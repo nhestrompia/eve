@@ -3,6 +3,7 @@ import type {
   ConfigResponse,
   DetailResponse,
   EvolutionSummary,
+  RepositorySummary,
   SearchResponse,
   SessionListResponse,
   SessionTranscriptResponse,
@@ -24,7 +25,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   config: () => request<ConfigResponse>('/api/config'),
-  evolutions: () => request<EvolutionSummary[]>('/api/evolutions'),
+  repositories: () => request<RepositorySummary[]>('/api/repositories'),
+  evolutions: (repo?: unknown) => {
+    const repoName = typeof repo === 'string' ? repo : '';
+    return request<EvolutionSummary[]>(`/api/evolutions${repoName ? `?repo=${encodeURIComponent(repoName)}` : ''}`);
+  },
   evolution: (id: string) => request<DetailResponse>(`/api/evolutions/${encodeURIComponent(id)}`),
   snapshot: (id: string) => request<SnapshotResponse>(`/api/evolutions/${encodeURIComponent(id)}/snapshot`),
   sessions: (id: string) => request<SessionListResponse>(`/api/evolutions/${encodeURIComponent(id)}/sessions`),

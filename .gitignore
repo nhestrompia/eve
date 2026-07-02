@@ -2,3 +2,6 @@
 .eve/public/
 ui/dist/
 ui/node_modules/
+.playwright-cli/
+.playwright-mcp/
+output/playwright/

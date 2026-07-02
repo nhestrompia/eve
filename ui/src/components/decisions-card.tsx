@@ -1,10 +1,11 @@
 import { Link } from '@tanstack/react-router';
 import { ArrowRight, Scale } from 'lucide-react';
+import { displayDecision } from '../lib/evolution-display';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { SectionHeading } from './section-heading';
 
 export function DecisionsCard({ decisions, evolutionId }: { decisions: unknown[]; evolutionId: string }) {
-  const first = decisions[0] as Record<string, unknown> | undefined;
+  const first = decisions[0] ? displayDecision(decisions[0]) : undefined;
 
   return (
     <Card>
@@ -17,18 +18,20 @@ export function DecisionsCard({ decisions, evolutionId }: { decisions: unknown[]
         ) : (
           <>
             <div>
-              <p className="font-semibold">{String(first?.title ?? first?.decision ?? 'Decision record')}</p>
+              <p className="font-semibold">{first?.title ?? 'Decision record'}</p>
             </div>
-            {first?.reason ? (
+            {first?.body ? (
               <div>
                 <p className="text-xs font-medium text-muted-foreground">Reason</p>
-                <p className="mt-1 text-sm text-muted-foreground text-pretty">{String(first.reason)}</p>
+                <p className="mt-1 text-sm text-muted-foreground text-pretty">{first.body}</p>
               </div>
             ) : null}
-            {first?.tradeoff ? (
+            {first?.meta?.find((item) => item.label === 'Tradeoff') ? (
               <div>
                 <p className="text-xs font-medium text-muted-foreground">Tradeoff</p>
-                <p className="mt-1 text-sm text-muted-foreground text-pretty">{String(first.tradeoff)}</p>
+                <p className="mt-1 text-sm text-muted-foreground text-pretty">
+                  {first.meta.find((item) => item.label === 'Tradeoff')?.value}
+                </p>
               </div>
             ) : null}
           </>

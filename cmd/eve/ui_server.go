@@ -60,6 +60,18 @@ type evolutionSummary struct {
 	UpdatedAt           string   `json:"updatedAt"`
 }
 
+type repositorySummary struct {
+	Name             string   `json:"name"`
+	RemoteURL        string   `json:"remoteUrl,omitempty"`
+	EvolutionCount   int      `json:"evolutionCount"`
+	SnapshotCount    int      `json:"snapshotCount"`
+	CommitCount      int      `json:"commitCount"`
+	LatestAt         string   `json:"latestAt"`
+	LatestEvolution  string   `json:"latestEvolution"`
+	LatestTitle      string   `json:"latestTitle"`
+	SessionProviders []string `json:"sessionProviders"`
+}
+
 type evolutionDetailResponse struct {
 	Evolution *eve.Evolution    `json:"evolution"`
 	Summary   evolutionSummary  `json:"summary"`
@@ -107,6 +119,8 @@ type uiSessionSource struct {
 	Format     string `json:"format"`
 	Size       int64  `json:"size"`
 	ModifiedAt string `json:"modifiedAt"`
+	Title      string `json:"title,omitempty"`
+	Match      string `json:"match,omitempty"`
 }
 
 type uiSessionPreview struct {
@@ -226,6 +240,7 @@ func newUIServer(store localStore, repo string, addr string) uiServer {
 func (server uiServer) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/config", server.handleConfig)
+	mux.HandleFunc("/api/repositories", server.handleRepositories)
 	mux.HandleFunc("/api/evolutions", server.handleEvolutions)
 	mux.HandleFunc("/api/evolutions/", server.handleEvolutionRoutes)
 	mux.HandleFunc("/api/search", server.handleSearch)
@@ -250,6 +265,19 @@ func (server uiServer) handleConfig(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (server uiServer) handleRepositories(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeMethodNotAllowed(w)
+		return
+	}
+	evolutions, err := server.store.loadAllCommitted()
+	if err != nil {
+		writeAPIError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, server.repositorySummaries(evolutions))
+}
+
 func (server uiServer) handleEvolutions(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeMethodNotAllowed(w)
@@ -260,8 +288,12 @@ func (server uiServer) handleEvolutions(w http.ResponseWriter, r *http.Request) 
 		writeAPIError(w, http.StatusInternalServerError, err)
 		return
 	}
+	repoFilter := strings.TrimSpace(r.URL.Query().Get("repo"))
 	rows := make([]evolutionSummary, 0, len(evolutions))
 	for _, evolution := range evolutions {
+		if repoFilter != "" && !evolutionTouchesRepository(evolution, repoFilter, server.repositoryName()) {
+			continue
+		}
 		rows = append(rows, summarizeEvolution(evolution))
 	}
 	sortEvolutionSummaries(rows)
@@ -376,7 +408,27 @@ func (server uiServer) handleSessionTranscript(w http.ResponseWriter, r *http.Re
 			continue
 		}
 		if !session.HasTranscript {
-			writeAPIError(w, http.StatusNotFound, fmt.Errorf("session transcript is not available"))
+			if len(session.LocalSources) == 0 {
+				writeAPIError(w, http.StatusNotFound, fmt.Errorf("session transcript is not available"))
+				return
+			}
+			source := session.LocalSources[0]
+			raw, err := os.ReadFile(filepath.FromSlash(source.Path))
+			if err != nil {
+				writeAPIError(w, http.StatusNotFound, fmt.Errorf("read local session candidate: %w", err))
+				return
+			}
+			raw = sanitizeSession(raw)
+			markdown := renderSessionMarkdown(session.Provider, session.ID, fallback(source.Title, session.Provider+" "+session.ID), source.Format, raw, true, source.Path)
+			writeJSON(w, http.StatusOK, sessionTranscriptResponse{
+				EvolutionID: evolution.Metadata.ID,
+				Provider:    session.Provider,
+				ID:          session.ID,
+				Key:         session.Key,
+				Title:       fallback(source.Title, session.Provider+" "+session.ID),
+				Markdown:    string(markdown),
+				Sanitized:   true,
+			})
 			return
 		}
 		markdown, err := os.ReadFile(filepath.FromSlash(session.Transcript))
@@ -526,6 +578,91 @@ func (server uiServer) repositoryName() string {
 	return currentRepositoryName()
 }
 
+func (server uiServer) repositorySummaries(evolutions []*eve.Evolution) []repositorySummary {
+	byName := map[string]*repositorySummary{}
+	current := server.repositoryName()
+	ensure := func(name string) *repositorySummary {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			name = current
+		}
+		if byName[name] == nil {
+			byName[name] = &repositorySummary{Name: name}
+			if name == current {
+				byName[name].RemoteURL = gitRemoteURL()
+			}
+		}
+		return byName[name]
+	}
+	ensure(current)
+	providerSets := map[string]map[string]bool{}
+	for _, evolution := range evolutions {
+		repos := evolutionRepositoryNames(evolution, current)
+		for _, repo := range repos {
+			row := ensure(repo)
+			row.EvolutionCount++
+			if evolution.Implementation.Snapshot != "" {
+				row.SnapshotCount++
+			}
+			row.CommitCount += len(evolution.Implementation.Commits)
+			latest := fallback(evolution.Metadata.UpdatedAt, evolution.Metadata.CreatedAt)
+			if latest > row.LatestAt {
+				row.LatestAt = latest
+				row.LatestEvolution = evolution.Metadata.ID
+				row.LatestTitle = evolution.Metadata.Title
+			}
+			if providerSets[repo] == nil {
+				providerSets[repo] = map[string]bool{}
+			}
+			for _, provider := range sessionProviders(evolution.Sessions) {
+				providerSets[repo][provider] = true
+			}
+		}
+	}
+	out := make([]repositorySummary, 0, len(byName))
+	for name, row := range byName {
+		for provider := range providerSets[name] {
+			row.SessionProviders = append(row.SessionProviders, provider)
+		}
+		sort.Strings(row.SessionProviders)
+		out = append(out, *row)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].LatestAt != out[j].LatestAt {
+			return out[i].LatestAt > out[j].LatestAt
+		}
+		return out[i].Name < out[j].Name
+	})
+	return out
+}
+
+func evolutionRepositoryNames(evolution *eve.Evolution, fallbackRepo string) []string {
+	seen := map[string]bool{}
+	var repos []string
+	for repo := range evolution.Implementation.Repositories {
+		repo = strings.TrimSpace(repo)
+		if repo == "" || seen[repo] {
+			continue
+		}
+		repos = append(repos, repo)
+		seen[repo] = true
+	}
+	if len(repos) == 0 {
+		repos = append(repos, fallbackRepo)
+	}
+	sort.Strings(repos)
+	return repos
+}
+
+func evolutionTouchesRepository(evolution *eve.Evolution, repo string, fallbackRepo string) bool {
+	for _, name := range evolutionRepositoryNames(evolution, fallbackRepo) {
+		if name == repo {
+			return true
+		}
+	}
+	return false
+}
+
 func summarizeEvolution(evolution *eve.Evolution) evolutionSummary {
 	return evolutionSummary{
 		ID:                  evolution.Metadata.ID,
@@ -628,7 +765,11 @@ func (server uiServer) sessionRecords(evolution *eve.Evolution) []uiSessionRecor
 		}
 		record.CaptureHint = sessionCaptureHint(record.Provider, record.ID)
 		record.RootsChecked = providerRoots(record.Provider)
-		record.LocalSources = discoverSessionSources(record.Provider, record.ID)
+		record.LocalSources = discoverSessionSources(record.Provider, record.ID, evolution)
+		if !record.HasTranscript && len(record.LocalSources) > 0 {
+			record.Status = "local-candidate"
+			record.Preview = previewSessionFile(filepath.FromSlash(record.LocalSources[0].Path))
+		}
 		records = append(records, record)
 		seen[key] = true
 	}
@@ -664,7 +805,7 @@ func recordFromArtifact(session eve.Session, artifact sessionArtifact) uiSession
 		Status:        "transcript",
 		CaptureHint:   sessionCaptureHint(artifact.Provider, artifact.ID),
 		RootsChecked:  providerRoots(artifact.Provider),
-		LocalSources:  discoverSessionSources(artifact.Provider, artifact.ID),
+		LocalSources:  []uiSessionSource{},
 		Preview:       previewSessionFile(filepath.FromSlash(artifact.Transcript)),
 	}
 }
@@ -727,7 +868,7 @@ func providerRoots(provider string) []string {
 	case "claude":
 		return claudeSessionRoots()
 	case "opencode":
-		return []string{}
+		return opencodeSessionRoots()
 	case "pi":
 		return piSessionRoots()
 	default:
@@ -735,12 +876,33 @@ func providerRoots(provider string) []string {
 	}
 }
 
-func discoverSessionSources(provider string, sessionID string) []uiSessionSource {
+func opencodeSessionRoots() []string {
+	home, _ := os.UserHomeDir()
+	var roots []string
+	if opencodeHome := os.Getenv("OPENCODE_HOME"); opencodeHome != "" {
+		roots = append(roots, opencodeHome)
+	}
+	if home != "" {
+		roots = append(roots,
+			filepath.Join(home, ".local", "share", "opencode", "storage"),
+			filepath.Join(home, "Library", "Application Support", "opencode"),
+			filepath.Join(home, ".opencode"),
+		)
+	}
+	return roots
+}
+
+func discoverSessionSources(provider string, sessionID string, evolution *eve.Evolution) []uiSessionSource {
 	sessionID = strings.TrimSpace(sessionID)
 	if sessionID == "" {
 		return nil
 	}
-	var sources []uiSessionSource
+	type scoredSource struct {
+		source uiSessionSource
+		score  int
+	}
+	keywords := sessionMatchKeywords(sessionID, evolution)
+	var files []string
 	for _, root := range providerRoots(provider) {
 		info, err := os.Stat(root)
 		if err != nil || !info.IsDir() {
@@ -754,32 +916,234 @@ func discoverSessionSources(provider string, sessionID string) []uiSessionSource
 			if ext != ".jsonl" && ext != ".json" && ext != ".md" && ext != ".txt" {
 				return nil
 			}
-			if !strings.Contains(entry.Name(), sessionID) && !strings.Contains(path, sessionID) {
-				return nil
-			}
-			info, statErr := entry.Info()
-			if statErr != nil {
-				return nil
-			}
-			sources = append(sources, uiSessionSource{
-				Path:       filepath.ToSlash(path),
-				Format:     strings.TrimPrefix(ext, "."),
-				Size:       info.Size(),
-				ModifiedAt: info.ModTime().UTC().Format(time.RFC3339),
-			})
+			files = append(files, path)
 			return nil
 		})
 	}
-	sort.Slice(sources, func(i, j int) bool {
-		return sources[i].ModifiedAt > sources[j].ModifiedAt
+	sort.Slice(files, func(i, j int) bool {
+		left, leftErr := os.Stat(files[i])
+		right, rightErr := os.Stat(files[j])
+		if leftErr != nil || rightErr != nil {
+			return files[i] > files[j]
+		}
+		return left.ModTime().After(right.ModTime())
 	})
-	if len(sources) > 8 {
-		return sources[:8]
+	files = filterSessionFilesByTime(files, evolution)
+	if len(files) > 500 {
+		files = files[:500]
 	}
-	if sources == nil {
+	var matches []scoredSource
+	for _, file := range files {
+		info, err := os.Stat(file)
+		if err != nil || info.IsDir() || info.Size() > 20*1024*1024 {
+			continue
+		}
+		score, reason, title := scoreSessionCandidate(file, sessionID, keywords, evolution)
+		if score == 0 {
+			continue
+		}
+		matches = append(matches, scoredSource{
+			score: score,
+			source: uiSessionSource{
+				Path:       filepath.ToSlash(file),
+				Format:     strings.TrimPrefix(strings.ToLower(filepath.Ext(file)), "."),
+				Size:       info.Size(),
+				ModifiedAt: info.ModTime().UTC().Format(time.RFC3339),
+				Title:      title,
+				Match:      reason,
+			},
+		})
+	}
+	sort.Slice(matches, func(i, j int) bool {
+		if matches[i].score != matches[j].score {
+			return matches[i].score > matches[j].score
+		}
+		return matches[i].source.ModifiedAt > matches[j].source.ModifiedAt
+	})
+	var sources []uiSessionSource
+	for _, match := range matches {
+		sources = append(sources, match.source)
+		if len(sources) == 8 {
+			break
+		}
+	}
+	if len(sources) == 0 {
 		return []uiSessionSource{}
 	}
 	return sources
+}
+
+func sessionMatchKeywords(sessionID string, evolution *eve.Evolution) []string {
+	seen := map[string]bool{}
+	var keywords []string
+	add := func(value string) {
+		value = strings.ToLower(strings.TrimSpace(value))
+		value = strings.Trim(value, "-_ .:/")
+		if len(value) < 4 || seen[value] {
+			return
+		}
+		keywords = append(keywords, value)
+		seen[value] = true
+	}
+	add(sessionID)
+	for _, part := range strings.FieldsFunc(sessionID, func(r rune) bool {
+		return r == '-' || r == '_' || r == ':' || r == '/'
+	}) {
+		add(part)
+	}
+	if evolution == nil {
+		return keywords
+	}
+	add(evolution.Metadata.ID)
+	add(evolution.Metadata.Title)
+	add(evolution.Intent)
+	add(evolution.Outcome)
+	for _, claim := range evolution.Behavior.Added {
+		add(claim.Description)
+	}
+	for _, claim := range evolution.Behavior.Changed {
+		add(claim.Description)
+	}
+	for _, claim := range evolution.Behavior.Fixed {
+		add(claim.Description)
+	}
+	for _, claim := range evolution.Behavior.Removed {
+		add(claim.Description)
+	}
+	return keywords
+}
+
+func filterSessionFilesByTime(files []string, evolution *eve.Evolution) []string {
+	if evolution == nil {
+		if len(files) > 80 {
+			return files[:80]
+		}
+		return files
+	}
+	center, ok := parseEvolutionTime(evolution)
+	if !ok {
+		if len(files) > 160 {
+			return files[:160]
+		}
+		return files
+	}
+	start := center.AddDate(0, 0, -14)
+	end := center.AddDate(0, 0, 2)
+	filtered := make([]string, 0, len(files))
+	for _, file := range files {
+		info, err := os.Stat(file)
+		if err != nil {
+			continue
+		}
+		if info.ModTime().Before(start) || info.ModTime().After(end) {
+			continue
+		}
+		filtered = append(filtered, file)
+	}
+	if len(filtered) == 0 {
+		if len(files) > 120 {
+			return files[:120]
+		}
+		return files
+	}
+	return filtered
+}
+
+func parseEvolutionTime(evolution *eve.Evolution) (time.Time, bool) {
+	for _, value := range []string{evolution.Metadata.UpdatedAt, evolution.Metadata.CreatedAt} {
+		if value == "" {
+			continue
+		}
+		parsed, err := time.Parse(time.RFC3339, value)
+		if err == nil {
+			return parsed, true
+		}
+	}
+	return time.Time{}, false
+}
+
+func scoreSessionCandidate(file string, sessionID string, keywords []string, evolution *eve.Evolution) (int, string, string) {
+	lowerPath := strings.ToLower(file)
+	lowerName := strings.ToLower(filepath.Base(file))
+	lowerID := strings.ToLower(sessionID)
+	score := 0
+	var reasons []string
+	if strings.Contains(lowerName, lowerID) || strings.Contains(lowerPath, lowerID) {
+		score += 100
+		reasons = append(reasons, "id")
+	}
+	data, err := os.ReadFile(file)
+	if err != nil {
+		return score, strings.Join(reasons, ", "), ""
+	}
+	text := strings.ToLower(string(data))
+	if strings.Contains(text, lowerID) {
+		score += 60
+		reasons = append(reasons, "session reference")
+	}
+	if evolution != nil {
+		if cwd, err := os.Getwd(); err == nil && strings.Contains(text, strings.ToLower(filepath.ToSlash(cwd))) {
+			score += 20
+			reasons = append(reasons, "repo path")
+		}
+		if evolution.Metadata.ID != "" && strings.Contains(text, strings.ToLower(evolution.Metadata.ID)) {
+			score += 30
+			reasons = append(reasons, "EV ID")
+		}
+	}
+	keywordHits := 0
+	for _, keyword := range keywords {
+		if keyword == lowerID {
+			continue
+		}
+		if strings.Contains(lowerPath, keyword) || strings.Contains(text, keyword) {
+			keywordHits++
+		}
+	}
+	if keywordHits > 0 {
+		score += min(keywordHits, 5) * 8
+		reasons = append(reasons, "content")
+	}
+	if score < 24 {
+		return 0, "", ""
+	}
+	return score, strings.Join(uniqueStrings(reasons), ", "), sessionCandidateTitle(data, file)
+}
+
+func sessionCandidateTitle(data []byte, file string) string {
+	scanner := bufio.NewScanner(bytes.NewReader(data))
+	scanner.Buffer(make([]byte, 1024), 1024*1024)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+		var event map[string]any
+		if json.Unmarshal([]byte(line), &event) == nil {
+			if title := firstMeaningfulTitle(firstString(event, "thread_name", "title", "summary", "name")); title != "" {
+				return title
+			}
+			if payload, ok := event["payload"].(map[string]any); ok {
+				if title := firstMeaningfulTitle(firstString(payload, "thread_name", "title", "summary", "name")); title != "" {
+					return title
+				}
+			}
+		}
+		if strings.HasPrefix(line, "#") {
+			return strings.TrimSpace(strings.TrimLeft(line, "#"))
+		}
+	}
+	return strings.TrimSuffix(filepath.Base(file), filepath.Ext(file))
+}
+
+func firstMeaningfulTitle(value string) string {
+	value = strings.TrimSpace(value)
+	switch strings.ToLower(value) {
+	case "", "auto", "untitled", "exec_command", "write_stdin", "response_item", "event_msg", "turn_context":
+		return ""
+	default:
+		return value
+	}
 }
 
 func previewSessionFile(path string) uiSessionPreview {
@@ -815,6 +1179,11 @@ func previewJSONLSession(data []byte) uiSessionPreview {
 			continue
 		}
 		role := strings.ToLower(firstString(event, "role", "type", "kind", "event"))
+		if payload, ok := event["payload"].(map[string]any); ok {
+			if payloadRole := strings.ToLower(firstString(payload, "role", "type", "kind", "event")); payloadRole != "" {
+				role = payloadRole
+			}
+		}
 		if role == "user" {
 			preview.UserMessages++
 			preview.MessageCount++
@@ -900,6 +1269,14 @@ func gitCommit(commit string) (uiGitCommit, error) {
 		AuthoredAt:  parts[4],
 		CommittedAt: parts[5],
 	}, nil
+}
+
+func gitRemoteURL() string {
+	output, err := exec.Command("git", "config", "--get", "remote.origin.url").Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(output))
 }
 
 func shortHash(commit string) string {

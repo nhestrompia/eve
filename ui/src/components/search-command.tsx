@@ -16,10 +16,6 @@ export function SearchCommand({ open, onOpenChange }: { open: boolean; onOpenCha
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault();
-        onOpenChange(true);
-      }
       if (event.key === 'Escape') onOpenChange(false);
     };
     window.addEventListener('keydown', onKeyDown);

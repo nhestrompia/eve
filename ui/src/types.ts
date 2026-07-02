@@ -97,6 +97,8 @@ export type SessionSource = {
   format: string;
   size: number;
   modifiedAt: string;
+  title?: string;
+  match?: string;
 };
 
 export type SessionPreview = {
@@ -161,6 +163,18 @@ export type ConfigResponse = {
   addr: string;
   eveDir: string;
   initialized: boolean;
+};
+
+export type RepositorySummary = {
+  name: string;
+  remoteUrl?: string;
+  evolutionCount: number;
+  snapshotCount: number;
+  commitCount: number;
+  latestAt: string;
+  latestEvolution: string;
+  latestTitle: string;
+  sessionProviders: string[];
 };
 
 export type SearchResponse = {

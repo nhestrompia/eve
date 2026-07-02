@@ -25,13 +25,15 @@ export function SessionsOverviewPage() {
           {sessions.data.sessions.length === 0 ? <EmptyPanel text="No AI sessions are recorded in this Evolution." /> : null}
           <div className="grid gap-4">
             {sessions.data.sessions.map((session) => (
-              <article key={session.key} className="rounded-lg border bg-white p-5">
+              <article key={session.key} className="rounded-lg bg-white p-5 shadow-[0_0_0_1px_rgba(15,23,42,0.08)]">
                 <div className="flex items-start justify-between gap-6">
                   <div>
                     <p className="font-semibold">{session.providerName}</p>
                     <p className="mt-1 font-mono text-sm text-muted-foreground">{session.id}</p>
                   </div>
-                  <span className="rounded-md border px-2 py-1 text-sm">{session.hasTranscript ? 'Transcript attached' : 'Reference only'}</span>
+                  <span className="rounded-md bg-secondary px-2 py-1 text-sm">
+                    {session.hasTranscript ? 'Transcript attached' : session.localSources.length > 0 ? 'Local transcript found' : 'Reference only'}
+                  </span>
                 </div>
                 <div className="mt-5 grid grid-cols-4 gap-3">
                   <Metric label="Events" value={session.preview.eventCount} />
@@ -39,10 +41,10 @@ export function SessionsOverviewPage() {
                   <Metric label="User" value={session.preview.userMessages} />
                   <Metric label="Agent" value={session.preview.agentMessages} />
                 </div>
-                {session.hasTranscript ? (
+                {session.hasTranscript || session.localSources.length > 0 ? (
                   <Button asChild className="mt-5">
                     <Link to="/evolutions/$id/session/$sessionId" params={{ id, sessionId: session.key }}>
-                      Read transcript
+                      {session.hasTranscript ? 'Read transcript' : 'Read local candidate'}
                     </Link>
                   </Button>
                 ) : (
@@ -56,8 +58,12 @@ export function SessionsOverviewPage() {
                     <p className="text-sm font-semibold">Matching local source files</p>
                     <div className="mt-2 space-y-2">
                       {(session.localSources ?? []).map((source) => (
-                        <div key={source.path} className="grid grid-cols-[minmax(0,1fr)_90px_120px] gap-3 rounded-md border px-3 py-2 text-sm">
-                          <span className="truncate font-mono">{source.path}</span>
+                        <div key={source.path} className="grid grid-cols-[minmax(0,1fr)_110px_120px] gap-3 rounded-md bg-slate-50 px-3 py-2 text-sm">
+                          <span className="min-w-0">
+                            <span className="block truncate font-medium">{source.title || source.path}</span>
+                            <span className="block truncate font-mono text-xs text-muted-foreground">{source.path}</span>
+                            {source.match ? <span className="block text-xs text-muted-foreground">Matched by {source.match}</span> : null}
+                          </span>
                           <span>{source.format}</span>
                           <span className="text-right text-muted-foreground">{compactDate(source.modifiedAt)}</span>
                         </div>

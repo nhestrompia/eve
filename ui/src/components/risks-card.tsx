@@ -1,10 +1,11 @@
 import { Link } from '@tanstack/react-router';
 import { ArrowRight, TriangleAlert } from 'lucide-react';
+import { displayRisk } from '../lib/evolution-display';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { SectionHeading } from './section-heading';
 
 export function RisksCard({ risks, evolutionId }: { risks: unknown[]; evolutionId: string }) {
-  const rendered = risks.map((risk) => String(risk));
+  const rendered = risks.map(displayRisk);
 
   return (
     <Card>
@@ -17,7 +18,7 @@ export function RisksCard({ risks, evolutionId }: { risks: unknown[]; evolutionI
         ) : (
           <ul className="list-disc space-y-3 pl-5 text-sm text-muted-foreground">
             {rendered.map((risk, index) => (
-              <li key={`${risk}-${index}`}>{risk}</li>
+              <li key={`${risk.title}-${index}`}>{risk.title}</li>
             ))}
           </ul>
         )}

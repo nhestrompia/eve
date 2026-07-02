@@ -1,10 +1,12 @@
 import { createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
 import { AppShell } from './components/app-shell';
+import { ActivityPage } from './pages/activity-page';
 import { ConfigPage } from './pages/config-page';
 import { DecisionsPage } from './pages/decisions-page';
 import { EvolutionDetailPage } from './pages/evolution-detail-page';
 import { ImplementationPage } from './pages/implementation-page';
 import { RawJsonPage } from './pages/raw-json-page';
+import { RepositoryPage } from './pages/repository-page';
 import { RelationshipsPage } from './pages/relationships-page';
 import { RisksPage } from './pages/risks-page';
 import { SearchPage } from './pages/search-page';
@@ -26,6 +28,12 @@ const evolutionRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/evolutions/$id',
   component: EvolutionDetailPage
+});
+
+const repositoryRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/repositories/$repo',
+  component: RepositoryPage
 });
 
 const snapshotRoute = createRoute({
@@ -76,6 +84,12 @@ const relationshipsRoute = createRoute({
   component: RelationshipsPage
 });
 
+const activityRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/evolutions/$id/activity',
+  component: ActivityPage
+});
+
 const searchRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/search',
@@ -97,6 +111,7 @@ const configRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
+  repositoryRoute,
   evolutionRoute,
   snapshotRoute,
   sessionRoute,
@@ -106,6 +121,7 @@ const routeTree = rootRoute.addChildren([
   risksRoute,
   implementationRoute,
   relationshipsRoute,
+  activityRoute,
   searchRoute,
   jsonRoute,
   configRoute

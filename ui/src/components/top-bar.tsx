@@ -1,5 +1,5 @@
-import { useRouterState } from '@tanstack/react-router';
-import { MoreHorizontal, Search, Sun } from 'lucide-react';
+import { Link, useRouterState } from '@tanstack/react-router';
+import { Link as LinkIcon, MoreHorizontal } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from './ui/button';
 
@@ -7,7 +7,7 @@ export function TopBar({ onSearch }: { onSearch: () => void }) {
   const state = useRouterState();
   const [copied, setCopied] = useState(false);
   const match = state.location.pathname.match(/EV-\d+/);
-  const id = match?.[0] ?? '#42';
+  const id = match?.[0];
 
   const copyURL = async () => {
     await navigator.clipboard.writeText(window.location.href);
@@ -16,40 +16,34 @@ export function TopBar({ onSearch }: { onSearch: () => void }) {
   };
 
   return (
-    <header className="sticky top-0 z-20 grid h-[76px] grid-cols-[260px_minmax(0,1fr)] border-b bg-white/82">
-      <div className="flex items-center gap-3 border-r px-8 text-sm text-muted-foreground">
-        <span>History</span>
-        <span>›</span>
-        <span className="font-semibold text-foreground">{id.startsWith('EV-') ? `#${id.replace('EV-', '')}` : id}</span>
+    <header className="sticky top-0 z-20 flex h-[76px] items-center justify-between border-b bg-white/88 px-8 backdrop-blur">
+      <button type="button" onClick={onSearch} className="sr-only">
+        Open search
+      </button>
+      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+        <span>Activity</span>
+        {id ? (
+          <>
+            <span>›</span>
+            <span className="font-semibold text-foreground">#{id.replace('EV-', '')}</span>
+          </>
+        ) : null}
       </div>
-      <div className="flex items-center justify-end gap-5 px-10">
-        <button
-          type="button"
-          onClick={onSearch}
-          className="flex h-11 w-[440px] items-center justify-between rounded-lg border bg-card px-4 text-muted-foreground shadow-sm"
-        >
-          <span className="flex items-center gap-3">
-            <Search className="size-4" />
-            Search evolutions...
-          </span>
-          <kbd className="font-mono text-xs">⌘K</kbd>
-        </button>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Toggle theme preview"
-          onClick={() => document.documentElement.classList.toggle('dark-preview')}
-        >
-          <Sun className="size-5" />
-        </Button>
+      <div className="flex items-center justify-end gap-3">
         <Button
           variant="outline"
-          size="icon"
+          className="h-10 gap-2 rounded-lg"
           aria-label={copied ? 'Page link copied' : 'Copy page link'}
           title={copied ? 'Copied' : 'Copy page link'}
           onClick={copyURL}
         >
-          <MoreHorizontal className="size-5" />
+          <LinkIcon className="size-4" />
+          {copied ? 'Copied' : 'Copy link'}
+        </Button>
+        <Button asChild variant="outline" size="icon" aria-label="Open EVE config" title="Open EVE config">
+          <Link to="/config">
+            <MoreHorizontal className="size-5" />
+          </Link>
         </Button>
       </div>
     </header>

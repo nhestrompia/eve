@@ -44,6 +44,10 @@
   --input: oklch(0.9 0.012 247);
   --ring: oklch(0.52 0.2 260);
   --radius: 0.55rem;
+  --shadow-border:
+    0 0 0 1px rgba(15, 23, 42, 0.06),
+    0 1px 2px -1px rgba(15, 23, 42, 0.08),
+    0 2px 4px 0 rgba(15, 23, 42, 0.04);
 }
 
 :root.dark-preview {
@@ -78,6 +82,9 @@ body {
   line-height: 1.45;
   font-synthesis-weight: none;
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-variant-numeric: tabular-nums;
 }
 
 button,
