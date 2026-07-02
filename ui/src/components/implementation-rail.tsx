@@ -3,10 +3,19 @@ import { ArrowRight, Copy, ExternalLink, FileText, X } from 'lucide-react';
 import { useState } from 'react';
 import { compactDate, humanDate, shortCommit } from '../format';
 import { displayDecision, displayRisk } from '../lib/evolution-display';
-import type { DetailResponse, SessionRecord, SnapshotResponse } from '../types';
+import type { DetailResponse, EvolutionSummary, SessionRecord, SnapshotResponse } from '../types';
+import { SnapshotTimeline } from './snapshot-timeline';
 import { Button } from './ui/button';
 
-export function ImplementationRail({ detail, snapshot }: { detail: DetailResponse; snapshot?: SnapshotResponse }) {
+export function ImplementationRail({
+  detail,
+  evolutions,
+  snapshot
+}: {
+  detail: DetailResponse;
+  evolutions: EvolutionSummary[];
+  snapshot?: SnapshotResponse;
+}) {
   const id = detail.summary.id;
   const commit = snapshot?.commit || detail.evolution.implementation.snapshot || '';
   const [copied, setCopied] = useState(false);
@@ -44,6 +53,8 @@ export function ImplementationRail({ detail, snapshot }: { detail: DetailRespons
           Committed {humanDate(detail.summary.updatedAt || detail.summary.createdAt)}
         </p>
       </section>
+
+      <SnapshotTimeline evolutions={evolutions} selectedId={id} className="mt-8" />
 
       <section className="mt-8">
         <h3 className="font-semibold">Commits ({detail.commits.length})</h3>

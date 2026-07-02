@@ -82,6 +82,7 @@ function ContributionGraph({ evolutions }: { evolutions: EvolutionSummary[] }) {
   const today = new Date();
   const start = new Date(today);
   start.setDate(today.getDate() - 52 * 7);
+  start.setDate(start.getDate() - start.getDay());
   const weeks = Array.from({ length: 53 }, (_, week) =>
     Array.from({ length: 7 }, (_, day) => {
       const date = new Date(start);
@@ -90,23 +91,53 @@ function ContributionGraph({ evolutions }: { evolutions: EvolutionSummary[] }) {
       return { date, count };
     })
   );
+  const monthLabels = buildMonthLabels(weeks);
+  const maxCount = Math.max(0, ...weeks.flat().map((day) => day.count));
 
   return (
     <div className="rounded-lg bg-white p-5 shadow-[0_0_0_1px_rgba(15,23,42,0.08)]">
-      <div className="grid grid-flow-col grid-rows-7 gap-1 overflow-hidden">
-        {weeks.flat().map((day) => (
-          <span
-            key={isoDay(day.date)}
-            title={`${compactDate(day.date.toISOString())}: ${day.count} Evolutions`}
-            className={`size-3 rounded-[3px] ${heatClass(day.count)}`}
-          />
-        ))}
+      <div className="overflow-x-auto pb-1">
+        <div className="min-w-[820px]">
+          <div className="mb-2 grid grid-cols-[34px_repeat(53,1fr)] gap-x-1 text-xs text-muted-foreground">
+            <span />
+            {monthLabels.map((label) => (
+              <span
+                key={`${label.name}-${label.week}`}
+                className="h-4 whitespace-nowrap"
+                style={{ gridColumn: `${label.week + 2} / span ${label.span}` }}
+              >
+                {label.name}
+              </span>
+            ))}
+          </div>
+          <div className="grid grid-cols-[34px_repeat(53,1fr)] gap-x-1">
+            <div className="grid grid-rows-7 gap-1 text-xs leading-3 text-muted-foreground">
+              {['', 'Mon', '', 'Wed', '', 'Fri', ''].map((label, index) => (
+                <span key={`${label}-${index}`} className="h-3">
+                  {label}
+                </span>
+              ))}
+            </div>
+            {weeks.map((week, weekIndex) => (
+              <div key={isoDay(week[0].date)} className="grid grid-rows-7 gap-1">
+                {week.map((day) => (
+                  <span
+                    key={isoDay(day.date)}
+                    aria-label={`${compactDate(day.date.toISOString())}: ${day.count} ${day.count === 1 ? 'Evolution' : 'Evolutions'}`}
+                    title={`${compactDate(day.date.toISOString())}: ${day.count} ${day.count === 1 ? 'Evolution' : 'Evolutions'}`}
+                    className={`size-3 rounded-[3px] ${heatClass(day.count, maxCount)} ${weekIndex === 52 && day.date > today ? 'opacity-40' : ''}`}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
       <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
-        <span>Less</span>
+        <span>{maxCount > 0 ? `Peak day: ${maxCount} ${maxCount === 1 ? 'Evolution' : 'Evolutions'}` : 'No activity in this range'}</span>
         <span className="flex items-center gap-1">
           {[0, 1, 2, 3, 4].map((value) => (
-            <span key={value} className={`size-3 rounded-[3px] ${heatClass(value)}`} />
+            <span key={value} className={`size-3 rounded-[3px] ${heatClass(value, 4)}`} />
           ))}
           More
         </span>
@@ -165,11 +196,31 @@ function ActivityList({ evolutions }: { evolutions: EvolutionSummary[] }) {
   );
 }
 
-function heatClass(count: number) {
+function buildMonthLabels(weeks: Array<Array<{ date: Date; count: number }>>) {
+  const labels: Array<{ name: string; week: number; span: number }> = [];
+
+  weeks.forEach((week, weekIndex) => {
+    const firstOfMonth = week.find((day) => day.date.getDate() === 1);
+    if (!firstOfMonth) return;
+    labels.push({
+      name: MONTHS[firstOfMonth.date.getMonth()],
+      week: weekIndex,
+      span: 1
+    });
+  });
+
+  return labels.map((label, index) => ({
+    ...label,
+    span: Math.max(1, (labels[index + 1]?.week ?? weeks.length) - label.week)
+  }));
+}
+
+function heatClass(count: number, maxCount: number) {
   if (count <= 0) return 'bg-slate-100';
-  if (count === 1) return 'bg-emerald-200';
-  if (count === 2) return 'bg-emerald-400';
-  if (count === 3) return 'bg-emerald-600';
+  const level = maxCount <= 1 ? 1 : Math.ceil((count / maxCount) * 4);
+  if (level <= 1) return 'bg-emerald-200';
+  if (level === 2) return 'bg-emerald-400';
+  if (level === 3) return 'bg-emerald-600';
   return 'bg-emerald-800';
 }
 
@@ -182,3 +233,5 @@ function parseDate(value?: string) {
 function isoDay(date: Date) {
   return date.toISOString().slice(0, 10);
 }
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

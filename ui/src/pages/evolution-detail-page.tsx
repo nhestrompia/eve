@@ -31,7 +31,7 @@ export function EvolutionDetailPage() {
             <VerificationSummarySection values={detail.data.evolution.verification} evolutionId={detail.data.summary.id} />
             <DetailActionTiles detail={detail.data} />
           </main>
-          <ImplementationRail detail={detail.data} snapshot={snapshot.data} />
+          <ImplementationRail detail={detail.data} evolutions={rows} snapshot={snapshot.data} />
         </div>
       ) : null}
       {!detail.isLoading && !detail.error && !detail.data ? <EmptyState title="Evolution not found" detail={`${id} is not available.`} /> : null}
