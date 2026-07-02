@@ -455,10 +455,14 @@ func TestUIAPISessionTranscript(t *testing.T) {
 		"codex",
 		"session_912",
 		"Implementation Session",
-		"md",
-		[]byte("# Implementation Session\n\nVerified transcript search.\n"),
+		"jsonl",
+		[]byte(`{"type":"event_msg","timestamp":"2026-07-02T00:00:00Z","payload":{"type":"user_message","message":"implement transcript search"}}
+{"type":"response_item","timestamp":"2026-07-02T00:00:01Z","payload":{"type":"function_call","name":"exec_command","arguments":"go test ./..."}}
+{"type":"event_msg","timestamp":"2026-07-02T00:00:02Z","payload":{"type":"agent_message","message":"Verified transcript search."}}
+{"type":"event_msg","timestamp":"2026-07-02T00:00:03Z","payload":{"type":"token_count","total_token_usage":{"total_tokens":1200}}}
+`),
 		true,
-		"fixture.md",
+		"fixture.jsonl",
 	)
 	if err != nil {
 		t.Fatalf("write session artifacts: %v", err)
@@ -476,11 +480,81 @@ func TestUIAPISessionTranscript(t *testing.T) {
 	if !strings.Contains(transcript.Markdown, "Verified transcript search.") {
 		t.Fatalf("transcript = %#v, want markdown", transcript)
 	}
+	for _, unwanted := range []string{"function_call", "token_count", "```json"} {
+		if strings.Contains(transcript.Markdown, unwanted) {
+			t.Fatalf("transcript markdown contains %q: %s", unwanted, transcript.Markdown)
+		}
+	}
+	if !strings.Contains(transcript.Markdown, "Tool calls: `1`") || !strings.Contains(transcript.Markdown, "Omitted system/tool/log events: `2`") {
+		t.Fatalf("transcript markdown = %s, want analytics", transcript.Markdown)
+	}
 
 	var search searchResponse
 	requestJSON(t, handler, http.MethodGet, "/api/search?q=transcript", nil, &search)
 	if len(search.Results) != 1 {
 		t.Fatalf("search = %#v, want transcript match", search)
+	}
+}
+
+func TestRenderSessionMarkdownExtractsProviderMessages(t *testing.T) {
+	tests := []struct {
+		name     string
+		provider string
+		format   string
+		raw      string
+		wants    []string
+	}{
+		{
+			name:     "codex",
+			provider: "codex",
+			format:   "jsonl",
+			raw: `{"type":"event_msg","payload":{"type":"user_message","message":"# AGENTS.md instructions\n\n<environment_context>repo</environment_context>"}}
+{"type":"event_msg","payload":{"type":"user_message","message":"make the detail page readable"}}
+{"type":"response_item","payload":{"type":"function_call","name":"exec_command","arguments":"rg session"}}
+{"type":"event_msg","payload":{"type":"agent_message","message":"Rendered only the useful messages."}}
+`,
+			wants: []string{"### User", "make the detail page readable", "### Assistant", "Rendered only the useful messages.", "Tool calls: `1`"},
+		},
+		{
+			name:     "claude",
+			provider: "claude",
+			format:   "jsonl",
+			raw: `{"type":"user","message":{"role":"user","content":"summarize this"}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Summary is ready."},{"type":"tool_use","name":"Read"}]}}
+`,
+			wants: []string{"summarize this", "Summary is ready.", "Tool calls: `1`"},
+		},
+		{
+			name:     "opencode",
+			provider: "opencode",
+			format:   "json",
+			raw:      `{"messages":[{"role":"user","parts":[{"type":"text","text":"ship it"}]},{"role":"assistant","parts":[{"type":"text","text":"Shipped."}]}]}`,
+			wants:    []string{"ship it", "Shipped."},
+		},
+		{
+			name:     "pi",
+			provider: "pi",
+			format:   "jsonl",
+			raw: `{"role":"user","content":"what changed?"}
+{"role":"assistant","content":"The session page now shows messages and analytics."}
+`,
+			wants: []string{"what changed?", "The session page now shows messages and analytics."},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			markdown := string(renderSessionMarkdown(tt.provider, "abc123", "", tt.format, []byte(tt.raw), true, "fixture"))
+			for _, want := range tt.wants {
+				if !strings.Contains(markdown, want) {
+					t.Fatalf("markdown = %s, want %q", markdown, want)
+				}
+			}
+			for _, unwanted := range []string{"```json", "function_call", "tool_use", "environment_context"} {
+				if strings.Contains(markdown, unwanted) {
+					t.Fatalf("markdown contains raw log marker %q: %s", unwanted, markdown)
+				}
+			}
+		})
 	}
 }
 

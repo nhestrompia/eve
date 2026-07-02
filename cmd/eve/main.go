@@ -890,6 +890,24 @@ type sessionExtension struct {
 	Sessions []sessionArtifact `json:"sessions"`
 }
 
+type sessionConversation struct {
+	Messages       []sessionMessage
+	EventCount     int
+	MessageCount   int
+	UserMessages   int
+	AgentMessages  int
+	ToolCalls      int
+	OmittedEvents  int
+	FirstTimestamp string
+	LastTimestamp  string
+}
+
+type sessionMessage struct {
+	Role      string
+	Text      string
+	Timestamp string
+}
+
 type repeatedFlag []string
 
 func (flag *repeatedFlag) String() string {
@@ -1618,8 +1636,9 @@ func renderSessionMarkdown(provider string, sessionID string, title string, rawF
 	var out strings.Builder
 	heading := strings.TrimSpace(title)
 	if heading == "" {
-		heading = provider + " " + sessionID
+		heading = providerDisplayName(provider) + " " + sessionID
 	}
+	conversation := extractSessionConversation(rawFormat, raw)
 	fmt.Fprintf(&out, "# %s\n\n", heading)
 	fmt.Fprintf(&out, "- Provider: `%s`\n", provider)
 	fmt.Fprintf(&out, "- Session: `%s`\n", sessionID)
@@ -1628,70 +1647,316 @@ func renderSessionMarkdown(provider string, sessionID string, title string, rawF
 	if source != "" {
 		fmt.Fprintf(&out, "- Source: `%s`\n", source)
 	}
-	out.WriteString("\n## Transcript\n\n")
-	switch rawFormat {
-	case "md", "markdown":
-		out.Write(raw)
-		if !bytes.HasSuffix(raw, []byte("\n")) {
+	out.WriteString("\n## Analytics\n\n")
+	fmt.Fprintf(&out, "- Events scanned: `%d`\n", conversation.EventCount)
+	fmt.Fprintf(&out, "- Messages shown: `%d`\n", conversation.MessageCount)
+	fmt.Fprintf(&out, "- User messages: `%d`\n", conversation.UserMessages)
+	fmt.Fprintf(&out, "- Agent messages: `%d`\n", conversation.AgentMessages)
+	fmt.Fprintf(&out, "- Tool calls: `%d`\n", conversation.ToolCalls)
+	fmt.Fprintf(&out, "- Omitted system/tool/log events: `%d`\n", conversation.OmittedEvents)
+	if conversation.FirstTimestamp != "" {
+		fmt.Fprintf(&out, "- First event: `%s`\n", conversation.FirstTimestamp)
+	}
+	if conversation.LastTimestamp != "" {
+		fmt.Fprintf(&out, "- Last event: `%s`\n", conversation.LastTimestamp)
+	}
+	out.WriteString("\n## Messages\n\n")
+	if len(conversation.Messages) == 0 {
+		out.WriteString("No user-facing messages could be extracted. The raw artifact is still stored separately for audit.\n")
+		return []byte(out.String())
+	}
+	for _, message := range conversation.Messages {
+		fmt.Fprintf(&out, "### %s", titleCase(message.Role))
+		if message.Timestamp != "" {
+			fmt.Fprintf(&out, " `%s`", message.Timestamp)
+		}
+		out.WriteString("\n\n")
+		out.WriteString(message.Text)
+		if !strings.HasSuffix(message.Text, "\n") {
 			out.WriteByte('\n')
 		}
-	case "jsonl":
-		renderJSONLMarkdown(&out, raw)
-	case "json":
-		renderJSONMarkdown(&out, raw)
-	default:
-		out.WriteString("```text\n")
-		out.Write(raw)
-		if !bytes.HasSuffix(raw, []byte("\n")) {
-			out.WriteByte('\n')
-		}
-		out.WriteString("```\n")
+		out.WriteByte('\n')
 	}
 	return []byte(out.String())
 }
 
-func renderJSONLMarkdown(out *strings.Builder, raw []byte) {
+func extractSessionConversation(rawFormat string, raw []byte) sessionConversation {
+	switch strings.ToLower(strings.Trim(strings.TrimSpace(rawFormat), ".")) {
+	case "jsonl":
+		return extractJSONLConversation(raw)
+	case "json":
+		return extractJSONConversation(raw)
+	case "md", "markdown":
+		return extractMarkdownConversation(raw)
+	default:
+		return extractTextConversation(raw)
+	}
+}
+
+func extractJSONLConversation(raw []byte) sessionConversation {
+	conversation := sessionConversation{}
 	scanner := bufio.NewScanner(bytes.NewReader(raw))
 	scanner.Buffer(make([]byte, 1024), 1024*1024*10)
-	index := 1
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" {
 			continue
 		}
+		conversation.EventCount++
 		var event map[string]any
 		if err := json.Unmarshal([]byte(line), &event); err != nil {
-			fmt.Fprintf(out, "### Event %d\n\n```json\n%s\n```\n\n", index, line)
-			index++
+			conversation.OmittedEvents++
 			continue
 		}
-		role := firstString(event, "role", "type", "kind", "event")
-		text := extractText(event)
-		if role == "" {
-			role = fmt.Sprintf("event %d", index)
+		conversation.addEvent(event)
+	}
+	return conversation
+}
+
+func extractJSONConversation(raw []byte) sessionConversation {
+	var value any
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return extractTextConversation(raw)
+	}
+	conversation := sessionConversation{}
+	conversation.addJSONValue(value)
+	return conversation
+}
+
+func extractMarkdownConversation(raw []byte) sessionConversation {
+	lines := strings.Split(string(raw), "\n")
+	conversation := sessionConversation{}
+	role := ""
+	var body strings.Builder
+	flush := func() {
+		text := strings.TrimSpace(body.String())
+		if role != "" && text != "" {
+			conversation.addMessage(role, text, "")
 		}
-		fmt.Fprintf(out, "### %s\n\n", titleCase(strings.ReplaceAll(role, "_", " ")))
-		if text != "" {
-			out.WriteString(text)
-			out.WriteString("\n\n")
-		} else {
-			pretty, _ := json.MarshalIndent(event, "", "  ")
-			fmt.Fprintf(out, "```json\n%s\n```\n\n", pretty)
+		body.Reset()
+	}
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		lower := strings.ToLower(strings.TrimLeft(trimmed, "# "))
+		if strings.HasPrefix(trimmed, "#") {
+			headingRole := markdownHeadingRole(lower)
+			if !isUserFacingRole(headingRole) {
+				continue
+			}
+			flush()
+			role = canonicalMessageRole(headingRole)
+			conversation.EventCount++
+			continue
 		}
-		index++
+		if role != "" {
+			body.WriteString(line)
+			body.WriteByte('\n')
+		}
+	}
+	flush()
+	if conversation.EventCount == 0 && strings.TrimSpace(string(raw)) != "" {
+		conversation.EventCount = len(lines)
+	}
+	conversation.OmittedEvents = max(conversation.EventCount-conversation.MessageCount, 0)
+	return conversation
+}
+
+func markdownHeadingRole(heading string) string {
+	heading = strings.TrimSpace(strings.TrimLeft(heading, "# "))
+	if heading == "" {
+		return ""
+	}
+	fields := strings.Fields(heading)
+	if len(fields) == 0 {
+		return ""
+	}
+	return strings.Trim(fields[0], "`:[]()")
+}
+
+func extractTextConversation(raw []byte) sessionConversation {
+	text := strings.TrimSpace(string(raw))
+	if text == "" {
+		return sessionConversation{}
+	}
+	return sessionConversation{
+		EventCount:    len(strings.Split(text, "\n")),
+		OmittedEvents: len(strings.Split(text, "\n")),
 	}
 }
 
-func renderJSONMarkdown(out *strings.Builder, raw []byte) {
-	var value any
-	if err := json.Unmarshal(raw, &value); err != nil {
-		out.WriteString("```json\n")
-		out.Write(raw)
-		out.WriteString("\n```\n")
+func (conversation *sessionConversation) addJSONValue(value any) {
+	switch typed := value.(type) {
+	case []any:
+		for _, item := range typed {
+			conversation.addJSONValue(item)
+		}
+	case map[string]any:
+		if events, ok := firstArray(typed, "events", "messages", "transcript", "conversation", "items"); ok {
+			for _, event := range events {
+				conversation.addJSONValue(event)
+			}
+			return
+		}
+		conversation.EventCount++
+		conversation.addEvent(typed)
+	default:
+		conversation.EventCount++
+		conversation.OmittedEvents++
+	}
+}
+
+func (conversation *sessionConversation) addEvent(event map[string]any) {
+	timestamp := eventTimestamp(event)
+	if timestamp != "" {
+		if conversation.FirstTimestamp == "" {
+			conversation.FirstTimestamp = timestamp
+		}
+		conversation.LastTimestamp = timestamp
+	}
+	if isToolEvent(event) {
+		conversation.ToolCalls++
+		conversation.OmittedEvents++
 		return
 	}
-	pretty, _ := json.MarshalIndent(value, "", "  ")
-	fmt.Fprintf(out, "```json\n%s\n```\n", pretty)
+	conversation.ToolCalls += nestedToolCallCount(event)
+	role := eventRole(event)
+	text := extractText(event)
+	if role == "" || text == "" || !isUserFacingRole(role) {
+		conversation.OmittedEvents++
+		return
+	}
+	if shouldOmitSessionMessage(role, text) {
+		conversation.OmittedEvents++
+		return
+	}
+	conversation.addMessage(canonicalMessageRole(role), text, timestamp)
+}
+
+func (conversation *sessionConversation) addMessage(role string, text string, timestamp string) {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return
+	}
+	role = canonicalMessageRole(role)
+	if len(conversation.Messages) > 0 {
+		last := conversation.Messages[len(conversation.Messages)-1]
+		if last.Role == role && last.Text == text {
+			return
+		}
+	}
+	conversation.Messages = append(conversation.Messages, sessionMessage{Role: role, Text: text, Timestamp: timestamp})
+	conversation.MessageCount++
+	switch role {
+	case "user":
+		conversation.UserMessages++
+	case "assistant":
+		conversation.AgentMessages++
+	}
+}
+
+func eventTimestamp(event map[string]any) string {
+	if timestamp := firstString(event, "timestamp", "created_at", "createdAt", "time"); timestamp != "" {
+		return timestamp
+	}
+	if payload, ok := event["payload"].(map[string]any); ok {
+		if timestamp := firstString(payload, "timestamp", "created_at", "createdAt", "time"); timestamp != "" {
+			return timestamp
+		}
+	}
+	return ""
+}
+
+func eventRole(event map[string]any) string {
+	role := firstString(event, "role", "speaker", "author")
+	eventType := firstString(event, "type", "kind", "event")
+	if role == "" {
+		role = eventType
+	}
+	if message, ok := event["message"].(map[string]any); ok {
+		if messageRole := firstString(message, "role", "speaker", "author"); messageRole != "" {
+			role = messageRole
+		}
+	}
+	if payload, ok := event["payload"].(map[string]any); ok {
+		payloadType := firstString(payload, "type", "kind", "event")
+		if payloadRole := firstString(payload, "role", "speaker", "author"); payloadRole != "" {
+			role = payloadRole
+		} else if payloadType == "agent_message" {
+			role = "assistant"
+		} else if payloadType == "user_message" {
+			role = "user"
+		}
+	}
+	return strings.ToLower(strings.TrimSpace(role))
+}
+
+func isUserFacingRole(role string) bool {
+	role = canonicalMessageRole(role)
+	return role == "user" || role == "assistant"
+}
+
+func shouldOmitSessionMessage(role string, text string) bool {
+	role = canonicalMessageRole(role)
+	text = strings.TrimSpace(text)
+	if role != "user" {
+		return false
+	}
+	return strings.HasPrefix(text, "# AGENTS.md instructions") ||
+		strings.Contains(text, "<environment_context>") ||
+		strings.Contains(text, "<INSTRUCTIONS>")
+}
+
+func canonicalMessageRole(role string) string {
+	role = strings.ToLower(strings.TrimSpace(strings.ReplaceAll(role, "_", " ")))
+	switch role {
+	case "assistant", "agent", "model", "ai", "assistant message", "agent message":
+		return "assistant"
+	case "user", "human", "customer", "user message":
+		return "user"
+	default:
+		return role
+	}
+}
+
+func isToolEvent(event map[string]any) bool {
+	values := []string{
+		firstString(event, "role", "type", "kind", "event", "name"),
+	}
+	if payload, ok := event["payload"].(map[string]any); ok {
+		values = append(values, firstString(payload, "role", "type", "kind", "event", "name"))
+	}
+	if message, ok := event["message"].(map[string]any); ok {
+		values = append(values, firstString(message, "role", "type", "kind", "event", "name"))
+	}
+	for _, value := range values {
+		value = strings.ToLower(value)
+		if strings.Contains(value, "tool") || strings.Contains(value, "function_call") || value == "function call" || value == "function call output" {
+			return true
+		}
+	}
+	return false
+}
+
+func nestedToolCallCount(value any) int {
+	switch typed := value.(type) {
+	case []any:
+		total := 0
+		for _, item := range typed {
+			total += nestedToolCallCount(item)
+		}
+		return total
+	case map[string]any:
+		if isToolEvent(typed) {
+			return 1
+		}
+		total := 0
+		for _, nested := range typed {
+			total += nestedToolCallCount(nested)
+		}
+		return total
+	default:
+		return 0
+	}
 }
 
 func sanitizeSession(raw []byte) []byte {
@@ -2049,18 +2314,42 @@ func firstString(values map[string]any, keys ...string) string {
 	return ""
 }
 
+func firstArray(values map[string]any, keys ...string) ([]any, bool) {
+	for _, key := range keys {
+		if value, ok := values[key]; ok {
+			if items, ok := value.([]any); ok {
+				return items, true
+			}
+		}
+	}
+	return nil, false
+}
+
 func extractText(event map[string]any) string {
 	if text := firstString(event, "text", "message", "content", "summary"); text != "" {
 		return text
 	}
-	if value, ok := event["content"].([]any); ok {
+	if payload, ok := event["payload"].(map[string]any); ok {
+		if text := extractText(payload); text != "" {
+			return text
+		}
+	}
+	if message, ok := event["message"].(map[string]any); ok {
+		if text := extractText(message); text != "" {
+			return text
+		}
+	}
+	if value, ok := firstArray(event, "content", "parts"); ok {
 		var parts []string
 		for _, item := range value {
 			switch typed := item.(type) {
 			case string:
 				parts = append(parts, typed)
 			case map[string]any:
-				if text := firstString(typed, "text", "content"); text != "" {
+				if isToolEvent(typed) {
+					continue
+				}
+				if text := firstString(typed, "text", "content", "message"); text != "" {
 					parts = append(parts, text)
 				}
 			}

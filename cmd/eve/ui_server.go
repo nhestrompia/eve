@@ -431,10 +431,25 @@ func (server uiServer) handleSessionTranscript(w http.ResponseWriter, r *http.Re
 			})
 			return
 		}
-		markdown, err := os.ReadFile(filepath.FromSlash(session.Transcript))
-		if err != nil {
-			writeAPIError(w, http.StatusNotFound, fmt.Errorf("read session transcript: %w", err))
-			return
+		var markdown []byte
+		if strings.TrimSpace(session.Raw) != "" && fileExists(filepath.FromSlash(session.Raw)) {
+			raw, err := os.ReadFile(filepath.FromSlash(session.Raw))
+			if err != nil {
+				writeAPIError(w, http.StatusNotFound, fmt.Errorf("read raw session artifact: %w", err))
+				return
+			}
+			rawFormat := session.Metadata["raw_format"]
+			if rawFormat == "" {
+				rawFormat = detectRawFormat(session.Source, raw)
+			}
+			markdown = renderSessionMarkdown(session.Provider, session.ID, fallback(session.Title, session.Provider+" "+session.ID), rawFormat, raw, session.Sanitized, session.Source)
+		} else {
+			var err error
+			markdown, err = os.ReadFile(filepath.FromSlash(session.Transcript))
+			if err != nil {
+				writeAPIError(w, http.StatusNotFound, fmt.Errorf("read session transcript: %w", err))
+				return
+			}
 		}
 		writeJSON(w, http.StatusOK, sessionTranscriptResponse{
 			EvolutionID: evolution.Metadata.ID,
@@ -836,9 +851,9 @@ func providerInfos() []uiProviderInfo {
 			ImportCommand: sessionCaptureHint(provider, "<session-id>"),
 			Displays: []string{
 				"session provider and id",
-				"attached sanitized transcript",
+				"user and agent messages",
+				"message, event, and tool-call analytics",
 				"raw artifact path and format",
-				"message/event counts when a transcript is attached",
 				"local matching transcript candidates when found",
 			},
 		})
@@ -1165,48 +1180,11 @@ func previewSessionFile(path string) uiSessionPreview {
 }
 
 func previewJSONLSession(data []byte) uiSessionPreview {
-	scanner := bufio.NewScanner(bytes.NewReader(data))
-	scanner.Buffer(make([]byte, 1024), 1024*1024*10)
-	preview := uiSessionPreview{}
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
-			continue
-		}
-		preview.EventCount++
-		var event map[string]any
-		if err := json.Unmarshal([]byte(line), &event); err != nil {
-			continue
-		}
-		role := strings.ToLower(firstString(event, "role", "type", "kind", "event"))
-		if payload, ok := event["payload"].(map[string]any); ok {
-			if payloadRole := strings.ToLower(firstString(payload, "role", "type", "kind", "event")); payloadRole != "" {
-				role = payloadRole
-			}
-		}
-		if role == "user" {
-			preview.UserMessages++
-			preview.MessageCount++
-		}
-		if role == "assistant" || role == "agent" || role == "system" {
-			preview.AgentMessages++
-			preview.MessageCount++
-		}
-		if strings.Contains(role, "tool") {
-			preview.ToolCalls++
-		}
-		if timestamp := firstString(event, "timestamp", "created_at", "createdAt", "time"); timestamp != "" {
-			if preview.FirstTimestamp == "" {
-				preview.FirstTimestamp = timestamp
-			}
-			preview.LastTimestamp = timestamp
-		}
-	}
-	return preview
+	return previewConversation(extractSessionConversation("jsonl", data))
 }
 
 func previewMarkdownSession(data []byte) uiSessionPreview {
-	preview := uiSessionPreview{}
+	preview := previewConversation(extractSessionConversation("md", data))
 	for _, line := range strings.Split(string(data), "\n") {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "#") {
@@ -1215,16 +1193,20 @@ func previewMarkdownSession(data []byte) uiSessionPreview {
 				preview.Headings = append(preview.Headings, heading)
 			}
 		}
-		if strings.HasPrefix(strings.ToLower(line), "### user") {
-			preview.UserMessages++
-			preview.MessageCount++
-		}
-		if strings.HasPrefix(strings.ToLower(line), "### assistant") {
-			preview.AgentMessages++
-			preview.MessageCount++
-		}
 	}
 	return preview
+}
+
+func previewConversation(conversation sessionConversation) uiSessionPreview {
+	return uiSessionPreview{
+		EventCount:     conversation.EventCount,
+		MessageCount:   conversation.MessageCount,
+		UserMessages:   conversation.UserMessages,
+		AgentMessages:  conversation.AgentMessages,
+		ToolCalls:      conversation.ToolCalls,
+		FirstTimestamp: conversation.FirstTimestamp,
+		LastTimestamp:  conversation.LastTimestamp,
+	}
 }
 
 func previewTextSession(data []byte) uiSessionPreview {
