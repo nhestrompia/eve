@@ -27,6 +27,20 @@ export function humanDate(value?: string): string {
   });
 }
 
+export function monthYear(value?: string): string {
+  if (!value) return 'Undated';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Undated';
+  return date.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+}
+
+export function compactDate(value?: string): string {
+  if (!value) return 'Unknown date';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 export function statusLabel(value?: string): string {
   if (!value) return 'unknown';
   return value.replaceAll('_', ' ');

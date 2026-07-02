@@ -1,5 +1,6 @@
 import { createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
 import { AppShell } from './components/app-shell';
+import { ConfigPage } from './pages/config-page';
 import { EvolutionDetailPage } from './pages/evolution-detail-page';
 import { RawJsonPage } from './pages/raw-json-page';
 import { SearchPage } from './pages/search-page';
@@ -46,7 +47,13 @@ const jsonRoute = createRoute({
   component: RawJsonPage
 });
 
-const routeTree = rootRoute.addChildren([indexRoute, evolutionRoute, snapshotRoute, sessionRoute, searchRoute, jsonRoute]);
+const configRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/config',
+  component: ConfigPage
+});
+
+const routeTree = rootRoute.addChildren([indexRoute, evolutionRoute, snapshotRoute, sessionRoute, searchRoute, jsonRoute, configRoute]);
 
 export const router = createRouter({ routeTree });
 

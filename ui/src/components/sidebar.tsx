@@ -1,7 +1,6 @@
 import { Link } from '@tanstack/react-router';
-import { BookOpen, ChevronDown, FileClock, GitBranch, History, Search, Settings, Sun, UserRound } from 'lucide-react';
+import { BookOpen, FileClock, GitBranch, History, Search, Settings, Sun } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
 import { api } from '../api';
 import { Button } from './ui/button';
 
@@ -9,12 +8,6 @@ export function Sidebar() {
   const config = useQuery({ queryKey: ['config'], queryFn: api.config });
   const evolutions = useQuery({ queryKey: ['evolutions'], queryFn: api.evolutions });
   const firstEvolution = evolutions.data?.[0]?.id;
-  const [notice, setNotice] = useState('');
-
-  const showNotice = (message: string) => {
-    setNotice(message);
-    window.setTimeout(() => setNotice(''), 3200);
-  };
 
   return (
     <aside className="sticky top-0 flex h-dvh flex-col border-r bg-white/78">
@@ -73,35 +66,21 @@ export function Sidebar() {
           </div>
           <span className="size-2 rounded-full bg-emerald-500" />
         </div>
-        <Button
-          variant="ghost"
-          className="mt-2 h-10 w-full justify-start gap-3 px-2 text-muted-foreground"
-          onClick={() => showNotice('Multi-repository UI is outside v1. Use EVE_DIR to point at another repository.')}
-        >
-          <span className="text-xl leading-none">+</span>
-          Add Repository
-        </Button>
-        {notice ? <p className="mt-3 rounded-md border bg-white px-3 py-2 text-xs text-muted-foreground">{notice}</p> : null}
+        <p className="mt-3 px-2 text-xs text-muted-foreground">
+          EVE UI reads one local repository from <span className="font-mono">{config.data?.eveDir ?? '.eve'}</span>.
+        </p>
       </div>
 
       <div className="mt-auto flex items-center justify-between border-t p-5">
-        <div className="flex items-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-full bg-slate-200">
-            <UserRound className="size-5 text-slate-600" />
-          </div>
-          <div>
-            <p className="font-semibold leading-4">Umut</p>
-            <p className="text-xs text-muted-foreground">Local · ~/.eve</p>
-          </div>
+        <div>
+          <p className="font-semibold leading-4">Local</p>
+          <p className="text-xs text-muted-foreground">{config.data?.repository ?? 'repository'}</p>
         </div>
         <div className="flex gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Open repository settings"
-            onClick={() => showNotice(`EVE directory: ${config.data?.eveDir ?? '.eve'}`)}
-          >
-            <Settings className="size-4" />
+          <Button asChild variant="ghost" size="icon" aria-label="Open EVE config">
+            <Link to="/config">
+              <Settings className="size-4" />
+            </Link>
           </Button>
           <Button
             variant="ghost"
@@ -110,14 +89,6 @@ export function Sidebar() {
             onClick={() => document.documentElement.classList.toggle('dark-preview')}
           >
             <Sun className="size-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Account menu"
-            onClick={() => showNotice('Local EVE UI has no account menu in v1.')}
-          >
-            <ChevronDown className="size-4" />
           </Button>
         </div>
       </div>

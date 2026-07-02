@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import { CheckCircle2, ListFilter } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { compactDate, monthYear } from '../format';
 import type { EvolutionSummary } from '../types';
 import { Button } from './ui/button';
 
@@ -9,6 +10,7 @@ export function EvolutionList({ evolutions, selectedId }: { evolutions: Evolutio
   const sorted = useMemo(() => {
     return [...evolutions].sort((left, right) => (ascending ? left.id.localeCompare(right.id) : right.id.localeCompare(left.id)));
   }, [ascending, evolutions]);
+  const groupLabel = monthYear(sorted[0]?.updatedAt || sorted[0]?.createdAt);
 
   return (
     <aside className="sticky top-[76px] h-[calc(100dvh-76px)] overflow-hidden border-r bg-white/72">
@@ -26,9 +28,9 @@ export function EvolutionList({ evolutions, selectedId }: { evolutions: Evolutio
         </Button>
       </div>
       <div className="h-[calc(100%-64px)] overflow-auto px-4 py-5">
-        <p className="mb-4 px-3 text-xs font-medium text-muted-foreground">May 2026</p>
+        <p className="mb-4 px-3 text-xs font-medium text-muted-foreground">{groupLabel}</p>
         <div className="space-y-2">
-          {sorted.map((evolution, index) => (
+          {sorted.map((evolution) => (
             <Link
               key={evolution.id}
               to="/evolutions/$id"
@@ -40,7 +42,7 @@ export function EvolutionList({ evolutions, selectedId }: { evolutions: Evolutio
               <CheckCircle2 className="size-4 text-emerald-600" />
               <span className="min-w-0">
                 <span className="block truncate font-semibold">{evolution.title || 'Untitled Evolution'}</span>
-                <span className="block text-sm text-muted-foreground">{index === 0 ? '2 days ago' : `${index * 3 + 2} days ago`}</span>
+                <span className="block text-sm text-muted-foreground">{compactDate(evolution.updatedAt || evolution.createdAt)}</span>
               </span>
               <span className="font-mono text-sm text-muted-foreground">#{evolution.id.replace('EV-', '')}</span>
             </Link>

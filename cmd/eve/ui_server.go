@@ -62,6 +62,7 @@ type evolutionDetailResponse struct {
 	Evolution *eve.Evolution    `json:"evolution"`
 	Summary   evolutionSummary  `json:"summary"`
 	Sessions  []uiSessionRecord `json:"sessions"`
+	Commits   []uiGitCommit     `json:"commits"`
 	RawJSON   json.RawMessage   `json:"rawJson"`
 }
 
@@ -90,6 +91,17 @@ type uiSessionRecord struct {
 	Source        string            `json:"source,omitempty"`
 	Metadata      map[string]string `json:"metadata,omitempty"`
 	HasTranscript bool              `json:"hasTranscript"`
+	Status        string            `json:"status"`
+	CaptureHint   string            `json:"captureHint"`
+}
+
+type uiGitCommit struct {
+	Hash        string `json:"hash"`
+	ShortHash   string `json:"shortHash"`
+	Subject     string `json:"subject"`
+	AuthorName  string `json:"authorName"`
+	AuthoredAt  string `json:"authoredAt"`
+	CommittedAt string `json:"committedAt"`
 }
 
 type sessionListResponse struct {
@@ -263,6 +275,7 @@ func (server uiServer) handleEvolutionDetail(w http.ResponseWriter, r *http.Requ
 		Evolution: evolution,
 		Summary:   summarizeEvolution(evolution),
 		Sessions:  server.sessionRecords(evolution),
+		Commits:   gitCommits(evolution.Implementation.Commits),
 		RawJSON:   raw,
 	})
 }
@@ -565,13 +578,16 @@ func (server uiServer) sessionRecords(evolution *eve.Evolution) []uiSessionRecor
 			ID:       session.ID,
 			Key:      key,
 			URI:      session.URI,
+			Status:   "reference-only",
 		}
 		if artifact, ok := artifactByKey[key]; ok {
 			record = recordFromArtifact(session, artifact)
 		} else if session.URI != "" && fileExists(filepath.FromSlash(session.URI)) {
 			record.Transcript = session.URI
 			record.HasTranscript = true
+			record.Status = "transcript"
 		}
+		record.CaptureHint = sessionCaptureHint(record.Provider, record.ID)
 		records = append(records, record)
 		seen[key] = true
 	}
@@ -603,7 +619,58 @@ func recordFromArtifact(session eve.Session, artifact sessionArtifact) uiSession
 		Source:        artifact.Source,
 		Metadata:      artifact.Metadata,
 		HasTranscript: artifact.Transcript != "" && fileExists(filepath.FromSlash(artifact.Transcript)),
+		Status:        "transcript",
+		CaptureHint:   sessionCaptureHint(artifact.Provider, artifact.ID),
 	}
+}
+
+func sessionCaptureHint(provider string, id string) string {
+	provider = fallback(provider, "provider")
+	id = fallback(id, "session-id")
+	return fmt.Sprintf("eve add session %s:%s --source <transcript.jsonl|json|md>", provider, id)
+}
+
+func gitCommits(commits []string) []uiGitCommit {
+	out := make([]uiGitCommit, 0, len(commits))
+	for _, commit := range commits {
+		if info, err := gitCommit(commit); err == nil {
+			out = append(out, info)
+			continue
+		}
+		out = append(out, uiGitCommit{
+			Hash:      commit,
+			ShortHash: shortHash(commit),
+			Subject:   "Commit metadata unavailable",
+		})
+	}
+	return out
+}
+
+func gitCommit(commit string) (uiGitCommit, error) {
+	format := "%H%x00%h%x00%s%x00%an%x00%aI%x00%cI"
+	output, err := exec.Command("git", "show", "-s", "--format="+format, commit).Output()
+	if err != nil {
+		return uiGitCommit{}, err
+	}
+	parts := strings.Split(strings.TrimSpace(string(output)), "\x00")
+	if len(parts) < 6 {
+		return uiGitCommit{}, fmt.Errorf("unexpected git show output")
+	}
+	return uiGitCommit{
+		Hash:        parts[0],
+		ShortHash:   parts[1],
+		Subject:     parts[2],
+		AuthorName:  parts[3],
+		AuthoredAt:  parts[4],
+		CommittedAt: parts[5],
+	}, nil
+}
+
+func shortHash(commit string) string {
+	if len(commit) <= 12 {
+		return commit
+	}
+	return commit[:12]
 }
 
 func (server uiServer) searchMatches(evolution *eve.Evolution, query string) []string {

@@ -17,7 +17,6 @@ import { RelatedEvolutions } from '../components/related-evolutions';
 import { RisksCard } from '../components/risks-card';
 import { StatusBadge } from '../components/status-badge';
 import { VerificationCard } from '../components/verification-card';
-import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 
 export function EvolutionDetailPage() {
@@ -52,11 +51,7 @@ export function EvolutionDetailPage() {
                   by <span className="font-medium text-blue-700">{detail.data.summary.sessionProviders.join(' & ') || 'EVE'}</span>
                 </p>
                 <p className="mt-5 max-w-3xl text-pretty">{detail.data.summary.outcome || 'No outcome recorded.'}</p>
-                <div className="mt-6 flex flex-wrap items-center gap-2">
-                  <Badge variant="secondary">Relationships:</Badge>
-                  <Badge variant="outline">Extends #38</Badge>
-                  <Badge variant="outline">Corrected by #57</Badge>
-                </div>
+                <RelationshipChips relationships={detail.data.evolution.relationships} />
               </div>
             </div>
             {snapshot.data ? (
@@ -80,7 +75,7 @@ export function EvolutionDetailPage() {
           <section className="grid grid-cols-3 gap-4">
             <DecisionsCard decisions={detail.data.evolution.decisions} evolutionId={detail.data.summary.id} />
             <RisksCard risks={detail.data.evolution.risks} evolutionId={detail.data.summary.id} />
-            <ImplementationCard evolution={detail.data.evolution} />
+            <ImplementationCard evolution={detail.data.evolution} commits={detail.data.commits} />
           </section>
           <section className="grid grid-cols-[minmax(0,1fr)_450px] gap-4">
             <JourneyCard detail={detail.data} />
@@ -103,5 +98,25 @@ export function EvolutionDetailPage() {
       ) : null}
       {!detail.isLoading && !detail.error && !detail.data ? <EmptyState title="Evolution not found" detail={`${id} is not available.`} /> : null}
     </EvolutionShell>
+  );
+}
+
+function RelationshipChips({ relationships }: { relationships: Record<string, string[] | undefined> }) {
+  const entries = Object.entries(relationships)
+    .flatMap(([kind, values]) => (values ?? []).map((value) => [kind.replaceAll('_', ' '), value] as const));
+
+  if (entries.length === 0) {
+    return <p className="mt-6 text-sm text-muted-foreground">No relationships recorded.</p>;
+  }
+
+  return (
+    <div className="mt-6 flex flex-wrap items-center gap-2">
+      <span className="rounded-md bg-secondary px-2 py-0.5 text-xs font-medium">Relationships:</span>
+      {entries.map(([kind, value]) => (
+        <span key={`${kind}-${value}`} className="rounded-md border px-2 py-0.5 text-xs capitalize">
+          {kind} {value}
+        </span>
+      ))}
+    </div>
   );
 }

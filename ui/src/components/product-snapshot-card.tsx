@@ -1,4 +1,4 @@
-import { Copy, ImageIcon, Info } from 'lucide-react';
+import { Copy, ImageIcon } from 'lucide-react';
 import { useState } from 'react';
 import type { DetailResponse, SnapshotResponse } from '../types';
 import { shortCommit } from '../format';
@@ -40,18 +40,13 @@ export function ProductSnapshotCard({ detail, snapshot }: { detail: DetailRespon
           </dd>
           <dt className="text-muted-foreground">Repository</dt>
           <dd className="font-semibold">{snapshot?.repository ?? Object.keys(detail.evolution.implementation.repositories ?? {})[0] ?? 'eve'}</dd>
-          <dt className="text-muted-foreground">Branch</dt>
-          <dd className="flex min-w-0 items-center gap-2">
-            <span className="rounded-md bg-blue-50 px-2 py-1 text-blue-700">Snapshot active</span>
-            <Info className="size-3.5 text-muted-foreground" />
-          </dd>
           <dt className="text-muted-foreground">Committed</dt>
           <dd>{detail.summary.updatedAt ? new Date(detail.summary.updatedAt).toLocaleString() : 'Unknown'}</dd>
         </dl>
       </CardContent>
       <CardFooter className="border-t bg-slate-50/70 text-xs text-muted-foreground">
         <span className="mr-3 size-2 rounded-full bg-emerald-500" />
-        You are viewing this snapshot. Your working tree is at this state.
+        Snapshot commit recorded in <span className="ml-1 font-mono">implementation.snapshot</span>.
       </CardFooter>
     </Card>
   );

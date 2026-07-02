@@ -84,12 +84,24 @@ export type SessionRecord = {
   attachedAt?: string;
   source?: string;
   hasTranscript: boolean;
+  status: string;
+  captureHint: string;
+};
+
+export type GitCommit = {
+  hash: string;
+  shortHash: string;
+  subject: string;
+  authorName: string;
+  authoredAt: string;
+  committedAt: string;
 };
 
 export type DetailResponse = {
   evolution: Evolution;
   summary: EvolutionSummary;
   sessions: SessionRecord[];
+  commits: GitCommit[];
   rawJson: unknown;
 };
 

@@ -20,11 +20,30 @@ export function RawJsonPage() {
             <p className="font-mono text-sm font-semibold text-blue-700">{id}</p>
             <h1 className="mt-2 text-3xl font-semibold text-balance">Raw canonical JSON</h1>
           </div>
+          <div className="grid grid-cols-2 gap-4">
+            <JsonSection id="verification" title="Verification" value={detail.data.evolution.verification} />
+            <JsonSection id="decisions" title="Decisions" value={detail.data.evolution.decisions} />
+            <JsonSection id="risks" title="Risks" value={detail.data.evolution.risks} />
+            <JsonSection id="implementation" title="Implementation" value={detail.data.evolution.implementation} />
+            <JsonSection id="relationships" title="Relationships" value={detail.data.evolution.relationships} />
+            <JsonSection id="sessions" title="Sessions" value={{ references: detail.data.evolution.sessions, artifacts: detail.data.sessions }} />
+          </div>
           <pre className="overflow-auto rounded-lg border bg-slate-950 p-6 font-mono text-xs text-white">
             {JSON.stringify(detail.data.rawJson, null, 2)}
           </pre>
         </div>
       ) : null}
     </EvolutionShell>
+  );
+}
+
+function JsonSection({ id, title, value }: { id: string; title: string; value: unknown }) {
+  return (
+    <section id={id} className="scroll-mt-24 rounded-lg border bg-white p-5">
+      <h2 className="text-sm font-semibold">{title}</h2>
+      <pre className="mt-3 max-h-56 overflow-auto rounded-md bg-slate-950 p-4 font-mono text-xs text-white">
+        {JSON.stringify(value, null, 2)}
+      </pre>
+    </section>
   );
 }

@@ -1,16 +1,11 @@
 import { Link } from '@tanstack/react-router';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight, FileText, Sparkles } from 'lucide-react';
 import type { DetailResponse } from '../types';
 import { Card, CardContent, CardHeader } from './ui/card';
 
 export function JourneyCard({ detail }: { detail: DetailResponse }) {
-  const sessions = detail.sessions.length > 0 ? detail.sessions : detail.evolution.sessions.map((session) => ({
-    provider: session.provider ?? 'agent',
-    id: session.id ?? 'session',
-    key: `${session.provider}:${session.id}`,
-    sanitized: false,
-    hasTranscript: false
-  }));
+  const sessions = detail.sessions;
+  const timeline = detail.evolution.timeline;
 
   return (
     <Card>
@@ -22,18 +17,30 @@ export function JourneyCard({ detail }: { detail: DetailResponse }) {
       </CardHeader>
       <CardContent>
         <div className="space-y-5">
-          {sessions.slice(0, 4).map((session, index) => (
-            <div key={session.key} className="grid grid-cols-[24px_36px_96px_minmax(0,1fr)_120px_84px] items-center gap-4 text-xs">
+          {sessions.length > 0 ? sessions.map((session, index) => (
+            <div key={session.key} className="grid grid-cols-[24px_36px_96px_minmax(0,1fr)] items-center gap-4 text-xs">
               <span className="flex size-6 items-center justify-center rounded-full border bg-white font-mono text-muted-foreground">{index + 1}</span>
-              <span className="flex size-8 items-center justify-center rounded-lg bg-violet-50 text-violet-700">✦</span>
-              <span className="font-semibold capitalize">{session.provider}</span>
-              <span className="truncate text-muted-foreground">
-                {index === 0 ? 'Defined architecture and product state.' : 'Implemented and verified snapshot behavior.'}
+              <span className="flex size-8 items-center justify-center rounded-lg bg-violet-50 text-violet-700">
+                <FileText className="size-4" />
               </span>
-              <span className="text-muted-foreground">May {12 + index}, 9:{14 + index} AM</span>
-              <span className="text-muted-foreground">{17 + index * 14} messages</span>
+              <span className="font-semibold capitalize">{session.provider}</span>
+              <span className="min-w-0">
+                <span className="block truncate text-muted-foreground">
+                  {session.hasTranscript ? `Transcript: ${session.title || session.id}` : `Reference only: ${session.id}`}
+                </span>
+                {!session.hasTranscript ? (
+                  <code className="mt-1 block truncate font-mono text-[11px] text-muted-foreground">{session.captureHint}</code>
+                ) : null}
+              </span>
             </div>
-          ))}
+          )) : (
+            <p className="text-sm text-muted-foreground">No AI sessions are recorded for this Evolution.</p>
+          )}
+          {sessions.length === 0 && timeline.length > 0 ? (
+            <div className="rounded-md border bg-slate-50 p-3 text-xs text-muted-foreground">
+              Timeline entries are available, but no session provider/id was attached.
+            </div>
+          ) : null}
         </div>
         {detail.sessions.find((session) => session.hasTranscript) ? (
           <Link
