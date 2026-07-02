@@ -69,6 +69,8 @@ func runWithIO(args []string, stdin io.Reader, stdout io.Writer, stderr io.Write
 		return runGraph(args[1:], stdout, stderr)
 	case "search":
 		return runSearch(args[1:], stdout, stderr)
+	case "ui":
+		return runUI(args[1:], stdout, stderr)
 	case "validate":
 		return runValidate(args[1:], stdout, stderr)
 	case "canonicalize":
@@ -840,6 +842,7 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  eve timeline EV-001")
 	fmt.Fprintln(w, "  eve graph [EV-001]")
 	fmt.Fprintln(w, "  eve search <query>")
+	fmt.Fprintln(w, "  eve ui [--addr localhost:4317] [--repo name] [--open=false]")
 	fmt.Fprintln(w, "  eve validate <file...>")
 	fmt.Fprintln(w, "  eve canonicalize <file>")
 	fmt.Fprintln(w, "  eve version")

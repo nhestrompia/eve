@@ -3,6 +3,9 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -392,6 +395,116 @@ func TestCheckoutRestoresCleanRepository(t *testing.T) {
 	}
 }
 
+func TestUIAPIServesStaticAndEvolutionData(t *testing.T) {
+	eveDir := filepath.Join(t.TempDir(), ".eve")
+	t.Setenv("EVE_DIR", eveDir)
+	var stdout, stderr bytes.Buffer
+	mustRun(t, []string{"init"}, &stdout, &stderr)
+	ev := sampleEvolution("EV-001", "Git-like product staging")
+	ev.Outcome = "Product history is browsable as snapshots."
+	saveEvolutionJSON(t, filepath.Join(eveDir, "evolutions", "EV-001.json"), ev)
+
+	handler := newUIServer(newStore(), "", "localhost:0").routes()
+
+	static := httptest.NewRecorder()
+	handler.ServeHTTP(static, httptest.NewRequest(http.MethodGet, "/", nil))
+	if static.Code != http.StatusOK {
+		t.Fatalf("static status = %d, want 200", static.Code)
+	}
+	if !strings.Contains(static.Body.String(), "EVE UI") {
+		t.Fatalf("static body = %q, want EVE UI", static.Body.String())
+	}
+
+	var rows []evolutionSummary
+	requestJSON(t, handler, http.MethodGet, "/api/evolutions", nil, &rows)
+	if len(rows) != 1 || rows[0].ID != "EV-001" || rows[0].Snapshot == "" {
+		t.Fatalf("timeline rows = %#v, want EV-001 with snapshot", rows)
+	}
+
+	var detail evolutionDetailResponse
+	requestJSON(t, handler, http.MethodGet, "/api/evolutions/EV-001", nil, &detail)
+	if detail.Evolution.Metadata.Title != "Git-like product staging" || len(detail.RawJSON) == 0 {
+		t.Fatalf("detail = %#v, want evolution and raw JSON", detail)
+	}
+
+	var snapshot snapshotResponse
+	requestJSON(t, handler, http.MethodGet, "/api/evolutions/EV-001/snapshot", nil, &snapshot)
+	if snapshot.CheckoutCommand != "eve checkout EV-001" || snapshot.Commit == "" {
+		t.Fatalf("snapshot = %#v, want checkout command and commit", snapshot)
+	}
+
+	var search searchResponse
+	requestJSON(t, handler, http.MethodGet, "/api/search?q=snapshots", nil, &search)
+	if len(search.Results) != 1 || search.Results[0].Evolution.ID != "EV-001" {
+		t.Fatalf("search = %#v, want EV-001", search)
+	}
+}
+
+func TestUIAPISessionTranscript(t *testing.T) {
+	eveDir := filepath.Join(t.TempDir(), ".eve")
+	t.Setenv("EVE_DIR", eveDir)
+	var stdout, stderr bytes.Buffer
+	mustRun(t, []string{"init"}, &stdout, &stderr)
+	ev := sampleEvolution("EV-001", "Session Reader")
+	saveEvolutionJSON(t, filepath.Join(eveDir, "evolutions", "EV-001.json"), ev)
+	store := newStore()
+	_, err := store.writeSessionArtifacts(
+		store.sessionDir("EV-001"),
+		store.sessionManifestPath("EV-001"),
+		"EV-001",
+		"codex",
+		"session_912",
+		"Implementation Session",
+		"md",
+		[]byte("# Implementation Session\n\nVerified transcript search.\n"),
+		true,
+		"fixture.md",
+	)
+	if err != nil {
+		t.Fatalf("write session artifacts: %v", err)
+	}
+
+	handler := newUIServer(newStore(), "", "localhost:0").routes()
+	var sessions sessionListResponse
+	requestJSON(t, handler, http.MethodGet, "/api/evolutions/EV-001/sessions", nil, &sessions)
+	if len(sessions.Sessions) != 1 || !sessions.Sessions[0].HasTranscript {
+		t.Fatalf("sessions = %#v, want transcript", sessions)
+	}
+
+	var transcript sessionTranscriptResponse
+	requestJSON(t, handler, http.MethodGet, "/api/evolutions/EV-001/sessions/codex%3Asession_912", nil, &transcript)
+	if !strings.Contains(transcript.Markdown, "Verified transcript search.") {
+		t.Fatalf("transcript = %#v, want markdown", transcript)
+	}
+
+	var search searchResponse
+	requestJSON(t, handler, http.MethodGet, "/api/search?q=transcript", nil, &search)
+	if len(search.Results) != 1 {
+		t.Fatalf("search = %#v, want transcript match", search)
+	}
+}
+
+func TestUIAPICheckoutReportsDirtyWorkingTree(t *testing.T) {
+	repo := initTempGitRepo(t)
+	t.Chdir(repo)
+	if err := os.WriteFile(filepath.Join(repo, "dirty.txt"), []byte("dirty"), 0o644); err != nil {
+		t.Fatalf("write dirty file: %v", err)
+	}
+
+	eveDir := filepath.Join(t.TempDir(), ".eve")
+	t.Setenv("EVE_DIR", eveDir)
+	var stdout, stderr bytes.Buffer
+	mustRun(t, []string{"init"}, &stdout, &stderr)
+	writeCommittedEvolution(t, eveDir, "EV-001", "Dirty Checkout")
+
+	handler := newUIServer(newStore(), "", "localhost:0").routes()
+	var checkout checkoutResponse
+	requestJSON(t, handler, http.MethodPost, "/api/evolutions/EV-001/checkout", nil, &checkout)
+	if checkout.ExitCode != 1 || !strings.Contains(checkout.Stderr, "Working tree has uncommitted changes.") {
+		t.Fatalf("checkout = %#v, want dirty-tree failure", checkout)
+	}
+}
+
 func mustRun(t *testing.T, args []string, stdout *bytes.Buffer, stderr *bytes.Buffer) {
 	t.Helper()
 	stdout.Reset()
@@ -399,6 +512,18 @@ func mustRun(t *testing.T, args []string, stdout *bytes.Buffer, stderr *bytes.Bu
 	code := run(args, stdout, stderr)
 	if code != 0 {
 		t.Fatalf("%v exit code = %d, stderr = %s", args, code, stderr.String())
+	}
+}
+
+func requestJSON(t *testing.T, handler http.Handler, method string, target string, body io.Reader, out any) {
+	t.Helper()
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, httptest.NewRequest(method, target, body))
+	if recorder.Code < 200 || recorder.Code >= 300 {
+		t.Fatalf("%s %s status = %d; body = %s", method, target, recorder.Code, recorder.Body.String())
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), out); err != nil {
+		t.Fatalf("decode %s %s: %v; body = %s", method, target, err, recorder.Body.String())
 	}
 }
 

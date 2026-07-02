@@ -1,2 +1,4 @@
 .eve/staged/
 .eve/public/
+ui/dist/
+ui/node_modules/
