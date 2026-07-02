@@ -1,6 +1,7 @@
 import { Copy, Download, Link as LinkIcon, MoreHorizontal, Terminal } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
+import { Link } from '@tanstack/react-router';
 import { api } from '../api';
 import type { CheckoutResponse, SnapshotResponse } from '../types';
 import {
@@ -18,6 +19,7 @@ import { Button } from './ui/button';
 
 export function CheckoutActions({ snapshot }: { snapshot: SnapshotResponse }) {
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const checkout = useMutation({ mutationFn: () => api.checkout(snapshot.id) });
 
   const copy = async () => {
@@ -26,15 +28,23 @@ export function CheckoutActions({ snapshot }: { snapshot: SnapshotResponse }) {
     window.setTimeout(() => setCopied(false), 1400);
   };
 
+  const copyLink = async () => {
+    await navigator.clipboard.writeText(`${window.location.origin}/evolutions/${snapshot.id}/snapshot`);
+    setLinkCopied(true);
+    window.setTimeout(() => setLinkCopied(false), 1400);
+  };
+
   return (
     <div className="flex flex-col items-end gap-4">
       <div className="flex gap-3">
-        <Button variant="outline" className="gap-2">
+        <Button variant="outline" className="gap-2" onClick={copyLink}>
           <LinkIcon className="size-4" />
-          Copy link
+          {linkCopied ? 'Copied' : 'Copy link'}
         </Button>
-        <Button variant="outline" size="icon" aria-label="More snapshot actions">
-          <MoreHorizontal className="size-4" />
+        <Button asChild variant="outline" size="icon" aria-label="Open raw JSON">
+          <Link to="/json/$id" params={{ id: snapshot.id }}>
+            <MoreHorizontal className="size-4" />
+          </Link>
         </Button>
       </div>
       <AlertDialog>

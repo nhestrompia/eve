@@ -63,8 +63,10 @@ export function EvolutionDetailPage() {
               <CheckoutActions snapshot={snapshot.data} />
             ) : (
               <div className="flex justify-end">
-                <Button variant="outline" size="icon" aria-label="More actions">
-                  <MoreHorizontal className="size-4" />
+                <Button asChild variant="outline" size="icon" aria-label="Open raw JSON">
+                  <Link to="/json/$id" params={{ id }}>
+                    <MoreHorizontal className="size-4" />
+                  </Link>
                 </Button>
               </div>
             )}
@@ -73,11 +75,11 @@ export function EvolutionDetailPage() {
           <section className="grid grid-cols-3 gap-4">
             <ProductSnapshotCard detail={detail.data} snapshot={snapshot.data} />
             <BehaviorCard behavior={detail.data.evolution.behavior} />
-            <VerificationCard values={detail.data.evolution.verification} />
+            <VerificationCard values={detail.data.evolution.verification} evolutionId={detail.data.summary.id} />
           </section>
           <section className="grid grid-cols-3 gap-4">
-            <DecisionsCard decisions={detail.data.evolution.decisions} />
-            <RisksCard risks={detail.data.evolution.risks} />
+            <DecisionsCard decisions={detail.data.evolution.decisions} evolutionId={detail.data.summary.id} />
+            <RisksCard risks={detail.data.evolution.risks} evolutionId={detail.data.summary.id} />
             <ImplementationCard evolution={detail.data.evolution} />
           </section>
           <section className="grid grid-cols-[minmax(0,1fr)_450px] gap-4">

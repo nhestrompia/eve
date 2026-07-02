@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router';
 import { ArrowRight, Code2 } from 'lucide-react';
 import type { Evolution } from '../types';
 import { shortCommit } from '../format';
@@ -24,9 +25,14 @@ export function ImplementationCard({ evolution }: { evolution: Evolution }) {
           ))}
           {commits.length === 0 ? <p className="text-muted-foreground">No contributed commits recorded.</p> : null}
         </div>
-        <a className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-blue-700" href="#commits">
+        <Link
+          className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-blue-700"
+          to="/json/$id"
+          params={{ id: evolution.metadata.id ?? '' }}
+          hash="implementation"
+        >
           View {Math.max(commits.length - 3, 0)} more commits <ArrowRight className="size-4" />
-        </a>
+        </Link>
       </CardContent>
     </Card>
   );

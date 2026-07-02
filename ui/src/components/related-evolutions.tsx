@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router';
 import { ArrowRight, GitBranch } from 'lucide-react';
 import type { Evolution } from '../types';
 import { Card, CardContent, CardHeader } from './ui/card';
@@ -19,9 +20,14 @@ export function RelatedEvolutions({ evolution }: { evolution: Evolution }) {
           <GitBranch className="size-4 text-slate-600" />
           <h2 className="text-sm font-semibold text-balance">Related Evolutions</h2>
         </div>
-        <a className="inline-flex items-center gap-2 text-sm font-medium text-blue-700" href="#relationships">
+        <Link
+          className="inline-flex items-center gap-2 text-sm font-medium text-blue-700"
+          to="/json/$id"
+          params={{ id: evolution.metadata.id ?? '' }}
+          hash="relationships"
+        >
           View all relationships <ArrowRight className="size-4" />
-        </a>
+        </Link>
       </CardHeader>
       <CardContent className="grid grid-cols-4 gap-6">
         {items.map(([label, value]) => (

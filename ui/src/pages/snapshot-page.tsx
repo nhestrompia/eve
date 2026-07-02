@@ -33,7 +33,7 @@ export function SnapshotPage() {
           </section>
           <section className="grid grid-cols-[minmax(0,1fr)_450px] gap-4">
             <BehaviorCard behavior={snapshot.data.behavior} />
-            <VerificationCard values={snapshot.data.verification} />
+            <VerificationCard values={snapshot.data.verification} evolutionId={snapshot.data.id} />
           </section>
         </div>
       ) : null}

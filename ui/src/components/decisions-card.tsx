@@ -1,8 +1,9 @@
+import { Link } from '@tanstack/react-router';
 import { ArrowRight, Scale } from 'lucide-react';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { SectionHeading } from './section-heading';
 
-export function DecisionsCard({ decisions }: { decisions: unknown[] }) {
+export function DecisionsCard({ decisions, evolutionId }: { decisions: unknown[]; evolutionId: string }) {
   const first = decisions[0] as Record<string, unknown> | undefined;
 
   return (
@@ -26,9 +27,14 @@ export function DecisionsCard({ decisions }: { decisions: unknown[] }) {
             {String(first?.tradeoff ?? 'Implementation details remain available, but they are secondary to behavior.')}
           </p>
         </div>
-        <a className="inline-flex items-center gap-2 text-sm font-medium text-blue-700" href="#decisions">
+        <Link
+          className="inline-flex items-center gap-2 text-sm font-medium text-blue-700"
+          to="/json/$id"
+          params={{ id: evolutionId }}
+          hash="decisions"
+        >
           View all decisions <ArrowRight className="size-4" />
-        </a>
+        </Link>
       </CardContent>
     </Card>
   );

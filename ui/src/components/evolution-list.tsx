@@ -1,21 +1,34 @@
 import { Link } from '@tanstack/react-router';
 import { CheckCircle2, ListFilter } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import type { EvolutionSummary } from '../types';
 import { Button } from './ui/button';
 
 export function EvolutionList({ evolutions, selectedId }: { evolutions: EvolutionSummary[]; selectedId?: string }) {
+  const [ascending, setAscending] = useState(false);
+  const sorted = useMemo(() => {
+    return [...evolutions].sort((left, right) => (ascending ? left.id.localeCompare(right.id) : right.id.localeCompare(left.id)));
+  }, [ascending, evolutions]);
+
   return (
     <aside className="sticky top-[76px] h-[calc(100dvh-76px)] overflow-hidden border-r bg-white/72">
       <div className="flex h-16 items-center justify-between border-b px-7">
         <h2 className="font-semibold">{evolutions.length} {evolutions.length === 1 ? 'Evolution' : 'Evolutions'}</h2>
-        <Button variant="ghost" size="icon" aria-label="Filter evolutions">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={ascending ? 'Show newest Evolutions first' : 'Show oldest Evolutions first'}
+          title={ascending ? 'Newest first' : 'Oldest first'}
+          aria-pressed={ascending}
+          onClick={() => setAscending((value) => !value)}
+        >
           <ListFilter className="size-4" />
         </Button>
       </div>
       <div className="h-[calc(100%-64px)] overflow-auto px-4 py-5">
         <p className="mb-4 px-3 text-xs font-medium text-muted-foreground">May 2026</p>
         <div className="space-y-2">
-          {evolutions.map((evolution, index) => (
+          {sorted.map((evolution, index) => (
             <Link
               key={evolution.id}
               to="/evolutions/$id"

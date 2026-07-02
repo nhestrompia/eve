@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import type { DetailResponse } from '../types';
 import { Card, CardContent, CardHeader } from './ui/card';
@@ -34,9 +35,27 @@ export function JourneyCard({ detail }: { detail: DetailResponse }) {
             </div>
           ))}
         </div>
-        <a className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-blue-700" href="#sessions">
-          View full conversation threads <ArrowRight className="size-4" />
-        </a>
+        {detail.sessions.find((session) => session.hasTranscript) ? (
+          <Link
+            className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-blue-700"
+            to="/evolutions/$id/session/$sessionId"
+            params={{
+              id: detail.summary.id,
+              sessionId: detail.sessions.find((session) => session.hasTranscript)?.key ?? ''
+            }}
+          >
+            View full conversation threads <ArrowRight className="size-4" />
+          </Link>
+        ) : (
+          <Link
+            className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-blue-700"
+            to="/json/$id"
+            params={{ id: detail.summary.id }}
+            hash="sessions"
+          >
+            View session references <ArrowRight className="size-4" />
+          </Link>
+        )}
       </CardContent>
     </Card>
   );

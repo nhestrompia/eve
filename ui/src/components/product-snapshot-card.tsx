@@ -1,4 +1,5 @@
 import { Copy, ImageIcon, Info } from 'lucide-react';
+import { useState } from 'react';
 import type { DetailResponse, SnapshotResponse } from '../types';
 import { shortCommit } from '../format';
 import { SectionHeading } from './section-heading';
@@ -7,6 +8,14 @@ import { Card, CardContent, CardFooter, CardHeader } from './ui/card';
 
 export function ProductSnapshotCard({ detail, snapshot }: { detail: DetailResponse; snapshot?: SnapshotResponse }) {
   const commit = snapshot?.commit ?? detail.summary.snapshot;
+  const [copied, setCopied] = useState(false);
+
+  const copyCommit = async () => {
+    if (!commit) return;
+    await navigator.clipboard.writeText(commit);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1400);
+  };
 
   return (
     <Card>
@@ -18,7 +27,14 @@ export function ProductSnapshotCard({ detail, snapshot }: { detail: DetailRespon
           <dt className="text-muted-foreground">Snapshot</dt>
           <dd className="flex min-w-0 items-center gap-2">
             <code className="max-w-[94px] truncate rounded-md bg-slate-100 px-2 py-1 font-mono text-xs">{shortCommit(commit)}</code>
-            <Button variant="ghost" size="icon" className="size-7 shrink-0" aria-label="Copy snapshot hash">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-7 shrink-0"
+              aria-label={copied ? 'Snapshot hash copied' : 'Copy snapshot hash'}
+              title={copied ? 'Copied' : 'Copy snapshot hash'}
+              onClick={copyCommit}
+            >
               <Copy className="size-3.5" />
             </Button>
           </dd>

@@ -1,9 +1,10 @@
+import { Link } from '@tanstack/react-router';
 import { ArrowRight, CheckCircle2, ShieldCheck, XCircle, Circle } from 'lucide-react';
 import type { Verification } from '../types';
 import { SectionHeading } from './section-heading';
 import { Card, CardContent, CardHeader } from './ui/card';
 
-export function VerificationCard({ values }: { values: Verification[] }) {
+export function VerificationCard({ values, evolutionId }: { values: Verification[]; evolutionId: string }) {
   return (
     <Card>
       <CardHeader>
@@ -26,9 +27,14 @@ export function VerificationCard({ values }: { values: Verification[] }) {
             );
           })}
         </ul>
-        <a className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-blue-700" href="#verification">
+        <Link
+          className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-blue-700"
+          to="/json/$id"
+          params={{ id: evolutionId }}
+          hash="verification"
+        >
           View all results <ArrowRight className="size-4" />
-        </a>
+        </Link>
       </CardContent>
     </Card>
   );
