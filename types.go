@@ -91,6 +91,7 @@ type Relationships struct {
 
 type Implementation struct {
 	Repositories map[string]Repository `json:"repositories,omitempty"`
+	Snapshot     string                `json:"snapshot,omitempty"`
 	Commits      []string              `json:"commits,omitempty"`
 	PullRequests []string              `json:"pull_requests,omitempty"`
 	FilesChanged int                   `json:"files_changed,omitempty"`

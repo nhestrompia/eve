@@ -274,6 +274,10 @@
             "$ref": "#/$defs/repository"
           }
         },
+        "snapshot": {
+          "type": "string",
+          "description": "Resolved Git commit SHA representing the repository state after this Evolution became true."
+        },
         "commits": {
           "$ref": "#/$defs/id_list"
         },
