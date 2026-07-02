@@ -23,11 +23,10 @@ export function RisksCard({ risks, evolutionId }: { risks: unknown[]; evolutionI
         )}
         <Link
           className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-blue-700"
-          to="/json/$id"
+          to="/evolutions/$id/risks"
           params={{ id: evolutionId }}
-          hash="risks"
         >
-          Open risks JSON <ArrowRight className="size-4" />
+          View risks <ArrowRight className="size-4" />
         </Link>
       </CardContent>
     </Card>

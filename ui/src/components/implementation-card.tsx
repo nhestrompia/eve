@@ -37,11 +37,10 @@ export function ImplementationCard({ evolution, commits }: { evolution: Evolutio
         </div>
         <Link
           className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-blue-700"
-          to="/json/$id"
+          to="/evolutions/$id/implementation"
           params={{ id: evolution.metadata.id ?? '' }}
-          hash="implementation"
         >
-          Open implementation JSON <ArrowRight className="size-4" />
+          View implementation <ArrowRight className="size-4" />
         </Link>
       </CardContent>
     </Card>

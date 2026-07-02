@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"embed"
 	"encoding/json"
@@ -17,6 +18,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/nhestrompia/eve"
 )
@@ -62,6 +64,7 @@ type evolutionDetailResponse struct {
 	Evolution *eve.Evolution    `json:"evolution"`
 	Summary   evolutionSummary  `json:"summary"`
 	Sessions  []uiSessionRecord `json:"sessions"`
+	Providers []uiProviderInfo  `json:"providers"`
 	Commits   []uiGitCommit     `json:"commits"`
 	RawJSON   json.RawMessage   `json:"rawJson"`
 }
@@ -79,6 +82,7 @@ type snapshotResponse struct {
 
 type uiSessionRecord struct {
 	Provider      string            `json:"provider"`
+	ProviderName  string            `json:"providerName"`
 	ID            string            `json:"id"`
 	Key           string            `json:"key"`
 	URI           string            `json:"uri,omitempty"`
@@ -93,6 +97,36 @@ type uiSessionRecord struct {
 	HasTranscript bool              `json:"hasTranscript"`
 	Status        string            `json:"status"`
 	CaptureHint   string            `json:"captureHint"`
+	LocalSources  []uiSessionSource `json:"localSources"`
+	RootsChecked  []string          `json:"rootsChecked"`
+	Preview       uiSessionPreview  `json:"preview"`
+}
+
+type uiSessionSource struct {
+	Path       string `json:"path"`
+	Format     string `json:"format"`
+	Size       int64  `json:"size"`
+	ModifiedAt string `json:"modifiedAt"`
+}
+
+type uiSessionPreview struct {
+	EventCount     int      `json:"eventCount"`
+	MessageCount   int      `json:"messageCount"`
+	UserMessages   int      `json:"userMessages"`
+	AgentMessages  int      `json:"agentMessages"`
+	ToolCalls      int      `json:"toolCalls"`
+	FirstTimestamp string   `json:"firstTimestamp,omitempty"`
+	LastTimestamp  string   `json:"lastTimestamp,omitempty"`
+	Headings       []string `json:"headings,omitempty"`
+}
+
+type uiProviderInfo struct {
+	Provider      string   `json:"provider"`
+	Name          string   `json:"name"`
+	Roots         []string `json:"roots"`
+	Available     bool     `json:"available"`
+	ImportCommand string   `json:"importCommand"`
+	Displays      []string `json:"displays"`
 }
 
 type uiGitCommit struct {
@@ -107,6 +141,7 @@ type uiGitCommit struct {
 type sessionListResponse struct {
 	EvolutionID string            `json:"evolutionId"`
 	Sessions    []uiSessionRecord `json:"sessions"`
+	Providers   []uiProviderInfo  `json:"providers"`
 }
 
 type sessionTranscriptResponse struct {
@@ -275,6 +310,7 @@ func (server uiServer) handleEvolutionDetail(w http.ResponseWriter, r *http.Requ
 		Evolution: evolution,
 		Summary:   summarizeEvolution(evolution),
 		Sessions:  server.sessionRecords(evolution),
+		Providers: providerInfos(),
 		Commits:   gitCommits(evolution.Implementation.Commits),
 		RawJSON:   raw,
 	})
@@ -320,6 +356,7 @@ func (server uiServer) handleSessions(w http.ResponseWriter, r *http.Request, id
 	writeJSON(w, http.StatusOK, sessionListResponse{
 		EvolutionID: evolution.Metadata.ID,
 		Sessions:    server.sessionRecords(evolution),
+		Providers:   providerInfos(),
 	})
 }
 
@@ -574,11 +611,12 @@ func (server uiServer) sessionRecords(evolution *eve.Evolution) []uiSessionRecor
 	for _, session := range evolution.Sessions {
 		key := sessionRecordKey(session.Provider, session.ID)
 		record := uiSessionRecord{
-			Provider: session.Provider,
-			ID:       session.ID,
-			Key:      key,
-			URI:      session.URI,
-			Status:   "reference-only",
+			Provider:     session.Provider,
+			ProviderName: providerDisplayName(session.Provider),
+			ID:           session.ID,
+			Key:          key,
+			URI:          session.URI,
+			Status:       "reference-only",
 		}
 		if artifact, ok := artifactByKey[key]; ok {
 			record = recordFromArtifact(session, artifact)
@@ -586,8 +624,11 @@ func (server uiServer) sessionRecords(evolution *eve.Evolution) []uiSessionRecor
 			record.Transcript = session.URI
 			record.HasTranscript = true
 			record.Status = "transcript"
+			record.Preview = previewSessionFile(filepath.FromSlash(session.URI))
 		}
 		record.CaptureHint = sessionCaptureHint(record.Provider, record.ID)
+		record.RootsChecked = providerRoots(record.Provider)
+		record.LocalSources = discoverSessionSources(record.Provider, record.ID)
 		records = append(records, record)
 		seen[key] = true
 	}
@@ -607,6 +648,7 @@ func (server uiServer) sessionRecords(evolution *eve.Evolution) []uiSessionRecor
 func recordFromArtifact(session eve.Session, artifact sessionArtifact) uiSessionRecord {
 	return uiSessionRecord{
 		Provider:      artifact.Provider,
+		ProviderName:  providerDisplayName(artifact.Provider),
 		ID:            artifact.ID,
 		Key:           sessionRecordKey(artifact.Provider, artifact.ID),
 		URI:           session.URI,
@@ -621,6 +663,9 @@ func recordFromArtifact(session eve.Session, artifact sessionArtifact) uiSession
 		HasTranscript: artifact.Transcript != "" && fileExists(filepath.FromSlash(artifact.Transcript)),
 		Status:        "transcript",
 		CaptureHint:   sessionCaptureHint(artifact.Provider, artifact.ID),
+		RootsChecked:  providerRoots(artifact.Provider),
+		LocalSources:  discoverSessionSources(artifact.Provider, artifact.ID),
+		Preview:       previewSessionFile(filepath.FromSlash(artifact.Transcript)),
 	}
 }
 
@@ -628,6 +673,197 @@ func sessionCaptureHint(provider string, id string) string {
 	provider = fallback(provider, "provider")
 	id = fallback(id, "session-id")
 	return fmt.Sprintf("eve add session %s:%s --source <transcript.jsonl|json|md>", provider, id)
+}
+
+func providerInfos() []uiProviderInfo {
+	providers := []string{"codex", "claude", "opencode", "pi"}
+	infos := make([]uiProviderInfo, 0, len(providers))
+	for _, provider := range providers {
+		roots := providerRoots(provider)
+		available := false
+		for _, root := range roots {
+			if info, err := os.Stat(root); err == nil && info.IsDir() {
+				available = true
+				break
+			}
+		}
+		infos = append(infos, uiProviderInfo{
+			Provider:      provider,
+			Name:          providerDisplayName(provider),
+			Roots:         roots,
+			Available:     available,
+			ImportCommand: sessionCaptureHint(provider, "<session-id>"),
+			Displays: []string{
+				"session provider and id",
+				"attached sanitized transcript",
+				"raw artifact path and format",
+				"message/event counts when a transcript is attached",
+				"local matching transcript candidates when found",
+			},
+		})
+	}
+	return infos
+}
+
+func providerDisplayName(provider string) string {
+	switch normalizeProvider(provider) {
+	case "codex":
+		return "Codex"
+	case "claude":
+		return "Claude Code"
+	case "opencode":
+		return "OpenCode"
+	case "pi":
+		return "Pi"
+	default:
+		return fallback(provider, "Unknown")
+	}
+}
+
+func providerRoots(provider string) []string {
+	switch normalizeProvider(provider) {
+	case "codex":
+		return codexSessionRoots()
+	case "claude":
+		return claudeSessionRoots()
+	case "opencode":
+		return []string{}
+	case "pi":
+		return piSessionRoots()
+	default:
+		return []string{}
+	}
+}
+
+func discoverSessionSources(provider string, sessionID string) []uiSessionSource {
+	sessionID = strings.TrimSpace(sessionID)
+	if sessionID == "" {
+		return nil
+	}
+	var sources []uiSessionSource
+	for _, root := range providerRoots(provider) {
+		info, err := os.Stat(root)
+		if err != nil || !info.IsDir() {
+			continue
+		}
+		_ = filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
+			if err != nil || entry.IsDir() {
+				return nil
+			}
+			ext := strings.ToLower(filepath.Ext(entry.Name()))
+			if ext != ".jsonl" && ext != ".json" && ext != ".md" && ext != ".txt" {
+				return nil
+			}
+			if !strings.Contains(entry.Name(), sessionID) && !strings.Contains(path, sessionID) {
+				return nil
+			}
+			info, statErr := entry.Info()
+			if statErr != nil {
+				return nil
+			}
+			sources = append(sources, uiSessionSource{
+				Path:       filepath.ToSlash(path),
+				Format:     strings.TrimPrefix(ext, "."),
+				Size:       info.Size(),
+				ModifiedAt: info.ModTime().UTC().Format(time.RFC3339),
+			})
+			return nil
+		})
+	}
+	sort.Slice(sources, func(i, j int) bool {
+		return sources[i].ModifiedAt > sources[j].ModifiedAt
+	})
+	if len(sources) > 8 {
+		return sources[:8]
+	}
+	if sources == nil {
+		return []uiSessionSource{}
+	}
+	return sources
+}
+
+func previewSessionFile(path string) uiSessionPreview {
+	if strings.TrimSpace(path) == "" {
+		return uiSessionPreview{}
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return uiSessionPreview{}
+	}
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".jsonl":
+		return previewJSONLSession(data)
+	case ".md", ".markdown":
+		return previewMarkdownSession(data)
+	default:
+		return previewTextSession(data)
+	}
+}
+
+func previewJSONLSession(data []byte) uiSessionPreview {
+	scanner := bufio.NewScanner(bytes.NewReader(data))
+	scanner.Buffer(make([]byte, 1024), 1024*1024*10)
+	preview := uiSessionPreview{}
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+		preview.EventCount++
+		var event map[string]any
+		if err := json.Unmarshal([]byte(line), &event); err != nil {
+			continue
+		}
+		role := strings.ToLower(firstString(event, "role", "type", "kind", "event"))
+		if role == "user" {
+			preview.UserMessages++
+			preview.MessageCount++
+		}
+		if role == "assistant" || role == "agent" || role == "system" {
+			preview.AgentMessages++
+			preview.MessageCount++
+		}
+		if strings.Contains(role, "tool") {
+			preview.ToolCalls++
+		}
+		if timestamp := firstString(event, "timestamp", "created_at", "createdAt", "time"); timestamp != "" {
+			if preview.FirstTimestamp == "" {
+				preview.FirstTimestamp = timestamp
+			}
+			preview.LastTimestamp = timestamp
+		}
+	}
+	return preview
+}
+
+func previewMarkdownSession(data []byte) uiSessionPreview {
+	preview := uiSessionPreview{}
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "#") {
+			heading := strings.TrimSpace(strings.TrimLeft(line, "#"))
+			if heading != "" && len(preview.Headings) < 6 {
+				preview.Headings = append(preview.Headings, heading)
+			}
+		}
+		if strings.HasPrefix(strings.ToLower(line), "### user") {
+			preview.UserMessages++
+			preview.MessageCount++
+		}
+		if strings.HasPrefix(strings.ToLower(line), "### assistant") {
+			preview.AgentMessages++
+			preview.MessageCount++
+		}
+	}
+	return preview
+}
+
+func previewTextSession(data []byte) uiSessionPreview {
+	text := strings.TrimSpace(string(data))
+	if text == "" {
+		return uiSessionPreview{}
+	}
+	return uiSessionPreview{EventCount: len(strings.Split(text, "\n"))}
 }
 
 func gitCommits(commits []string) []uiGitCommit {

@@ -35,11 +35,10 @@ export function DecisionsCard({ decisions, evolutionId }: { decisions: unknown[]
         )}
         <Link
           className="inline-flex items-center gap-2 text-sm font-medium text-blue-700"
-          to="/json/$id"
+          to="/evolutions/$id/decisions"
           params={{ id: evolutionId }}
-          hash="decisions"
         >
-          Open decisions JSON <ArrowRight className="size-4" />
+          View decisions <ArrowRight className="size-4" />
         </Link>
       </CardContent>
     </Card>

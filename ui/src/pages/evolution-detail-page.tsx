@@ -58,8 +58,8 @@ export function EvolutionDetailPage() {
               <CheckoutActions snapshot={snapshot.data} />
             ) : (
               <div className="flex justify-end">
-                <Button asChild variant="outline" size="icon" aria-label="Open raw JSON">
-                  <Link to="/json/$id" params={{ id }}>
+                <Button asChild variant="outline" size="icon" aria-label="View implementation">
+                  <Link to="/evolutions/$id/implementation" params={{ id }}>
                     <MoreHorizontal className="size-4" />
                   </Link>
                 </Button>
@@ -89,8 +89,8 @@ export function EvolutionDetailPage() {
               </Link>
             </Button>
             <Button asChild variant="outline">
-              <Link to="/json/$id" params={{ id }}>
-                Raw JSON
+              <Link to="/evolutions/$id/sessions" params={{ id }}>
+                AI sessions
               </Link>
             </Button>
           </div>

@@ -41,8 +41,8 @@ export function CheckoutActions({ snapshot }: { snapshot: SnapshotResponse }) {
           <LinkIcon className="size-4" />
           {linkCopied ? 'Copied' : 'Copy link'}
         </Button>
-        <Button asChild variant="outline" size="icon" aria-label="Open raw JSON">
-          <Link to="/json/$id" params={{ id: snapshot.id }}>
+        <Button asChild variant="outline" size="icon" aria-label="View implementation">
+          <Link to="/evolutions/$id/implementation" params={{ id: snapshot.id }}>
             <MoreHorizontal className="size-4" />
           </Link>
         </Button>

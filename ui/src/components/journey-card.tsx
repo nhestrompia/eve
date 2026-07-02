@@ -56,9 +56,8 @@ export function JourneyCard({ detail }: { detail: DetailResponse }) {
         ) : (
           <Link
             className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-blue-700"
-            to="/json/$id"
+            to="/evolutions/$id/sessions"
             params={{ id: detail.summary.id }}
-            hash="sessions"
           >
             View session references <ArrowRight className="size-4" />
           </Link>

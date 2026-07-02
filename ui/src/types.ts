@@ -73,6 +73,7 @@ export type EvolutionSummary = {
 
 export type SessionRecord = {
   provider: string;
+  providerName: string;
   id: string;
   key: string;
   uri?: string;
@@ -86,6 +87,36 @@ export type SessionRecord = {
   hasTranscript: boolean;
   status: string;
   captureHint: string;
+  localSources: SessionSource[];
+  rootsChecked: string[];
+  preview: SessionPreview;
+};
+
+export type SessionSource = {
+  path: string;
+  format: string;
+  size: number;
+  modifiedAt: string;
+};
+
+export type SessionPreview = {
+  eventCount: number;
+  messageCount: number;
+  userMessages: number;
+  agentMessages: number;
+  toolCalls: number;
+  firstTimestamp?: string;
+  lastTimestamp?: string;
+  headings?: string[];
+};
+
+export type ProviderInfo = {
+  provider: string;
+  name: string;
+  roots: string[];
+  available: boolean;
+  importCommand: string;
+  displays: string[];
 };
 
 export type GitCommit = {
@@ -101,8 +132,15 @@ export type DetailResponse = {
   evolution: Evolution;
   summary: EvolutionSummary;
   sessions: SessionRecord[];
+  providers: ProviderInfo[];
   commits: GitCommit[];
   rawJson: unknown;
+};
+
+export type SessionListResponse = {
+  evolutionId: string;
+  sessions: SessionRecord[];
+  providers: ProviderInfo[];
 };
 
 export type SnapshotResponse = {

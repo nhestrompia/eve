@@ -4,6 +4,7 @@ import type {
   DetailResponse,
   EvolutionSummary,
   SearchResponse,
+  SessionListResponse,
   SessionTranscriptResponse,
   SnapshotResponse
 } from './types';
@@ -26,6 +27,7 @@ export const api = {
   evolutions: () => request<EvolutionSummary[]>('/api/evolutions'),
   evolution: (id: string) => request<DetailResponse>(`/api/evolutions/${encodeURIComponent(id)}`),
   snapshot: (id: string) => request<SnapshotResponse>(`/api/evolutions/${encodeURIComponent(id)}/snapshot`),
+  sessions: (id: string) => request<SessionListResponse>(`/api/evolutions/${encodeURIComponent(id)}/sessions`),
   search: (query: string) => request<SearchResponse>(`/api/search?q=${encodeURIComponent(query)}`),
   transcript: (id: string, key: string) =>
     request<SessionTranscriptResponse>(`/api/evolutions/${encodeURIComponent(id)}/sessions/${encodeURIComponent(key)}`),

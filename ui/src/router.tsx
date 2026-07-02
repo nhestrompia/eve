@@ -1,12 +1,18 @@
 import { createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
 import { AppShell } from './components/app-shell';
 import { ConfigPage } from './pages/config-page';
+import { DecisionsPage } from './pages/decisions-page';
 import { EvolutionDetailPage } from './pages/evolution-detail-page';
+import { ImplementationPage } from './pages/implementation-page';
 import { RawJsonPage } from './pages/raw-json-page';
+import { RelationshipsPage } from './pages/relationships-page';
+import { RisksPage } from './pages/risks-page';
 import { SearchPage } from './pages/search-page';
+import { SessionsOverviewPage } from './pages/sessions-overview-page';
 import { SessionPage } from './pages/session-page';
 import { SnapshotPage } from './pages/snapshot-page';
 import { TimelinePage } from './pages/timeline-page';
+import { VerificationPage } from './pages/verification-page';
 
 const rootRoute = createRootRoute({ component: AppShell });
 
@@ -34,6 +40,42 @@ const sessionRoute = createRoute({
   component: SessionPage
 });
 
+const sessionsOverviewRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/evolutions/$id/sessions',
+  component: SessionsOverviewPage
+});
+
+const verificationRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/evolutions/$id/verification',
+  component: VerificationPage
+});
+
+const decisionsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/evolutions/$id/decisions',
+  component: DecisionsPage
+});
+
+const risksRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/evolutions/$id/risks',
+  component: RisksPage
+});
+
+const implementationRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/evolutions/$id/implementation',
+  component: ImplementationPage
+});
+
+const relationshipsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/evolutions/$id/relationships',
+  component: RelationshipsPage
+});
+
 const searchRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/search',
@@ -53,7 +95,21 @@ const configRoute = createRoute({
   component: ConfigPage
 });
 
-const routeTree = rootRoute.addChildren([indexRoute, evolutionRoute, snapshotRoute, sessionRoute, searchRoute, jsonRoute, configRoute]);
+const routeTree = rootRoute.addChildren([
+  indexRoute,
+  evolutionRoute,
+  snapshotRoute,
+  sessionRoute,
+  sessionsOverviewRoute,
+  verificationRoute,
+  decisionsRoute,
+  risksRoute,
+  implementationRoute,
+  relationshipsRoute,
+  searchRoute,
+  jsonRoute,
+  configRoute
+]);
 
 export const router = createRouter({ routeTree });
 
