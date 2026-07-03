@@ -32,8 +32,10 @@ export function RepositoryActivityView({
 
           <section className="space-y-4">
             <div className="flex items-center justify-between gap-4">
-              <h2 className="text-xl font-semibold">{total} {total === 1 ? 'Evolution' : 'Evolutions'} in the last year</h2>
-              <span className="text-sm text-muted-foreground">{new Date().getFullYear()}</span>
+              <h2 className="text-xl font-semibold">Recent activity</h2>
+              <span className="text-sm text-muted-foreground">
+                {total} {total === 1 ? 'Evolution' : 'Evolutions'}
+              </span>
             </div>
             <ContributionGraph evolutions={evolutions} />
           </section>
@@ -72,69 +74,86 @@ export function RepositoryActivityView({
 }
 
 function ContributionGraph({ evolutions }: { evolutions: EvolutionSummary[] }) {
-  const counts = new Map<string, number>();
+  const counts = new Map<string, ActivityDay>();
   for (const evolution of evolutions) {
     const date = parseDate(evolution.updatedAt || evolution.createdAt);
     if (!date) continue;
     const key = isoDay(date);
-    counts.set(key, (counts.get(key) ?? 0) + 1);
+    const current = counts.get(key) ?? { evolutionCount: 0, commitCount: 0 };
+    counts.set(key, {
+      evolutionCount: current.evolutionCount + 1,
+      commitCount: current.commitCount + (evolution.commitCount ?? 0)
+    });
   }
   const today = new Date();
   const start = new Date(today);
-  start.setDate(today.getDate() - 52 * 7);
+  start.setDate(today.getDate() - (ACTIVITY_WEEKS - 1) * 7);
   start.setDate(start.getDate() - start.getDay());
-  const weeks = Array.from({ length: 53 }, (_, week) =>
+  const weeks = Array.from({ length: ACTIVITY_WEEKS }, (_, week) =>
     Array.from({ length: 7 }, (_, day) => {
       const date = new Date(start);
       date.setDate(start.getDate() + week * 7 + day);
-      const count = counts.get(isoDay(date)) ?? 0;
-      return { date, count };
+      const activity = counts.get(isoDay(date)) ?? { evolutionCount: 0, commitCount: 0 };
+      return { date, ...activity };
     })
   );
   const monthLabels = buildMonthLabels(weeks);
-  const maxCount = Math.max(0, ...weeks.flat().map((day) => day.count));
+  const maxCount = Math.max(0, ...weeks.flat().map((day) => day.evolutionCount));
+  const peakCommits = Math.max(0, ...weeks.flat().map((day) => day.commitCount));
 
   return (
     <div className="rounded-lg bg-white p-5 shadow-[0_0_0_1px_rgba(15,23,42,0.08)]">
-      <div className="overflow-x-auto pb-1">
-        <div className="min-w-[820px]">
-          <div className="mb-2 grid grid-cols-[34px_repeat(53,1fr)] gap-x-1 text-xs text-muted-foreground">
-            <span />
-            {monthLabels.map((label) => (
-              <span
-                key={`${label.name}-${label.week}`}
-                className="h-4 whitespace-nowrap"
-                style={{ gridColumn: `${label.week + 2} / span ${label.span}` }}
-              >
-                {label.name}
+      <div className="w-full">
+        <div
+          className="mb-2 grid gap-x-1 text-xs text-muted-foreground"
+          style={{ gridTemplateColumns: `30px repeat(${ACTIVITY_WEEKS}, minmax(0, 1fr))` }}
+        >
+          <span />
+          {monthLabels.map((label) => (
+            <span
+              key={`${label.name}-${label.week}`}
+              className="h-4 truncate"
+              style={{ gridColumn: `${label.week + 2} / span ${label.span}` }}
+            >
+              {label.name}
+            </span>
+          ))}
+        </div>
+        <div className="grid gap-x-1" style={{ gridTemplateColumns: `30px repeat(${ACTIVITY_WEEKS}, minmax(0, 1fr))` }}>
+          <div className="grid grid-rows-7 gap-1 text-xs leading-3 text-muted-foreground">
+            {['', 'Mon', '', 'Wed', '', 'Fri', ''].map((label, index) => (
+              <span key={`${label}-${index}`} className="h-3">
+                {label}
               </span>
             ))}
           </div>
-          <div className="grid grid-cols-[34px_repeat(53,1fr)] gap-x-1">
-            <div className="grid grid-rows-7 gap-1 text-xs leading-3 text-muted-foreground">
-              {['', 'Mon', '', 'Wed', '', 'Fri', ''].map((label, index) => (
-                <span key={`${label}-${index}`} className="h-3">
-                  {label}
-                </span>
-              ))}
-            </div>
-            {weeks.map((week, weekIndex) => (
-              <div key={isoDay(week[0].date)} className="grid grid-rows-7 gap-1">
-                {week.map((day) => (
+          {weeks.map((week) => (
+            <div key={isoDay(week[0].date)} className="grid grid-rows-7 justify-items-center gap-1">
+              {week.map((day) => {
+                const label = activityLabel(day);
+                return (
                   <span
                     key={isoDay(day.date)}
-                    aria-label={`${compactDate(day.date.toISOString())}: ${day.count} ${day.count === 1 ? 'Evolution' : 'Evolutions'}`}
-                    title={`${compactDate(day.date.toISOString())}: ${day.count} ${day.count === 1 ? 'Evolution' : 'Evolutions'}`}
-                    className={`size-3 rounded-[3px] ${heatClass(day.count, maxCount)} ${weekIndex === 52 && day.date > today ? 'opacity-40' : ''}`}
-                  />
-                ))}
-              </div>
-            ))}
-          </div>
+                    aria-label={label}
+                    title={label}
+                    className={`group/day relative block size-3 rounded-[3px] ${heatClass(day.evolutionCount, maxCount)} ${day.date > today ? 'opacity-40' : ''}`}
+                  >
+                    <span className="pointer-events-none absolute bottom-5 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-950 px-2 py-1 text-[11px] font-medium text-white shadow-lg group-hover/day:block">
+                      {label}
+                    </span>
+                  </span>
+                );
+              })}
+            </div>
+          ))}
         </div>
       </div>
       <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
-        <span>{maxCount > 0 ? `Peak day: ${maxCount} ${maxCount === 1 ? 'Evolution' : 'Evolutions'}` : 'No activity in this range'}</span>
+        <span>
+          {maxCount > 0
+            ? `Peak day: ${maxCount} ${maxCount === 1 ? 'Evolution' : 'Evolutions'} · ${peakCommits} ${peakCommits === 1 ? 'commit' : 'commits'}`
+            : 'No activity in this range'}
+        </span>
         <span className="flex items-center gap-1">
           {[0, 1, 2, 3, 4].map((value) => (
             <span key={value} className={`size-3 rounded-[3px] ${heatClass(value, 4)}`} />
@@ -196,7 +215,16 @@ function ActivityList({ evolutions }: { evolutions: EvolutionSummary[] }) {
   );
 }
 
-function buildMonthLabels(weeks: Array<Array<{ date: Date; count: number }>>) {
+type ActivityDay = {
+  evolutionCount: number;
+  commitCount: number;
+};
+
+type ActivityCell = ActivityDay & {
+  date: Date;
+};
+
+function buildMonthLabels(weeks: ActivityCell[][]) {
   const labels: Array<{ name: string; week: number; span: number }> = [];
 
   weeks.forEach((week, weekIndex) => {
@@ -213,6 +241,12 @@ function buildMonthLabels(weeks: Array<Array<{ date: Date; count: number }>>) {
     ...label,
     span: Math.max(1, (labels[index + 1]?.week ?? weeks.length) - label.week)
   }));
+}
+
+function activityLabel(day: ActivityCell) {
+  const evolutions = `${day.evolutionCount} ${day.evolutionCount === 1 ? 'Evolution' : 'Evolutions'}`;
+  const commits = `${day.commitCount} ${day.commitCount === 1 ? 'commit' : 'commits'}`;
+  return `${compactDate(day.date.toISOString())}: ${evolutions}, ${commits}`;
 }
 
 function heatClass(count: number, maxCount: number) {
@@ -235,3 +269,4 @@ function isoDay(date: Date) {
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const ACTIVITY_WEEKS = 18;

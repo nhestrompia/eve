@@ -53,6 +53,7 @@ type evolutionSummary struct {
 	Status              string   `json:"status"`
 	Outcome             string   `json:"outcome"`
 	Snapshot            string   `json:"snapshot"`
+	CommitCount         int      `json:"commitCount"`
 	VerificationState   string   `json:"verificationState"`
 	VerificationSummary string   `json:"verificationSummary"`
 	SessionProviders    []string `json:"sessionProviders"`
@@ -686,6 +687,7 @@ func summarizeEvolution(evolution *eve.Evolution) evolutionSummary {
 		Status:              evolution.Metadata.Status,
 		Outcome:             evolution.Outcome,
 		Snapshot:            evolution.Implementation.Snapshot,
+		CommitCount:         len(evolution.Implementation.Commits),
 		VerificationState:   verificationState(evolution.Verification),
 		VerificationSummary: verificationSummary(evolution.Verification),
 		SessionProviders:    sessionProviders(evolution.Sessions),

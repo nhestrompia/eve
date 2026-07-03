@@ -64,6 +64,7 @@ export type EvolutionSummary = {
   status: string;
   outcome: string;
   snapshot: string;
+  commitCount: number;
   verificationState: string;
   verificationSummary: string;
   sessionProviders: string[];

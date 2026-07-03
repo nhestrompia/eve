@@ -417,8 +417,8 @@ func TestUIAPIServesStaticAndEvolutionData(t *testing.T) {
 
 	var rows []evolutionSummary
 	requestJSON(t, handler, http.MethodGet, "/api/evolutions", nil, &rows)
-	if len(rows) != 1 || rows[0].ID != "EV-001" || rows[0].Snapshot == "" {
-		t.Fatalf("timeline rows = %#v, want EV-001 with snapshot", rows)
+	if len(rows) != 1 || rows[0].ID != "EV-001" || rows[0].Snapshot == "" || rows[0].CommitCount != len(ev.Implementation.Commits) {
+		t.Fatalf("timeline rows = %#v, want EV-001 with snapshot and commit count", rows)
 	}
 
 	var detail evolutionDetailResponse
