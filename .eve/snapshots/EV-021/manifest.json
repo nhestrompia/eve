@@ -1,0 +1,22 @@
+{
+  "evolution_id": "EV-021",
+  "updated_at": "2026-07-03T17:11:12Z",
+  "images": [
+    {
+      "id": "codex-clipboard-32bfce31-2d57-4544-a325-e14f95368d9a",
+      "title": "codex-clipboard-32bfce31-2d57-4544-a325-e14f95368d9a",
+      "path": ".eve/snapshots/EV-021/codex-clipboard-32bfce31-2d57-4544-a325-e14f95368d9a.png",
+      "mime_type": "image/png",
+      "source": "/var/folders/xy/2q7y3z7s22vf12brnsdgkwt40000gn/T/codex-clipboard-32bfce31-2d57-4544-a325-e14f95368d9a.png",
+      "attached_at": "2026-07-03T17:11:05Z"
+    },
+    {
+      "id": "codex-clipboard-48820bf2-7cd3-4d06-b908-e3b8f728aac8",
+      "title": "codex-clipboard-48820bf2-7cd3-4d06-b908-e3b8f728aac8",
+      "path": ".eve/snapshots/EV-021/codex-clipboard-48820bf2-7cd3-4d06-b908-e3b8f728aac8.png",
+      "mime_type": "image/png",
+      "source": "/var/folders/xy/2q7y3z7s22vf12brnsdgkwt40000gn/T/codex-clipboard-48820bf2-7cd3-4d06-b908-e3b8f728aac8.png",
+      "attached_at": "2026-07-03T17:11:05Z"
+    }
+  ]
+}
