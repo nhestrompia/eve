@@ -1,22 +1,36 @@
-import { Link, useNavigate } from '@tanstack/react-router';
-import { BookOpen, FileClock, GitBranch, History, Plus, Search, Settings, Sun } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { FormEvent, useState } from 'react';
-import { api } from '../api';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
+import { useQuery } from "@tanstack/react-query";
+import { Link, useNavigate } from "@tanstack/react-router";
+import {
+  BookOpen,
+  GitBranch,
+  History,
+  Plus,
+  Search,
+  Settings,
+  Sun,
+} from "lucide-react";
+import { FormEvent, useState } from "react";
+import { api } from "../api";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 
 export function Sidebar() {
-  const config = useQuery({ queryKey: ['config'], queryFn: api.config });
-  const evolutions = useQuery({ queryKey: ['evolutions'], queryFn: api.evolutions });
-  const repositories = useQuery({ queryKey: ['repositories'], queryFn: api.repositories });
+  const config = useQuery({ queryKey: ["config"], queryFn: api.config });
+  const evolutions = useQuery({
+    queryKey: ["evolutions"],
+    queryFn: api.evolutions,
+  });
+  const repositories = useQuery({
+    queryKey: ["repositories"],
+    queryFn: api.repositories,
+  });
   const firstEvolution = evolutions.data?.[0]?.id;
   const navigate = useNavigate();
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
 
   const submitSearch = (event: FormEvent) => {
     event.preventDefault();
-    void navigate({ to: '/search', search: { q: query } });
+    void navigate({ to: "/search", search: { q: query } });
   };
 
   return (
@@ -41,7 +55,9 @@ export function Sidebar() {
             placeholder="Search..."
             className="h-11 rounded-lg bg-white pl-10 pr-12 shadow-[0_0_0_1px_rgba(15,23,42,0.08)]"
           />
-          <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-mono text-xs text-muted-foreground">⌘K</kbd>
+          <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-mono text-xs text-muted-foreground">
+            ⌘K
+          </kbd>
         </div>
       </form>
 
@@ -49,12 +65,12 @@ export function Sidebar() {
         <Link
           to="/"
           className="flex h-11 shrink-0 items-center gap-3 rounded-lg px-4 font-medium text-slate-950 md:h-12 md:gap-4"
-          activeProps={{ className: 'bg-slate-100 shadow-sm' }}
+          activeProps={{ className: "bg-slate-100 shadow-sm" }}
         >
           <History className="size-4 text-blue-600" />
           Activity
         </Link>
-        {firstEvolution ? (
+        {/* {firstEvolution ? (
           <Link
             to="/evolutions/$id/snapshot"
             params={{ id: firstEvolution }}
@@ -76,27 +92,36 @@ export function Sidebar() {
         >
           <Search className="size-4" />
           Search
-        </Link>
+        </Link> */}
       </nav>
 
       <div className="mx-4 border-t md:mx-7 md:my-6" />
 
       <div className="px-4 py-3 md:px-5 md:py-0">
-        <p className="mb-3 px-2 text-xs font-medium text-muted-foreground">Repositories</p>
+        <p className="mb-3 px-2 text-xs font-medium text-muted-foreground">
+          Repositories
+        </p>
         <div className="flex gap-2 overflow-x-auto md:block md:space-y-1 md:overflow-visible">
-          {(repositories.data?.length ? repositories.data : [{ name: config.data?.repository ?? 'eve', evolutionCount: 0 }]).map((repo) => (
+          {(repositories.data?.length
+            ? repositories.data
+            : [{ name: config.data?.repository ?? "eve", evolutionCount: 0 }]
+          ).map((repo) => (
             <Link
               key={repo.name}
               to="/repositories/$repo"
               params={{ repo: repo.name }}
               className="flex min-h-11 shrink-0 items-center justify-between gap-3 rounded-lg px-3 hover:bg-slate-50 md:min-h-12 md:w-full"
-              activeProps={{ className: 'bg-slate-100 shadow-sm' }}
+              activeProps={{ className: "bg-slate-100 shadow-sm" }}
             >
               <span className="flex min-w-0 items-center gap-3">
                 <BookOpen className="size-4 shrink-0 text-slate-500" />
-                <span className="max-w-36 truncate font-semibold md:max-w-none">{repo.name}</span>
+                <span className="max-w-36 truncate font-semibold md:max-w-none">
+                  {repo.name}
+                </span>
               </span>
-              <span className="ml-3 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-muted-foreground">{repo.evolutionCount}</span>
+              <span className="ml-3 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-muted-foreground">
+                {repo.evolutionCount}
+              </span>
             </Link>
           ))}
         </div>
@@ -112,10 +137,17 @@ export function Sidebar() {
       <div className="mt-auto flex items-center justify-between border-t p-4 md:p-5">
         <div>
           <p className="font-semibold leading-4">Local</p>
-          <p className="text-xs text-muted-foreground">{config.data?.repository ?? 'repository'}</p>
+          <p className="text-xs text-muted-foreground">
+            {config.data?.repository ?? "repository"}
+          </p>
         </div>
         <div className="flex gap-1">
-          <Button asChild variant="ghost" size="icon" aria-label="Open EVE config">
+          <Button
+            asChild
+            variant="ghost"
+            size="icon"
+            aria-label="Open EVE config"
+          >
             <Link to="/config">
               <Settings className="size-4" />
             </Link>
@@ -124,7 +156,9 @@ export function Sidebar() {
             variant="ghost"
             size="icon"
             aria-label="Toggle theme"
-            onClick={() => document.documentElement.classList.toggle('dark-preview')}
+            onClick={() =>
+              document.documentElement.classList.toggle("dark-preview")
+            }
           >
             <Sun className="size-4" />
           </Button>
