@@ -56,7 +56,7 @@ export function RepositoryActivityView({
                   : 'Track and understand how your products are evolving across repositories.'}
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <div className="flex min-w-0 flex-wrap gap-3 xl:justify-end">
               {repoRows.slice(0, 4).map((repo, index) => (
                 <RepositoryOverviewCard key={repo.name} repo={repo} tone={REPO_TONES[index % REPO_TONES.length]} selected={selectedRepo === repo.name} />
               ))}
@@ -96,20 +96,25 @@ function RepositoryOverviewCard({ repo, tone, selected }: { repo: RepositorySumm
     <Link
       to="/repositories/$repo"
       params={{ repo: repo.name }}
-      className={`min-w-0 rounded-lg bg-white p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.1)] transition-[background-color,box-shadow,scale] duration-150 hover:bg-slate-50 active:scale-[0.96] ${selected ? 'ring-2 ring-blue-500/20' : ''}`}
+      className={`w-[196px] min-w-[196px] rounded-lg bg-white p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.1)] transition-[background-color,box-shadow,scale] duration-150 hover:bg-slate-50 active:scale-[0.96] ${selected ? 'ring-2 ring-blue-500/20' : ''}`}
     >
       <div className="flex items-center justify-between gap-3">
-        <span className="flex min-w-0 items-center gap-2">
+        <span className="flex min-w-0 flex-1 items-center gap-2">
           <span className={`size-2.5 rounded-full ${tone.bg}`} />
-          <span className="truncate font-semibold">{repo.name}</span>
+          <span className="min-w-0 truncate text-sm font-semibold">{repo.name}</span>
         </span>
         <Icon className={`size-4 shrink-0 ${tone.text}`} />
       </div>
       <div className="mt-4">
         <RepoSparkline tone={tone} seed={repo.name} />
       </div>
-      <p className="mt-3 truncate text-xs text-muted-foreground">
-        {repo.evolutionCount} EVs · {repo.snapshotCount} snapshots · {repo.commitCount} {repo.commitCount === 1 ? 'commit' : 'commits'}
+      <p className="mt-3 text-xs leading-4 text-muted-foreground">
+        <span className="block truncate">
+          {repo.evolutionCount} EVs · {repo.snapshotCount} snaps
+        </span>
+        <span className="block truncate">
+          {repo.commitCount} {repo.commitCount === 1 ? 'commit' : 'commits'}
+        </span>
       </p>
     </Link>
   );
@@ -376,11 +381,11 @@ function PlatformOverview({ stats }: { stats: PlatformStats }) {
   ] as const;
   return (
     <RailCard title="Platform overview" eyebrow="Last 12 months">
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-2.5">
         {tiles.map(([label, value]) => (
-          <div key={label} className="rounded-lg bg-white p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.1)]">
-            <div className="text-2xl font-semibold tabular-nums">{value}</div>
-            <div className="mt-1 text-xs leading-4 text-muted-foreground">{label}</div>
+          <div key={label} className="min-w-0 rounded-lg bg-white px-3.5 py-3 shadow-[0_0_0_1px_rgba(15,23,42,0.1)]">
+            <div className="text-xl font-semibold leading-6 tabular-nums">{value}</div>
+            <div className="mt-1 max-w-full text-[11px] leading-3 text-muted-foreground">{label}</div>
           </div>
         ))}
       </div>
