@@ -33,7 +33,7 @@ export function EvolutionList({ evolutions, selectedId }: { evolutions: Evolutio
           {sorted.map((evolution) => (
             <Link
               key={evolution.id}
-              to="/evolutions/$id"
+              to="/snapshots/$id"
               params={{ id: evolution.id }}
               className={`grid grid-cols-[24px_minmax(0,1fr)_auto] items-center gap-3 rounded-lg px-3 py-4 ${
                 selectedId === evolution.id ? 'bg-blue-50 shadow-sm ring-1 ring-blue-100' : 'hover:bg-slate-50'

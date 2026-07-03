@@ -9,9 +9,9 @@ import { Button } from '../components/ui/button';
 import { EmptyPanel, Header } from './verification-page';
 
 export function SessionsOverviewPage() {
-  const { id } = useParams({ from: '/evolutions/$id/sessions' });
-  const evolutions = useQuery({ queryKey: ['evolutions'], queryFn: api.evolutions });
-  const detail = useQuery({ queryKey: ['evolution', id], queryFn: () => api.evolution(id) });
+  const { id } = useParams({ from: '/snapshots/$id/sessions' });
+  const evolutions = useQuery({ queryKey: ['snapshots'], queryFn: api.snapshots });
+  const detail = useQuery({ queryKey: ['snapshot-detail', id], queryFn: () => api.snapshotDetail(id) });
   const sessions = useQuery({ queryKey: ['sessions', id], queryFn: () => api.sessions(id) });
 
   return (
@@ -43,7 +43,7 @@ export function SessionsOverviewPage() {
                 </div>
                 {session.hasTranscript || session.localSources.length > 0 ? (
                   <Button asChild className="mt-5">
-                    <Link to="/evolutions/$id/session/$sessionId" params={{ id, sessionId: session.key }}>
+                    <Link to="/snapshots/$id/session/$sessionId" params={{ id, sessionId: session.key }}>
                       {session.hasTranscript ? 'Read transcript' : 'Read local candidate'}
                     </Link>
                   </Button>

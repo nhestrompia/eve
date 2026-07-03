@@ -47,7 +47,7 @@ export function SearchCommand({ open, onOpenChange }: { open: boolean; onOpenCha
             {results.data?.results.map((result) => (
               <Link
                 key={result.evolution.id}
-                to="/evolutions/$id"
+                to="/snapshots/$id"
                 params={{ id: result.evolution.id }}
                 onClick={() => onOpenChange(false)}
                 className="grid grid-cols-1 gap-2 rounded-lg border p-3 hover:bg-slate-50 sm:grid-cols-[80px_minmax(0,1fr)] sm:gap-4"

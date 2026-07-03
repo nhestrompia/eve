@@ -7,9 +7,9 @@ import { EvolutionShell } from '../components/evolution-shell';
 import { LoadingState } from '../components/loading-state';
 
 export function VerificationPage() {
-  const { id } = useParams({ from: '/evolutions/$id/verification' });
-  const evolutions = useQuery({ queryKey: ['evolutions'], queryFn: api.evolutions });
-  const detail = useQuery({ queryKey: ['evolution', id], queryFn: () => api.evolution(id) });
+  const { id } = useParams({ from: '/snapshots/$id/verification' });
+  const evolutions = useQuery({ queryKey: ['snapshots'], queryFn: api.snapshots });
+  const detail = useQuery({ queryKey: ['snapshot-detail', id], queryFn: () => api.snapshotDetail(id) });
 
   return (
     <EvolutionShell evolutions={evolutions.data ?? []} selectedId={id}>

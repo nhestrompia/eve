@@ -8,8 +8,8 @@ import { RepositoryActivityView } from '../components/repository-activity-view';
 
 export function RepositoryPage() {
   const { repo } = useParams({ from: '/repositories/$repo' });
-  const allEvolutions = useQuery({ queryKey: ['evolutions'], queryFn: () => api.evolutions() });
-  const evolutions = useQuery({ queryKey: ['evolutions', repo], queryFn: () => api.evolutions(repo) });
+  const allEvolutions = useQuery({ queryKey: ['snapshots'], queryFn: () => api.snapshots() });
+  const evolutions = useQuery({ queryKey: ['snapshots', repo], queryFn: () => api.snapshots(repo) });
   const repositories = useQuery({ queryKey: ['repositories'], queryFn: api.repositories });
 
   return (

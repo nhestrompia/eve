@@ -8,8 +8,8 @@ import { MarkdownViewer } from '../components/markdown-viewer';
 import { StatusBadge } from '../components/status-badge';
 
 export function SessionPage() {
-  const { id, sessionId } = useParams({ from: '/evolutions/$id/session/$sessionId' });
-  const evolutions = useQuery({ queryKey: ['evolutions'], queryFn: api.evolutions });
+  const { id, sessionId } = useParams({ from: '/snapshots/$id/session/$sessionId' });
+  const evolutions = useQuery({ queryKey: ['snapshots'], queryFn: api.snapshots });
   const transcript = useQuery({
     queryKey: ['session', id, sessionId],
     queryFn: () => api.transcript(id, sessionId),

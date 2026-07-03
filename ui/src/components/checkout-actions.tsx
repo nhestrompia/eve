@@ -29,7 +29,7 @@ export function CheckoutActions({ snapshot }: { snapshot: SnapshotResponse }) {
   };
 
   const copyLink = async () => {
-    await navigator.clipboard.writeText(`${window.location.origin}/evolutions/${snapshot.id}/snapshot`);
+    await navigator.clipboard.writeText(`${window.location.origin}/snapshots/${snapshot.id}/snapshot`);
     setLinkCopied(true);
     window.setTimeout(() => setLinkCopied(false), 1400);
   };
@@ -42,7 +42,7 @@ export function CheckoutActions({ snapshot }: { snapshot: SnapshotResponse }) {
           {linkCopied ? 'Copied' : 'Copy link'}
         </Button>
         <Button asChild variant="outline" size="icon" aria-label="View implementation">
-          <Link to="/evolutions/$id/implementation" params={{ id: snapshot.id }}>
+          <Link to="/snapshots/$id/implementation" params={{ id: snapshot.id }}>
             <MoreHorizontal className="size-4" />
           </Link>
         </Button>

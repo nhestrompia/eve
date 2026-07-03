@@ -29,7 +29,7 @@ export function VerificationCard({ values, evolutionId }: { values: Verification
         </ul>
         <Link
           className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-blue-700"
-          to="/evolutions/$id/verification"
+          to="/snapshots/$id/verification"
           params={{ id: evolutionId }}
         >
           View all results <ArrowRight className="size-4" />

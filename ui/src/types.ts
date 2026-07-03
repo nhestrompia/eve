@@ -1,3 +1,9 @@
+export type Validation = {
+  command: string;
+  status: 'passed' | 'failed' | 'skipped' | string;
+  output?: string;
+};
+
 export type Verification = {
   type?: string;
   status: string;
@@ -18,6 +24,43 @@ export type Behavior = {
   changed?: BehaviorClaim[];
   removed?: BehaviorClaim[];
   fixed?: BehaviorClaim[];
+};
+
+export type Snapshot = {
+  id: string;
+  schemaVersion: string;
+  title: string;
+  type: string;
+  summary: string;
+  userVisibleChange?: string;
+  relationships: Record<string, string[] | undefined>;
+  risks: unknown[];
+  timeline: Array<{
+    phase: string;
+    title: string;
+    summary?: string;
+    occurredAt?: string;
+  }>;
+  decisions: unknown[];
+  validation: Validation[];
+  artifacts: SnapshotArtifact[];
+  implementation: {
+    branch: string;
+    gitState: string;
+    baseCommit?: string;
+    commits: string[];
+    dirty: boolean;
+  };
+  createdAt: string;
+};
+
+export type SnapshotArtifact = {
+  type: string;
+  uri?: string;
+  path?: string;
+  url?: string;
+  mimeType?: string;
+  description?: string;
 };
 
 export type Evolution = {
@@ -70,6 +113,29 @@ export type EvolutionSummary = {
   sessionProviders: string[];
   createdAt: string;
   updatedAt: string;
+};
+
+export type SnapshotSummary = {
+  id: string;
+  title: string;
+  type: string;
+  summary: string;
+  userVisibleChange?: string;
+  gitState: string;
+  branch: string;
+  dirty: boolean;
+  validationState: string;
+  createdAt: string;
+};
+
+export type DetailResponse = {
+  snapshot: Snapshot;
+  evolution: Evolution;
+  summary: EvolutionSummary;
+  sessions: SessionRecord[];
+  providers: ProviderInfo[];
+  commits: GitCommit[];
+  rawJson: unknown;
 };
 
 export type SessionRecord = {
@@ -131,15 +197,6 @@ export type GitCommit = {
   committedAt: string;
 };
 
-export type DetailResponse = {
-  evolution: Evolution;
-  summary: EvolutionSummary;
-  sessions: SessionRecord[];
-  providers: ProviderInfo[];
-  commits: GitCommit[];
-  rawJson: unknown;
-};
-
 export type SessionListResponse = {
   evolutionId: string;
   sessions: SessionRecord[];
@@ -168,7 +225,7 @@ export type SnapshotImage = {
 };
 
 export type ConfigResponse = {
-  protocolVersion: number;
+  snapshotSchemaVersion: string;
   cliVersion: string;
   repository: string;
   addr: string;
@@ -177,6 +234,8 @@ export type ConfigResponse = {
 };
 
 export type RepositorySummary = {
+  id?: string;
+  root?: string;
   name: string;
   remoteUrl?: string;
   evolutionCount: number;
@@ -184,6 +243,7 @@ export type RepositorySummary = {
   commitCount: number;
   latestAt: string;
   latestEvolution: string;
+  latestSnapshot?: string;
   latestTitle: string;
   sessionProviders: string[];
 };

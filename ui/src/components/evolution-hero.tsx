@@ -78,7 +78,7 @@ export function EvolutionHero({ detail, snapshot }: { detail: DetailResponse; sn
           </AlertDialogContent>
         </AlertDialog>
         <Button asChild variant="outline" className="h-12 justify-start gap-3 rounded-lg pl-5">
-          <Link to="/evolutions/$id/snapshot" params={{ id: detail.summary.id }}>
+          <Link to="/snapshots/$id/snapshot" params={{ id: detail.summary.id }}>
             <Box className="size-4" />
             View snapshot
           </Link>

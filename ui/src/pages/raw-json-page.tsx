@@ -7,8 +7,8 @@ import { LoadingState } from '../components/loading-state';
 
 export function RawJsonPage() {
   const { id } = useParams({ from: '/json/$id' });
-  const evolutions = useQuery({ queryKey: ['evolutions'], queryFn: api.evolutions });
-  const detail = useQuery({ queryKey: ['evolution', id], queryFn: () => api.evolution(id) });
+  const evolutions = useQuery({ queryKey: ['snapshots'], queryFn: api.snapshots });
+  const detail = useQuery({ queryKey: ['snapshot-detail', id], queryFn: () => api.snapshotDetail(id) });
 
   return (
     <EvolutionShell evolutions={evolutions.data ?? []} selectedId={id}>

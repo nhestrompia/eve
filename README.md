@@ -1,97 +1,110 @@
 # EVE
 
-EVE records product evolution alongside Git implementation history.
+EVE records completed product snapshots alongside Git implementation history.
 
-Git stages code. EVE stages product meaning.
-
-This repository contains the RFC-0001 reference shape for an Evolution, a JSON
-Schema 2020-12 contract, a Go library, and a CLI.
+Git records implementation checkpoints. EVE records the completed product unit:
+one feature, bug fix, experiment, refactor, or release.
 
 ## Library
 
 ```go
-evolution, err := eve.Parse(data)
+snapshot, err := eve.ParseSnapshot(data)
 if err != nil {
     return err
 }
 
-if err := eve.Validate(evolution); err != nil {
+if err := eve.ValidateSnapshot(snapshot); err != nil {
     return err
 }
 
-canonical, err := eve.CanonicalJSON(evolution)
+canonical, err := eve.CanonicalSnapshotJSON(snapshot)
 ```
 
 Public package APIs:
 
-- `Parse([]byte) (*Evolution, error)`
-- `Validate(*Evolution) error`
-- `CanonicalJSON(*Evolution) ([]byte, error)`
-- `LoadFile(path string) (*Evolution, error)`
+- `ParseSnapshot([]byte) (*Snapshot, error)`
+- `ValidateSnapshot(*Snapshot) error`
+- `CanonicalSnapshotJSON(*Snapshot) ([]byte, error)`
+- `LoadSnapshotFile(path string) (*Snapshot, error)`
 
-## CLI Workflow
+## CLI
 
 ```sh
 go run ./cmd/eve init
-git commit -m "Implement Enterprise SSO"
-go run ./cmd/eve add \
-  --title "Enterprise SSO" \
-  --type feature \
-  --behavior-added "Organizations can log in via Okta" \
-  --outcome "Organizations can authenticate with Okta." \
-  --verification "passed: go test ./..." \
-  --session codex:session_912 \
-  --session-source transcript.jsonl \
-  --implementation HEAD \
-  --sanitize
-go run ./cmd/eve status
-go run ./cmd/eve commit
-git add .eve/
-git commit -m "EV-001 Enterprise SSO"
+go run ./cmd/eve dev
+go run ./cmd/eve snapshot snap_123
+go run ./cmd/eve checkout snap_123
+go run ./cmd/eve checkout --force snap_123
+go run ./cmd/eve validate .eve/snapshots/snap_123.json
+go run ./cmd/eve canonicalize .eve/snapshots/snap_123.json
 ```
 
-Manual staging commands:
+`eve checkout` refuses to run when the Git working tree has uncommitted changes
+unless `--force` is supplied.
 
-```sh
-go run ./cmd/eve add title "Enterprise SSO" --type feature
-go run ./cmd/eve add behavior --added "Organizations can log in via Okta"
-go run ./cmd/eve add verification --status passed --reference "go test ./..."
-go run ./cmd/eve add session codex:session_912 --source transcript.jsonl --sanitize
-go run ./cmd/eve add outcome "Organizations can authenticate with Okta."
-go run ./cmd/eve add implementation --snapshot HEAD --commit HEAD --repository eve --status merged --image screenshot.png
+## Runtime
+
+`eve dev` starts the local Snapshot runtime:
+
+```text
+EVE Runtime
+├── Web UI
+├── Local API
+├── MCP server
+├── Repo watcher/cache refresh
+└── Local index cache
 ```
 
-Read committed Evolutions:
+The runtime binds to localhost only. The local cache under `.eve/cache/` is
+rebuildable and not canonical.
 
-```sh
-go run ./cmd/eve list
-go run ./cmd/eve show EV-001
-go run ./cmd/eve timeline EV-001
-go run ./cmd/eve graph
-go run ./cmd/eve search okta
+Canonical product history lives in:
+
+```text
+.eve/snapshots/*.json
 ```
 
-Navigate product snapshots:
+Artifacts are referenced from Snapshot JSON and stored as files or external
+URIs:
 
-```sh
-go run ./cmd/eve snapshot EV-001
-go run ./cmd/eve checkout EV-001
+```text
+.eve/artifacts/<snapshot-id>/...
 ```
 
-`eve checkout` refuses to run when the Git working tree has uncommitted changes.
+## Local API
 
-`implementation.commits` records commits contributed by an Evolution.
-`implementation.snapshot` records the resolved Git commit SHA that represents
-the repository state after the Evolution became true. `eve checkout` uses
-`implementation.snapshot`.
-
-Protocol tools:
-
-```sh
-go run ./cmd/eve validate evolution.json
-go run ./cmd/eve canonicalize evolution.json
-go run ./cmd/eve version
+```text
+GET  /api/repos
+GET  /api/repos/{repoId}
+GET  /api/repos/{repoId}/snapshots
+GET  /api/repos/{repoId}/snapshots/{snapshotId}
+POST /api/repos/{repoId}/snapshots/{snapshotId}/checkout
+POST /mcp
 ```
+
+## MCP
+
+Resources:
+
+```text
+eve://repos
+eve://repos/{repoId}
+eve://repos/{repoId}/snapshots
+eve://repos/{repoId}/snapshots/{snapshotId}
+```
+
+Tools:
+
+- `list_repos`
+- `list_snapshots`
+- `get_snapshot`
+- `complete_snapshot`
+- `skip_snapshot`
+- `checkout_snapshot`
+
+`complete_snapshot` accepts product meaning from agents. EVE derives Git facts
+from the repository at completion time: branch, Git state, commits, and dirty
+status.
 
 ## Storage
 
@@ -100,34 +113,9 @@ Initialized structure:
 ```text
 .eve/
   config.json
-  staged/
-  evolutions/
-  sessions/
   snapshots/
+  artifacts/
+  cache/
 ```
 
-Committed product history:
-
-```text
-.eve/config.json
-.eve/evolutions/EV-001.json
-.eve/sessions/EV-001/
-  codex-session-912.md
-  codex-session-912.jsonl
-  manifest.json
-.eve/snapshots/EV-001/
-  screenshot.png
-  manifest.json
-```
-
-Local/generated state:
-
-```text
-.eve/staged/
-.eve/public/
-```
-
-## Scope
-
-EVE does not specify synchronization, auth, review policy, verification policy,
-deployment, or UI. Git remains the source of truth for implementation.
+EVE no longer reads or writes `.eve/evolutions/` in the Snapshot-first runtime.

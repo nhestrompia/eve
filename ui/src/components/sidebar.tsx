@@ -26,7 +26,7 @@ export function Sidebar() {
   const config = useQuery({ queryKey: ["config"], queryFn: api.config });
   const evolutions = useQuery({
     queryKey: ["evolutions"],
-    queryFn: api.evolutions,
+    queryFn: api.snapshots,
   });
   const repositories = useQuery({
     queryKey: ["repositories"],
@@ -120,7 +120,7 @@ export function Sidebar() {
         </Link>
         {/* {firstEvolution ? (
           <Link
-            to="/evolutions/$id/snapshot"
+            to="/snapshots/$id/snapshot"
             params={{ id: firstEvolution }}
             className="flex h-11 shrink-0 items-center gap-3 rounded-lg px-4 text-muted-foreground hover:bg-slate-50 hover:text-foreground md:h-12 md:gap-4"
           >

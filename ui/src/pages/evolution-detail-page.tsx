@@ -12,9 +12,9 @@ import { LoadingState } from '../components/loading-state';
 import { VerificationSummarySection } from '../components/verification-summary-section';
 
 export function EvolutionDetailPage() {
-  const { id } = useParams({ from: '/evolutions/$id' });
-  const evolutions = useQuery({ queryKey: ['evolutions'], queryFn: api.evolutions });
-  const detail = useQuery({ queryKey: ['evolution', id], queryFn: () => api.evolution(id) });
+  const { id } = useParams({ from: '/snapshots/$id' });
+  const evolutions = useQuery({ queryKey: ['snapshots'], queryFn: api.snapshots });
+  const detail = useQuery({ queryKey: ['snapshot-detail', id], queryFn: () => api.snapshotDetail(id) });
   const snapshot = useQuery({ queryKey: ['snapshot', id], queryFn: () => api.snapshot(id), retry: false });
 
   const rows = evolutions.data ?? [];

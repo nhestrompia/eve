@@ -1,104 +1,72 @@
 package eve
 
-import "encoding/json"
-
 const (
-	ProtocolVersion = 1
-	CLIVersion      = "0.1.0"
+	SnapshotSchemaVersion = "0.1.0"
+	CLIVersion            = "0.2.0"
 )
 
-type Evolution struct {
-	EVE            EVEHeader                  `json:"eve"`
-	Metadata       Metadata                   `json:"metadata"`
-	Intent         string                     `json:"intent"`
-	Outcome        string                     `json:"outcome"`
-	Behavior       Behavior                   `json:"behavior"`
-	Decisions      []json.RawMessage          `json:"decisions"`
-	Risks          []json.RawMessage          `json:"risks"`
-	Verification   []Verification             `json:"verification"`
-	Sessions       []Session                  `json:"sessions"`
-	Timeline       []TimelineEntry            `json:"timeline"`
-	Relationships  Relationships              `json:"relationships"`
-	Implementation Implementation             `json:"implementation"`
-	Extensions     map[string]json.RawMessage `json:"extensions"`
-}
-
-type EVEHeader struct {
-	Version int `json:"version"`
-}
-
-type Metadata struct {
-	ID        string `json:"id,omitempty"`
-	Title     string `json:"title,omitempty"`
-	Type      string `json:"type,omitempty"`
-	Status    string `json:"status"`
-	CreatedBy string `json:"created_by,omitempty"`
-	CreatedAt string `json:"created_at,omitempty"`
-	UpdatedAt string `json:"updated_at,omitempty"`
-}
-
-type Behavior struct {
-	Added   []BehaviorClaim `json:"added,omitempty"`
-	Changed []BehaviorClaim `json:"changed,omitempty"`
-	Removed []BehaviorClaim `json:"removed,omitempty"`
-	Fixed   []BehaviorClaim `json:"fixed,omitempty"`
-}
-
-type BehaviorClaim struct {
-	Description string    `json:"description"`
-	Evidence    *Evidence `json:"evidence,omitempty"`
-}
-
-type Evidence struct {
-	Commits []string `json:"commits,omitempty"`
-	Files   []string `json:"files,omitempty"`
-	Tests   []string `json:"tests,omitempty"`
-}
-
-type Verification struct {
-	Type      string `json:"type,omitempty"`
-	Status    string `json:"status"`
-	Reference string `json:"reference,omitempty"`
-}
-
-type Session struct {
-	Provider string `json:"provider,omitempty"`
-	ID       string `json:"id,omitempty"`
-	URI      string `json:"uri,omitempty"`
-}
-
-type TimelineEntry struct {
-	Timestamp   string `json:"timestamp,omitempty"`
-	Actor       *Actor `json:"actor,omitempty"`
-	Event       string `json:"event,omitempty"`
-	Description string `json:"description,omitempty"`
-}
-
-type Actor struct {
-	Type     string `json:"type,omitempty"`
-	Provider string `json:"provider,omitempty"`
-	ID       string `json:"id,omitempty"`
+type Snapshot struct {
+	ID                string          `json:"id"`
+	SchemaVersion     string          `json:"schemaVersion"`
+	Title             string          `json:"title"`
+	Type              string          `json:"type"`
+	Summary           string          `json:"summary"`
+	UserVisibleChange string          `json:"userVisibleChange,omitempty"`
+	Relationships     Relationships   `json:"relationships"`
+	Risks             []Risk          `json:"risks"`
+	Timeline          []TimelineEntry `json:"timeline"`
+	Decisions         []Decision      `json:"decisions"`
+	Validation        []Validation    `json:"validation"`
+	Artifacts         []Artifact      `json:"artifacts"`
+	Implementation    Implementation  `json:"implementation"`
+	CreatedAt         string          `json:"createdAt"`
 }
 
 type Relationships struct {
-	Extends    []string `json:"extends,omitempty"`
-	DependsOn  []string `json:"depends_on,omitempty"`
-	Corrects   []string `json:"corrects,omitempty"`
-	Supersedes []string `json:"supersedes,omitempty"`
-	Reverts    []string `json:"reverts,omitempty"`
-	Related    []string `json:"related,omitempty"`
+	Corrects   []string `json:"corrects"`
+	Supersedes []string `json:"supersedes"`
+	Reverts    []string `json:"reverts"`
+	DependsOn  []string `json:"dependsOn"`
+	Related    []string `json:"related"`
+}
+
+type Risk struct {
+	Title      string `json:"title"`
+	Severity   string `json:"severity"`
+	Mitigation string `json:"mitigation,omitempty"`
+}
+
+type TimelineEntry struct {
+	Phase      string `json:"phase"`
+	Title      string `json:"title"`
+	Summary    string `json:"summary,omitempty"`
+	OccurredAt string `json:"occurredAt,omitempty"`
+}
+
+type Decision struct {
+	Title     string `json:"title"`
+	Rationale string `json:"rationale,omitempty"`
+}
+
+type Validation struct {
+	Command string `json:"command"`
+	Status  string `json:"status"`
+	Output  string `json:"output,omitempty"`
+}
+
+type Artifact struct {
+	Type        string `json:"type"`
+	URI         string `json:"uri,omitempty"`
+	Path        string `json:"path,omitempty"`
+	URL         string `json:"url,omitempty"`
+	MimeType    string `json:"mimeType,omitempty"`
+	Description string `json:"description,omitempty"`
 }
 
 type Implementation struct {
-	Repositories map[string]Repository `json:"repositories,omitempty"`
-	Snapshot     string                `json:"snapshot,omitempty"`
-	Commits      []string              `json:"commits,omitempty"`
-	PullRequests []string              `json:"pull_requests,omitempty"`
-	FilesChanged int                   `json:"files_changed,omitempty"`
-	Insertions   int                   `json:"insertions,omitempty"`
-	Deletions    int                   `json:"deletions,omitempty"`
-}
-
-type Repository struct {
-	Status string `json:"status,omitempty"`
+	Branch     string   `json:"branch"`
+	GitState   string   `json:"gitState"`
+	BaseCommit string   `json:"baseCommit,omitempty"`
+	Commits    []string `json:"commits"`
+	Dirty      bool     `json:"dirty"`
 }

@@ -9,9 +9,9 @@ import { humanDate } from '../format';
 import { Header } from './verification-page';
 
 export function ActivityPage() {
-  const { id } = useParams({ from: '/evolutions/$id/activity' });
-  const evolutions = useQuery({ queryKey: ['evolutions'], queryFn: api.evolutions });
-  const detail = useQuery({ queryKey: ['evolution', id], queryFn: () => api.evolution(id) });
+  const { id } = useParams({ from: '/snapshots/$id/activity' });
+  const evolutions = useQuery({ queryKey: ['snapshots'], queryFn: api.snapshots });
+  const detail = useQuery({ queryKey: ['snapshot-detail', id], queryFn: () => api.snapshotDetail(id) });
 
   return (
     <EvolutionShell evolutions={evolutions.data ?? []} selectedId={id}>

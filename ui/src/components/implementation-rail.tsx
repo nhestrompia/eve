@@ -65,7 +65,7 @@ export function ImplementationRail({
           ))}
         </div>
         <Link
-          to="/evolutions/$id/sessions"
+          to="/snapshots/$id/sessions"
           params={{ id }}
           className="mt-6 inline-flex min-h-10 items-center gap-2 rounded-md px-2 text-sm font-medium text-blue-700 hover:bg-blue-50"
         >
@@ -74,11 +74,11 @@ export function ImplementationRail({
       </section>
 
       <div className="mt-8 divide-y">
-        <Link to="/evolutions/$id/decisions" params={{ id }} className="flex min-h-14 items-center justify-between gap-4 py-4 hover:text-blue-700">
+        <Link to="/snapshots/$id/decisions" params={{ id }} className="flex min-h-14 items-center justify-between gap-4 py-4 hover:text-blue-700">
           <span className="font-semibold">Decisions ({detail.evolution.decisions.length})</span>
           <ArrowRight className="size-4" />
         </Link>
-        <Link to="/evolutions/$id/risks" params={{ id }} className="flex min-h-14 items-center justify-between gap-4 py-4 hover:text-blue-700">
+        <Link to="/snapshots/$id/risks" params={{ id }} className="flex min-h-14 items-center justify-between gap-4 py-4 hover:text-blue-700">
           <span className="font-semibold">Risks ({detail.evolution.risks.length})</span>
           <ArrowRight className="size-4" />
         </Link>
@@ -139,7 +139,7 @@ function SessionRailItem({
   if (session.hasTranscript || session.localSources.length > 0) {
     return (
       <Link
-        to="/evolutions/$id/session/$sessionId"
+        to="/snapshots/$id/session/$sessionId"
         params={{ id: evolutionId, sessionId: session.key }}
         className="grid grid-cols-[24px_40px_minmax(0,1fr)] gap-4 rounded-lg py-1 hover:text-blue-700"
       >

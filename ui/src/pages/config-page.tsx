@@ -6,7 +6,7 @@ import { LoadingState } from '../components/loading-state';
 
 export function ConfigPage() {
   const config = useQuery({ queryKey: ['config'], queryFn: api.config });
-  const evolutions = useQuery({ queryKey: ['evolutions'], queryFn: api.evolutions });
+  const evolutions = useQuery({ queryKey: ['snapshots'], queryFn: api.snapshots });
 
   return (
     <EvolutionShell evolutions={evolutions.data ?? []} selectedId={undefined}>
@@ -32,8 +32,8 @@ export function ConfigPage() {
               <p className="mt-2 font-mono text-lg">{config.data.cliVersion}</p>
             </div>
             <div className="rounded-lg border bg-white p-5">
-              <p className="text-sm text-muted-foreground">Protocol version</p>
-              <p className="mt-2 font-mono text-lg">v{config.data.protocolVersion}</p>
+              <p className="text-sm text-muted-foreground">Snapshot schema</p>
+              <p className="mt-2 font-mono text-lg">{config.data.snapshotSchemaVersion}</p>
             </div>
           </div>
           <pre className="overflow-auto rounded-lg border bg-slate-950 p-6 font-mono text-xs text-white">

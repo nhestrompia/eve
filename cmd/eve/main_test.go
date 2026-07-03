@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -17,682 +16,134 @@ import (
 
 func TestRunVersion(t *testing.T) {
 	var stdout, stderr bytes.Buffer
-
 	code := run([]string{"version"}, &stdout, &stderr)
 	if code != 0 {
 		t.Fatalf("exit code = %d, want 0; stderr = %s", code, stderr.String())
 	}
-	if !strings.Contains(stdout.String(), "protocol v1") {
-		t.Fatalf("stdout = %q, want protocol version", stdout.String())
+	if !strings.Contains(stdout.String(), "snapshot schema 0.1.0") {
+		t.Fatalf("stdout = %q, want snapshot schema", stdout.String())
 	}
 }
 
-func TestRunValidateValidFile(t *testing.T) {
-	path := writeTempEvolution(t, validCLIJSON())
-	var stdout, stderr bytes.Buffer
-
-	code := run([]string{"validate", path}, &stdout, &stderr)
-	if code != 0 {
-		t.Fatalf("exit code = %d, want 0; stderr = %s", code, stderr.String())
-	}
-	if !strings.Contains(stdout.String(), "valid") {
-		t.Fatalf("stdout = %q, want valid", stdout.String())
-	}
-}
-
-func TestRunValidateInvalidFile(t *testing.T) {
-	path := writeTempEvolution(t, `{"eve":{"version":2}}`)
-	var stdout, stderr bytes.Buffer
-
-	code := run([]string{"validate", path}, &stdout, &stderr)
-	if code != 1 {
-		t.Fatalf("exit code = %d, want 1", code)
-	}
-	if !strings.Contains(stderr.String(), "invalid evolution") {
-		t.Fatalf("stderr = %q, want validation error", stderr.String())
-	}
-}
-
-func TestRunCanonicalize(t *testing.T) {
-	path := writeTempEvolution(t, validCLIJSON())
-	var stdout, stderr bytes.Buffer
-
-	code := run([]string{"canonicalize", path}, &stdout, &stderr)
-	if code != 0 {
-		t.Fatalf("exit code = %d, want 0; stderr = %s", code, stderr.String())
-	}
-	if strings.Contains(strings.TrimSpace(stdout.String()), "\n") {
-		t.Fatalf("stdout contains embedded newline: %q", stdout.String())
-	}
-	if !strings.Contains(stdout.String(), `"eve":{"version":1}`) {
-		t.Fatalf("stdout = %q, want canonical JSON", stdout.String())
-	}
-}
-
-func TestInitCreatesStructure(t *testing.T) {
-	eveDir := filepath.Join(t.TempDir(), ".eve")
-	t.Setenv("EVE_DIR", eveDir)
+func TestInitCreatesSnapshotStructure(t *testing.T) {
+	repo := initTempGitRepo(t)
+	t.Chdir(repo)
 
 	var stdout, stderr bytes.Buffer
 	code := run([]string{"init"}, &stdout, &stderr)
 	if code != 0 {
-		t.Fatalf("init exit code = %d, want 0; stderr = %s", code, stderr.String())
+		t.Fatalf("init exit code = %d, stderr = %s", code, stderr.String())
 	}
 	for _, path := range []string{
-		filepath.Join(eveDir, "config.json"),
-		filepath.Join(eveDir, "staged"),
-		filepath.Join(eveDir, "evolutions"),
-		filepath.Join(eveDir, "sessions"),
-		filepath.Join(eveDir, "snapshots"),
+		filepath.Join(repo, ".eve", "config.json"),
+		filepath.Join(repo, ".eve", "snapshots"),
+		filepath.Join(repo, ".eve", "artifacts"),
+		filepath.Join(repo, ".eve", "cache"),
 	} {
 		if _, err := os.Stat(path); err != nil {
 			t.Fatalf("expected %s: %v", path, err)
 		}
 	}
-	if _, err := os.Stat(filepath.Join(eveDir, "next_id")); !os.IsNotExist(err) {
-		t.Fatalf("next_id should not exist, err = %v", err)
+	if _, err := os.Stat(filepath.Join(repo, ".eve", "evolutions")); !os.IsNotExist(err) {
+		t.Fatalf(".eve/evolutions should not be created, err = %v", err)
 	}
 }
 
-func TestAddStatusCommitWorkflow(t *testing.T) {
-	eveDir := filepath.Join(t.TempDir(), ".eve")
-	t.Setenv("EVE_DIR", eveDir)
-	source := writeTranscriptSource(t)
-	head := currentHead(t)
-
-	var stdout, stderr bytes.Buffer
-	mustRun(t, []string{"init"}, &stdout, &stderr)
-
-	stdout.Reset()
-	stderr.Reset()
-	code := run([]string{
-		"add",
-		"--title", "Enterprise SSO",
-		"--type", "feature",
-		"--behavior-added", "Organizations can log in via Okta",
-		"--outcome", "Organizations can authenticate with Okta.",
-		"--verification", "passed: go test ./...",
-		"--session", "codex:session_912",
-		"--session-source", source,
-		"--implementation", "HEAD",
-	}, &stdout, &stderr)
-	if code != 0 {
-		t.Fatalf("add exit code = %d, want 0; stderr = %s", code, stderr.String())
-	}
-
-	stdout.Reset()
-	stderr.Reset()
-	code = run([]string{"status"}, &stdout, &stderr)
-	if code != 0 {
-		t.Fatalf("status exit code = %d, want 0; stderr = %s\nstdout = %s", code, stderr.String(), stdout.String())
-	}
-	for _, want := range []string{
-		"Ready: yes",
-		"Next ID: EV-001",
-		"Commit message: EV-001 Enterprise SSO",
-	} {
-		if !strings.Contains(stdout.String(), want) {
-			t.Fatalf("status stdout = %q, want %q", stdout.String(), want)
-		}
-	}
-
-	stdout.Reset()
-	stderr.Reset()
-	code = run([]string{"commit"}, &stdout, &stderr)
-	if code != 0 {
-		t.Fatalf("commit exit code = %d, want 0; stderr = %s\nstdout = %s", code, stderr.String(), stdout.String())
-	}
-	for _, want := range []string{
-		"Created EV-001 Enterprise SSO",
-		"git add .eve/",
-		`git commit -m "EV-001 Enterprise SSO"`,
-	} {
-		if !strings.Contains(stdout.String(), want) {
-			t.Fatalf("commit stdout = %q, want %q", stdout.String(), want)
-		}
-	}
-
-	evolutionPath := filepath.Join(eveDir, "evolutions", "EV-001.json")
-	if _, err := os.Stat(evolutionPath); err != nil {
-		t.Fatalf("expected committed evolution: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(eveDir, "staged", "evolution.json")); !os.IsNotExist(err) {
-		t.Fatalf("staged evolution should be cleared, err = %v", err)
-	}
-	for _, path := range []string{
-		filepath.Join(eveDir, "sessions", "EV-001", "codex-session-912.md"),
-		filepath.Join(eveDir, "sessions", "EV-001", "codex-session-912.jsonl"),
-		filepath.Join(eveDir, "sessions", "EV-001", "manifest.json"),
-	} {
-		if _, err := os.Stat(path); err != nil {
-			t.Fatalf("expected session artifact %s: %v", path, err)
-		}
-	}
-
-	raw, err := os.ReadFile(filepath.Join(eveDir, "sessions", "EV-001", "codex-session-912.jsonl"))
-	if err != nil {
-		t.Fatalf("read raw artifact: %v", err)
-	}
-	if strings.Contains(string(raw), "sk-1234567890abcdef") {
-		t.Fatalf("raw artifact was not sanitized: %s", string(raw))
-	}
-	if !strings.Contains(readFile(t, evolutionPath), head) {
-		t.Fatalf("committed evolution does not contain resolved HEAD %s", head)
-	}
-}
-
-func TestManualAddSubcommands(t *testing.T) {
-	eveDir := filepath.Join(t.TempDir(), ".eve")
-	t.Setenv("EVE_DIR", eveDir)
-	source := writeTranscriptSource(t)
-	var stdout, stderr bytes.Buffer
-	mustRun(t, []string{"init"}, &stdout, &stderr)
-
-	commands := [][]string{
-		{"add", "title", "Enterprise SSO", "--type", "feature"},
-		{"add", "behavior", "--added", "Organizations can log in via Okta"},
-		{"add", "verification", "--status", "passed", "--reference", "go test ./..."},
-		{"add", "session", "codex:session_912", "--source", source},
-		{"add", "outcome", "Organizations can authenticate with Okta."},
-		{"add", "implementation", "--snapshot", "HEAD", "--commit", "HEAD", "--repository", "eve", "--status", "merged"},
-	}
-	for _, command := range commands {
-		stdout.Reset()
-		stderr.Reset()
-		code := run(command, &stdout, &stderr)
-		if code != 0 {
-			t.Fatalf("%v exit code = %d, stderr = %s", command, code, stderr.String())
-		}
-	}
-
-	stdout.Reset()
-	stderr.Reset()
-	code := run([]string{"status"}, &stdout, &stderr)
-	if code != 0 {
-		t.Fatalf("status exit code = %d, want 0; stderr = %s\nstdout = %s", code, stderr.String(), stdout.String())
-	}
-}
-
-func TestAddImplementationSnapshotImageLifecycle(t *testing.T) {
-	eveDir := filepath.Join(t.TempDir(), ".eve")
-	t.Setenv("EVE_DIR", eveDir)
-	source := writePNGSource(t, "screenshot.png")
-	var stdout, stderr bytes.Buffer
-	mustRun(t, []string{"init"}, &stdout, &stderr)
-	mustRun(t, []string{"add", "title", "Snapshot Images", "--type", "feature"}, &stdout, &stderr)
-	mustRun(t, []string{"add", "behavior", "--added", "Agents can attach screenshots to product snapshots"}, &stdout, &stderr)
-	mustRun(t, []string{"add", "verification", "--status", "passed", "--reference", "go test ./..."}, &stdout, &stderr)
-	mustRun(t, []string{"add", "session", "codex:session_912", "--source", writeTranscriptSource(t)}, &stdout, &stderr)
-	mustRun(t, []string{"add", "outcome", "Snapshots display attached screenshots."}, &stdout, &stderr)
-
-	stdout.Reset()
-	stderr.Reset()
-	code := run([]string{"add", "implementation", "--snapshot", "HEAD", "--image", source}, &stdout, &stderr)
-	if code != 0 {
-		t.Fatalf("add implementation image exit code = %d, stderr = %s", code, stderr.String())
-	}
-	if _, err := os.Stat(filepath.Join(eveDir, "staged", "snapshots", "screenshot.png")); err != nil {
-		t.Fatalf("expected staged snapshot image: %v", err)
-	}
-	stagedManifest := loadSnapshotImageManifest(filepath.Join(eveDir, "staged", "snapshots", "manifest.json"))
-	if len(stagedManifest.Images) != 1 || stagedManifest.Images[0].ID != "screenshot" || stagedManifest.Images[0].MimeType != "image/png" {
-		t.Fatalf("staged manifest = %#v, want screenshot png", stagedManifest)
-	}
-
-	stdout.Reset()
-	stderr.Reset()
-	code = run([]string{"commit"}, &stdout, &stderr)
-	if code != 0 {
-		t.Fatalf("commit exit code = %d, stderr = %s\nstdout = %s", code, stderr.String(), stdout.String())
-	}
-	if _, err := os.Stat(filepath.Join(eveDir, "snapshots", "EV-001", "screenshot.png")); err != nil {
-		t.Fatalf("expected committed snapshot image: %v", err)
-	}
-	committed, err := eve.LoadFile(filepath.Join(eveDir, "evolutions", "EV-001.json"))
-	if err != nil {
-		t.Fatalf("load committed evolution: %v", err)
-	}
-	var extension snapshotImageExtension
-	if err := json.Unmarshal(committed.Extensions["eve.snapshot_images"], &extension); err != nil {
-		t.Fatalf("parse snapshot image extension: %v", err)
-	}
-	if len(extension.Images) != 1 || !strings.Contains(extension.Images[0].Path, ".eve/snapshots/EV-001/screenshot.png") {
-		t.Fatalf("snapshot image extension = %#v, want final image path", extension)
-	}
-}
-
-func TestAddImplementationSnapshotImageValidation(t *testing.T) {
-	eveDir := filepath.Join(t.TempDir(), ".eve")
-	t.Setenv("EVE_DIR", eveDir)
-	var stdout, stderr bytes.Buffer
-	mustRun(t, []string{"init"}, &stdout, &stderr)
-
-	code := run([]string{"add", "implementation", "--image", filepath.Join(t.TempDir(), "missing.png")}, &stdout, &stderr)
-	if code != 1 || !strings.Contains(stderr.String(), "read snapshot image") {
-		t.Fatalf("missing image code = %d stderr = %q, want read failure", code, stderr.String())
-	}
-
-	source := filepath.Join(t.TempDir(), "notes.txt")
-	if err := os.WriteFile(source, []byte("not an image"), 0o600); err != nil {
-		t.Fatalf("write source: %v", err)
-	}
-	stdout.Reset()
-	stderr.Reset()
-	code = run([]string{"add", "implementation", "--image", source}, &stdout, &stderr)
-	if code != 1 || !strings.Contains(stderr.String(), "unsupported snapshot image") {
-		t.Fatalf("unsupported image code = %d stderr = %q, want unsupported failure", code, stderr.String())
-	}
-}
-
-func TestStatusFailsWhenRequiredFieldsMissing(t *testing.T) {
-	t.Setenv("EVE_DIR", filepath.Join(t.TempDir(), ".eve"))
-	var stdout, stderr bytes.Buffer
-	mustRun(t, []string{"init"}, &stdout, &stderr)
-	mustRun(t, []string{"add", "title", "Incomplete", "--type", "feature"}, &stdout, &stderr)
-
-	stdout.Reset()
-	stderr.Reset()
-	code := run([]string{"status"}, &stdout, &stderr)
-	if code != 1 {
-		t.Fatalf("status exit code = %d, want 1", code)
-	}
-	for _, want := range []string{"Ready: no", "outcome", "behavior", "verification", "session", "implementation snapshot"} {
-		if !strings.Contains(stdout.String(), want) {
-			t.Fatalf("status stdout = %q, want %q", stdout.String(), want)
-		}
-	}
-}
-
-func TestStatusFailsForInvalidType(t *testing.T) {
-	t.Setenv("EVE_DIR", filepath.Join(t.TempDir(), ".eve"))
-	var stdout, stderr bytes.Buffer
-	mustRun(t, []string{"init"}, &stdout, &stderr)
-	mustRun(t, []string{"add", "title", "Enterprise SSO", "--type", "migration"}, &stdout, &stderr)
-
-	stdout.Reset()
-	stderr.Reset()
-	code := run([]string{"status"}, &stdout, &stderr)
-	if code != 1 {
-		t.Fatalf("status exit code = %d, want 1", code)
-	}
-	if !strings.Contains(stdout.String(), "type must be one of feature, fix, refactor, docs, test, chore") {
-		t.Fatalf("status stdout = %q, want allowed type validation", stdout.String())
-	}
-}
-
-func TestNextIDScansExistingEvolutions(t *testing.T) {
-	eveDir := filepath.Join(t.TempDir(), ".eve")
-	t.Setenv("EVE_DIR", eveDir)
-	var stdout, stderr bytes.Buffer
-	mustRun(t, []string{"init"}, &stdout, &stderr)
-	writeCommittedEvolution(t, eveDir, "EV-001", "First")
-	writeCommittedEvolution(t, eveDir, "EV-003", "Third")
-
-	mustStageCompleteEvolution(t, eveDir)
-	stdout.Reset()
-	stderr.Reset()
-	code := run([]string{"commit"}, &stdout, &stderr)
-	if code != 0 {
-		t.Fatalf("commit exit code = %d, stderr = %s", code, stderr.String())
-	}
-	if !strings.Contains(stdout.String(), "Created EV-004") {
-		t.Fatalf("commit stdout = %q, want EV-004", stdout.String())
-	}
-}
-
-func TestSessionProvidersFromSource(t *testing.T) {
-	for _, provider := range []string{"codex", "claude", "opencode", "pi"} {
-		t.Run(provider, func(t *testing.T) {
-			t.Setenv("EVE_DIR", filepath.Join(t.TempDir(), ".eve"))
-			source := filepath.Join(t.TempDir(), provider+".md")
-			if err := os.WriteFile(source, []byte("# transcript\n\nhello\n"), 0o600); err != nil {
-				t.Fatalf("write source: %v", err)
-			}
-			var stdout, stderr bytes.Buffer
-			mustRun(t, []string{"init"}, &stdout, &stderr)
-			code := run([]string{"add", "session", provider + ":abc123", "--source", source}, &stdout, &stderr)
-			if code != 0 {
-				t.Fatalf("add session exit code = %d; stderr = %s", code, stderr.String())
-			}
-		})
-	}
-}
-
-func TestShowListTimelineGraphSearchAndSnapshot(t *testing.T) {
-	eveDir := filepath.Join(t.TempDir(), ".eve")
-	t.Setenv("EVE_DIR", eveDir)
-	var stdout, stderr bytes.Buffer
-	mustRun(t, []string{"init"}, &stdout, &stderr)
-	writeCommittedEvolution(t, eveDir, "EV-001", "Base")
-	child := sampleEvolution("EV-002", "Enterprise SSO")
-	child.Relationships.Extends = []string{"EV-001"}
-	child.Behavior.Added = behaviorClaims("Organizations can log in via Okta")
-	saveEvolutionJSON(t, filepath.Join(eveDir, "evolutions", "EV-002.json"), child)
-
-	assertCommandContains(t, []string{"list"}, []string{"EV-001", "EV-002", "Enterprise SSO"})
-	assertCommandContains(t, []string{"show", "EV-002"}, []string{"Enterprise SSO", "+ Organizations can log in via Okta", "Commits:"})
-	assertCommandContains(t, []string{"timeline", "EV-002"}, []string{"EV-002 timeline"})
-	assertCommandContains(t, []string{"graph"}, []string{"EV-001 Base", "`-- EV-002 Enterprise SSO"})
-	assertCommandContains(t, []string{"search", "okta"}, []string{"EV-002"})
-	assertCommandContains(t, []string{"snapshot", "EV-002"}, []string{"Snapshot", "Repository: eve", "Commit:"})
-}
-
-func TestSnapshotFailsWithoutImplementationCommit(t *testing.T) {
-	eveDir := filepath.Join(t.TempDir(), ".eve")
-	t.Setenv("EVE_DIR", eveDir)
-	var stdout, stderr bytes.Buffer
-	mustRun(t, []string{"init"}, &stdout, &stderr)
-	ev := sampleEvolution("EV-001", "No Commit")
-	ev.Implementation.Snapshot = ""
-	saveEvolutionJSON(t, filepath.Join(eveDir, "evolutions", "EV-001.json"), ev)
-
-	code := run([]string{"snapshot", "EV-001"}, &stdout, &stderr)
-	if code != 1 {
-		t.Fatalf("snapshot exit code = %d, want 1", code)
-	}
-	if !strings.Contains(stderr.String(), "no resolvable code snapshot") {
-		t.Fatalf("stderr = %q, want missing commit failure", stderr.String())
-	}
-}
-
-func TestSnapshotAllowsExternalRepositoryMetadata(t *testing.T) {
-	eveDir := filepath.Join(t.TempDir(), ".eve")
-	t.Setenv("EVE_DIR", eveDir)
-	var stdout, stderr bytes.Buffer
-	mustRun(t, []string{"init"}, &stdout, &stderr)
-	ev := sampleEvolution("EV-001", "Multi Repo")
-	ev.Implementation.Repositories["api"] = eve.Repository{Status: "merged"}
-	saveEvolutionJSON(t, filepath.Join(eveDir, "evolutions", "EV-001.json"), ev)
-
-	code := run([]string{"snapshot", "EV-001"}, &stdout, &stderr)
-	if code != 0 {
-		t.Fatalf("snapshot exit code = %d, want 0; stderr = %s", code, stderr.String())
-	}
-	if !strings.Contains(stdout.String(), "Snapshot") {
-		t.Fatalf("stdout = %q, want snapshot", stdout.String())
-	}
-}
-
-func TestCheckoutFailsOnDirtyWorkingTree(t *testing.T) {
+func TestSnapshotValidateCanonicalizeAndCleanBreakList(t *testing.T) {
 	repo := initTempGitRepo(t)
 	t.Chdir(repo)
+	mustRun(t, []string{"init"})
+	snapshot := sampleSnapshot("snap_001", "Snapshot Runtime", gitOutputForTest(t, repo, "rev-parse", "HEAD"))
+	writeSnapshot(t, repo, snapshot)
+	writeLegacyEvolution(t, repo)
 
-	eveDir := filepath.Join(t.TempDir(), ".eve")
-	t.Setenv("EVE_DIR", eveDir)
-	var stdout, stderr bytes.Buffer
-	mustRun(t, []string{"init"}, &stdout, &stderr)
-	writeCommittedEvolution(t, eveDir, "EV-001", "Enterprise SSO")
+	assertCommandContains(t, []string{"snapshot", "snap_001"}, []string{"Snapshot Runtime", "Repository:", "Commit:"})
+	assertCommandContains(t, []string{"validate", filepath.Join(repo, ".eve", "snapshots", "snap_001.json")}, []string{"is valid"})
+	assertCommandContains(t, []string{"canonicalize", filepath.Join(repo, ".eve", "snapshots", "snap_001.json")}, []string{`"id":"snap_001"`})
+
+	handler := newRuntimeServer(repoFromRoot(repo), "localhost:0").routes()
+	var rows []snapshotSummary
+	requestJSON(t, handler, http.MethodGet, "/api/repos/"+filepath.Base(repo)+"/snapshots", nil, &rows)
+	if len(rows) != 1 || rows[0].ID != "snap_001" {
+		t.Fatalf("rows = %#v, want only snap_001", rows)
+	}
+}
+
+func TestRuntimeAPIAndMCP(t *testing.T) {
+	repo := initTempGitRepo(t)
+	t.Chdir(repo)
+	mustRun(t, []string{"init"})
+	head := gitOutputForTest(t, repo, "rev-parse", "HEAD")
+	writeSnapshot(t, repo, sampleSnapshot("snap_api", "API Snapshot", head))
+
+	handler := newRuntimeServer(repoFromRoot(repo), "localhost:0").routes()
+	var repos []repoSummary
+	requestJSON(t, handler, http.MethodGet, "/api/repos", nil, &repos)
+	if len(repos) != 1 || repos[0].SnapshotCount != 1 {
+		t.Fatalf("repos = %#v, want one repo with one snapshot", repos)
+	}
+
+	var detail snapshotDetailResponse
+	requestJSON(t, handler, http.MethodGet, "/api/repos/"+filepath.Base(repo)+"/snapshots/snap_api", nil, &detail)
+	if detail.Snapshot.Title != "API Snapshot" || len(detail.RawJSON) == 0 {
+		t.Fatalf("detail = %#v, want snapshot detail", detail)
+	}
+
+	response := mcpCall(t, handler, `{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}`)
+	if !strings.Contains(response, "complete_snapshot") {
+		t.Fatalf("tools/list response = %s, want complete_snapshot", response)
+	}
+	response = mcpCall(t, handler, `{"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"eve://repos/`+filepath.Base(repo)+`/snapshots/snap_api"}}`)
+	if !strings.Contains(response, "API Snapshot") {
+		t.Fatalf("resources/read response = %s, want snapshot", response)
+	}
+	response = mcpCall(t, handler, `{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"complete_snapshot","arguments":{"title":"Completed by MCP","type":"feature","summary":"MCP writes snapshots.","validation":[{"command":"go test ./...","status":"passed"}]}}}`)
+	if !strings.Contains(response, "Completed by MCP") {
+		t.Fatalf("complete_snapshot response = %s, want created snapshot", response)
+	}
+	snapshots, err := repoFromRoot(repo).listSnapshots("")
+	if err != nil {
+		t.Fatalf("list snapshots: %v", err)
+	}
+	if len(snapshots) != 2 {
+		t.Fatalf("snapshot count = %d, want 2", len(snapshots))
+	}
+}
+
+func TestCheckoutRefusesDirtyTreeUnlessForced(t *testing.T) {
+	repo := initTempGitRepo(t)
+	t.Chdir(repo)
+	head := gitOutputForTest(t, repo, "rev-parse", "HEAD")
+	mustRun(t, []string{"init"})
+	writeSnapshot(t, repo, sampleSnapshot("snap_checkout", "Checkout Snapshot", head))
 	if err := os.WriteFile(filepath.Join(repo, "dirty.txt"), []byte("dirty"), 0o644); err != nil {
 		t.Fatalf("write dirty file: %v", err)
 	}
 
-	code := run([]string{"checkout", "EV-001"}, &stdout, &stderr)
-	if code != 1 {
-		t.Fatalf("checkout exit code = %d, want dirty-tree failure", code)
-	}
-	if !strings.Contains(stderr.String(), "Working tree has uncommitted changes.") {
-		t.Fatalf("stderr = %q, want dirty-tree message", stderr.String())
+	var stdout, stderr bytes.Buffer
+	code := run([]string{"checkout", "snap_checkout"}, &stdout, &stderr)
+	if code != 1 || !strings.Contains(stderr.String(), "Working tree has uncommitted changes") {
+		t.Fatalf("checkout code = %d stderr = %q, want dirty refusal", code, stderr.String())
 	}
 }
 
-func TestCheckoutRestoresCleanRepository(t *testing.T) {
+func TestCompleteSnapshotDerivesGitFacts(t *testing.T) {
 	repo := initTempGitRepo(t)
-	t.Chdir(repo)
-	first := gitOutput(t, "rev-parse", "HEAD")
-	if err := os.WriteFile(filepath.Join(repo, "product.txt"), []byte("second\n"), 0o644); err != nil {
-		t.Fatalf("write product file: %v", err)
-	}
-	gitRun(t, "add", "product.txt")
-	gitRun(t, "commit", "-m", "second")
-
-	eveDir := filepath.Join(t.TempDir(), ".eve")
-	t.Setenv("EVE_DIR", eveDir)
-	var stdout, stderr bytes.Buffer
-	mustRun(t, []string{"init"}, &stdout, &stderr)
-	ev := sampleEvolution("EV-001", "Enterprise SSO")
-	ev.Implementation.Snapshot = first
-	saveEvolutionJSON(t, filepath.Join(eveDir, "evolutions", "EV-001.json"), ev)
-
-	stdout.Reset()
-	stderr.Reset()
-	code := run([]string{"checkout", "EV-001"}, &stdout, &stderr)
-	if code != 0 {
-		t.Fatalf("checkout exit code = %d, want 0; stderr = %s", code, stderr.String())
-	}
-	if !strings.Contains(stdout.String(), "Product snapshot restored") {
-		t.Fatalf("stdout = %q, want restored message", stdout.String())
-	}
-	if got := strings.TrimSpace(gitOutput(t, "rev-parse", "HEAD")); got != first {
-		t.Fatalf("HEAD = %s, want %s", got, first)
-	}
-}
-
-func TestUIAPIServesStaticAndEvolutionData(t *testing.T) {
-	eveDir := filepath.Join(t.TempDir(), ".eve")
-	t.Setenv("EVE_DIR", eveDir)
-	var stdout, stderr bytes.Buffer
-	mustRun(t, []string{"init"}, &stdout, &stderr)
-	ev := sampleEvolution("EV-001", "Git-like product staging")
-	ev.Outcome = "Product history is browsable as snapshots."
-	ev.Implementation.Commits = nil
-	saveEvolutionJSON(t, filepath.Join(eveDir, "evolutions", "EV-001.json"), ev)
-	store := newStore()
-	if _, err := store.writeSnapshotImageArtifact(
-		store.snapshotDir("EV-001"),
-		store.snapshotImageManifestPath("EV-001"),
-		"EV-001",
-		writePNGSource(t, "dashboard.png"),
-	); err != nil {
-		t.Fatalf("write snapshot image artifact: %v", err)
-	}
-
-	handler := newUIServer(newStore(), "", "localhost:0").routes()
-
-	static := httptest.NewRecorder()
-	handler.ServeHTTP(static, httptest.NewRequest(http.MethodGet, "/", nil))
-	if static.Code != http.StatusOK {
-		t.Fatalf("static status = %d, want 200", static.Code)
-	}
-	if !strings.Contains(static.Body.String(), "EVE UI") {
-		t.Fatalf("static body = %q, want EVE UI", static.Body.String())
-	}
-
-	var rows []evolutionSummary
-	requestJSON(t, handler, http.MethodGet, "/api/evolutions", nil, &rows)
-	if len(rows) != 1 || rows[0].ID != "EV-001" || rows[0].Snapshot == "" || rows[0].CommitCount != 1 {
-		t.Fatalf("timeline rows = %#v, want EV-001 with snapshot commit count", rows)
-	}
-
-	var detail evolutionDetailResponse
-	requestJSON(t, handler, http.MethodGet, "/api/evolutions/EV-001", nil, &detail)
-	if detail.Evolution.Metadata.Title != "Git-like product staging" || len(detail.RawJSON) == 0 {
-		t.Fatalf("detail = %#v, want evolution and raw JSON", detail)
-	}
-
-	var snapshot snapshotResponse
-	requestJSON(t, handler, http.MethodGet, "/api/evolutions/EV-001/snapshot", nil, &snapshot)
-	if snapshot.CheckoutCommand != "eve checkout EV-001" || snapshot.Commit == "" {
-		t.Fatalf("snapshot = %#v, want checkout command and commit", snapshot)
-	}
-	if len(snapshot.SnapshotImages) != 1 || snapshot.SnapshotImages[0].ID != "dashboard" || snapshot.SnapshotImages[0].URL == "" {
-		t.Fatalf("snapshot images = %#v, want dashboard image metadata", snapshot.SnapshotImages)
-	}
-	image := httptest.NewRecorder()
-	handler.ServeHTTP(image, httptest.NewRequest(http.MethodGet, snapshot.SnapshotImages[0].URL, nil))
-	if image.Code != http.StatusOK || image.Header().Get("Content-Type") != "image/png" || image.Body.Len() == 0 {
-		t.Fatalf("image response code = %d content-type = %q len = %d", image.Code, image.Header().Get("Content-Type"), image.Body.Len())
-	}
-	missingImage := httptest.NewRecorder()
-	handler.ServeHTTP(missingImage, httptest.NewRequest(http.MethodGet, "/api/evolutions/EV-001/snapshot-images/not-recorded", nil))
-	if missingImage.Code != http.StatusNotFound {
-		t.Fatalf("missing image status = %d, want 404", missingImage.Code)
-	}
-
-	var search searchResponse
-	requestJSON(t, handler, http.MethodGet, "/api/search?q=snapshots", nil, &search)
-	if len(search.Results) != 1 || search.Results[0].Evolution.ID != "EV-001" {
-		t.Fatalf("search = %#v, want EV-001", search)
-	}
-}
-
-func TestUIAPISessionTranscript(t *testing.T) {
-	eveDir := filepath.Join(t.TempDir(), ".eve")
-	t.Setenv("EVE_DIR", eveDir)
-	var stdout, stderr bytes.Buffer
-	mustRun(t, []string{"init"}, &stdout, &stderr)
-	ev := sampleEvolution("EV-001", "Session Reader")
-	saveEvolutionJSON(t, filepath.Join(eveDir, "evolutions", "EV-001.json"), ev)
-	store := newStore()
-	_, err := store.writeSessionArtifacts(
-		store.sessionDir("EV-001"),
-		store.sessionManifestPath("EV-001"),
-		"EV-001",
-		"codex",
-		"session_912",
-		"Implementation Session",
-		"jsonl",
-		[]byte(`{"type":"event_msg","timestamp":"2026-07-02T00:00:00Z","payload":{"type":"user_message","message":"implement transcript search"}}
-{"type":"response_item","timestamp":"2026-07-02T00:00:01Z","payload":{"type":"function_call","name":"exec_command","arguments":"go test ./..."}}
-{"type":"event_msg","timestamp":"2026-07-02T00:00:02Z","payload":{"type":"agent_message","message":"Verified transcript search."}}
-{"type":"event_msg","timestamp":"2026-07-02T00:00:03Z","payload":{"type":"token_count","total_token_usage":{"total_tokens":1200}}}
-`),
-		true,
-		"fixture.jsonl",
-	)
+	facts, err := deriveGitFacts(repoFromRoot(repo))
 	if err != nil {
-		t.Fatalf("write session artifacts: %v", err)
+		t.Fatalf("deriveGitFacts: %v", err)
 	}
-
-	handler := newUIServer(newStore(), "", "localhost:0").routes()
-	var sessions sessionListResponse
-	requestJSON(t, handler, http.MethodGet, "/api/evolutions/EV-001/sessions", nil, &sessions)
-	if len(sessions.Sessions) != 1 || !sessions.Sessions[0].HasTranscript {
-		t.Fatalf("sessions = %#v, want transcript", sessions)
-	}
-
-	var transcript sessionTranscriptResponse
-	requestJSON(t, handler, http.MethodGet, "/api/evolutions/EV-001/sessions/codex%3Asession_912", nil, &transcript)
-	if !strings.Contains(transcript.Markdown, "Verified transcript search.") {
-		t.Fatalf("transcript = %#v, want markdown", transcript)
-	}
-	for _, unwanted := range []string{"function_call", "token_count", "```json"} {
-		if strings.Contains(transcript.Markdown, unwanted) {
-			t.Fatalf("transcript markdown contains %q: %s", unwanted, transcript.Markdown)
-		}
-	}
-	if !strings.Contains(transcript.Markdown, "Tool calls: `1`") || !strings.Contains(transcript.Markdown, "Omitted system/tool/log events: `2`") {
-		t.Fatalf("transcript markdown = %s, want analytics", transcript.Markdown)
-	}
-
-	var search searchResponse
-	requestJSON(t, handler, http.MethodGet, "/api/search?q=transcript", nil, &search)
-	if len(search.Results) != 1 {
-		t.Fatalf("search = %#v, want transcript match", search)
+	if facts.GitState == "" || len(facts.Commits) == 0 {
+		t.Fatalf("facts = %#v, want git state and commits", facts)
 	}
 }
 
-func TestRenderSessionMarkdownExtractsProviderMessages(t *testing.T) {
-	tests := []struct {
-		name     string
-		provider string
-		format   string
-		raw      string
-		wants    []string
-	}{
-		{
-			name:     "codex",
-			provider: "codex",
-			format:   "jsonl",
-			raw: `{"type":"event_msg","payload":{"type":"user_message","message":"# AGENTS.md instructions\n\n<environment_context>repo</environment_context>"}}
-{"type":"event_msg","payload":{"type":"user_message","message":"make the detail page readable"}}
-{"type":"response_item","payload":{"type":"function_call","name":"exec_command","arguments":"rg session"}}
-{"type":"event_msg","payload":{"type":"agent_message","message":"Rendered only the useful messages."}}
-`,
-			wants: []string{"### User", "make the detail page readable", "### Assistant", "Rendered only the useful messages.", "Tool calls: `1`"},
-		},
-		{
-			name:     "claude",
-			provider: "claude",
-			format:   "jsonl",
-			raw: `{"type":"user","message":{"role":"user","content":"summarize this"}}
-{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Summary is ready."},{"type":"tool_use","name":"Read"}]}}
-`,
-			wants: []string{"summarize this", "Summary is ready.", "Tool calls: `1`"},
-		},
-		{
-			name:     "opencode",
-			provider: "opencode",
-			format:   "json",
-			raw:      `{"messages":[{"role":"user","parts":[{"type":"text","text":"ship it"}]},{"role":"assistant","parts":[{"type":"text","text":"Shipped."}]}]}`,
-			wants:    []string{"ship it", "Shipped."},
-		},
-		{
-			name:     "pi",
-			provider: "pi",
-			format:   "jsonl",
-			raw: `{"role":"user","content":"what changed?"}
-{"role":"assistant","content":"The session page now shows messages and analytics."}
-`,
-			wants: []string{"what changed?", "The session page now shows messages and analytics."},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			markdown := string(renderSessionMarkdown(tt.provider, "abc123", "", tt.format, []byte(tt.raw), true, "fixture"))
-			for _, want := range tt.wants {
-				if !strings.Contains(markdown, want) {
-					t.Fatalf("markdown = %s, want %q", markdown, want)
-				}
-			}
-			for _, unwanted := range []string{"```json", "function_call", "tool_use", "environment_context"} {
-				if strings.Contains(markdown, unwanted) {
-					t.Fatalf("markdown contains raw log marker %q: %s", unwanted, markdown)
-				}
-			}
-		})
-	}
-}
-
-func TestUIAPICheckoutReportsDirtyWorkingTree(t *testing.T) {
-	repo := initTempGitRepo(t)
-	t.Chdir(repo)
-	if err := os.WriteFile(filepath.Join(repo, "dirty.txt"), []byte("dirty"), 0o644); err != nil {
-		t.Fatalf("write dirty file: %v", err)
-	}
-
-	eveDir := filepath.Join(t.TempDir(), ".eve")
-	t.Setenv("EVE_DIR", eveDir)
+func mustRun(t *testing.T, args []string) {
+	t.Helper()
 	var stdout, stderr bytes.Buffer
-	mustRun(t, []string{"init"}, &stdout, &stderr)
-	writeCommittedEvolution(t, eveDir, "EV-001", "Dirty Checkout")
-
-	handler := newUIServer(newStore(), "", "localhost:0").routes()
-	var checkout checkoutResponse
-	requestJSON(t, handler, http.MethodPost, "/api/evolutions/EV-001/checkout", nil, &checkout)
-	if checkout.ExitCode != 1 || !strings.Contains(checkout.Stderr, "Working tree has uncommitted changes.") {
-		t.Fatalf("checkout = %#v, want dirty-tree failure", checkout)
-	}
-}
-
-func mustRun(t *testing.T, args []string, stdout *bytes.Buffer, stderr *bytes.Buffer) {
-	t.Helper()
-	stdout.Reset()
-	stderr.Reset()
-	code := run(args, stdout, stderr)
+	code := run(args, &stdout, &stderr)
 	if code != 0 {
-		t.Fatalf("%v exit code = %d, stderr = %s", args, code, stderr.String())
-	}
-}
-
-func requestJSON(t *testing.T, handler http.Handler, method string, target string, body io.Reader, out any) {
-	t.Helper()
-	recorder := httptest.NewRecorder()
-	handler.ServeHTTP(recorder, httptest.NewRequest(method, target, body))
-	if recorder.Code < 200 || recorder.Code >= 300 {
-		t.Fatalf("%s %s status = %d; body = %s", method, target, recorder.Code, recorder.Body.String())
-	}
-	if err := json.Unmarshal(recorder.Body.Bytes(), out); err != nil {
-		t.Fatalf("decode %s %s: %v; body = %s", method, target, err, recorder.Body.String())
+		t.Fatalf("%v exit code = %d stderr = %s stdout = %s", args, code, stderr.String(), stdout.String())
 	}
 }
 
@@ -701,7 +152,7 @@ func assertCommandContains(t *testing.T, args []string, wants []string) {
 	var stdout, stderr bytes.Buffer
 	code := run(args, &stdout, &stderr)
 	if code != 0 {
-		t.Fatalf("%v exit code = %d; stderr = %s", args, code, stderr.String())
+		t.Fatalf("%v exit code = %d stderr = %s", args, code, stderr.String())
 	}
 	for _, want := range wants {
 		if !strings.Contains(stdout.String(), want) {
@@ -710,190 +161,114 @@ func assertCommandContains(t *testing.T, args []string, wants []string) {
 	}
 }
 
-func writeTempEvolution(t *testing.T, input string) string {
+func requestJSON(t *testing.T, handler http.Handler, method string, target string, body *bytes.Reader, out any) {
 	t.Helper()
-	path := filepath.Join(t.TempDir(), "evolution.json")
-	if err := os.WriteFile(path, []byte(input), 0o600); err != nil {
-		t.Fatalf("write temp evolution: %v", err)
+	if body == nil {
+		body = bytes.NewReader(nil)
 	}
-	return path
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, httptest.NewRequest(method, target, body))
+	if recorder.Code < 200 || recorder.Code >= 300 {
+		t.Fatalf("%s %s status = %d body = %s", method, target, recorder.Code, recorder.Body.String())
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), out); err != nil {
+		t.Fatalf("decode response: %v; body = %s", err, recorder.Body.String())
+	}
 }
 
-func writeTranscriptSource(t *testing.T) string {
+func mcpCall(t *testing.T, handler http.Handler, body string) string {
 	t.Helper()
-	source := filepath.Join(t.TempDir(), "codex-session_912.jsonl")
-	transcript := `{"role":"user","content":"implement Okta login","api_key":"sk-1234567890abcdef"}
-{"role":"assistant","content":"implemented Okta callback flow"}
-`
-	if err := os.WriteFile(source, []byte(transcript), 0o600); err != nil {
-		t.Fatalf("write source transcript: %v", err)
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(body))
+	request.Header.Set("Accept", "application/json, text/event-stream")
+	handler.ServeHTTP(recorder, request)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("mcp status = %d body = %s", recorder.Code, recorder.Body.String())
 	}
-	return source
-}
-
-func writePNGSource(t *testing.T, name string) string {
-	t.Helper()
-	source := filepath.Join(t.TempDir(), name)
-	data := []byte{
-		0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
-		0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
-		0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-		0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53,
-		0xde, 0x00, 0x00, 0x00, 0x0c, 0x49, 0x44, 0x41,
-		0x54, 0x78, 0x9c, 0x63, 0x60, 0x60, 0x60, 0x00,
-		0x00, 0x00, 0x04, 0x00, 0x01, 0xf6, 0x17, 0x38,
-		0x55, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e,
-		0x44, 0xae, 0x42, 0x60, 0x82,
-	}
-	if err := os.WriteFile(source, data, 0o600); err != nil {
-		t.Fatalf("write png source: %v", err)
-	}
-	return source
-}
-
-func currentHead(t *testing.T) string {
-	t.Helper()
-	commit, err := resolveCommit("HEAD")
-	if err != nil {
-		t.Fatalf("resolve HEAD: %v", err)
-	}
-	return commit
-}
-
-func mustStageCompleteEvolution(t *testing.T, eveDir string) {
-	t.Helper()
-	source := writeTranscriptSource(t)
-	var stdout, stderr bytes.Buffer
-	commands := [][]string{
-		{"add", "--title", "Enterprise SSO", "--type", "feature", "--behavior-added", "Organizations can log in via Okta", "--outcome", "Organizations can authenticate with Okta.", "--verification", "passed: go test ./...", "--session", "codex:session_912", "--session-source", source, "--implementation", "HEAD"},
-	}
-	for _, command := range commands {
-		mustRun(t, command, &stdout, &stderr)
-	}
-}
-
-func writeCommittedEvolution(t *testing.T, eveDir string, id string, title string) {
-	t.Helper()
-	saveEvolutionJSON(t, filepath.Join(eveDir, "evolutions", id+".json"), sampleEvolution(id, title))
-}
-
-func saveEvolutionJSON(t *testing.T, path string, evolution *eve.Evolution) {
-	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		t.Fatalf("mkdir %s: %v", filepath.Dir(path), err)
-	}
-	canonical, err := eve.CanonicalJSON(evolution)
-	if err != nil {
-		t.Fatalf("canonical JSON: %v", err)
-	}
-	if err := os.WriteFile(path, append(canonical, '\n'), 0o644); err != nil {
-		t.Fatalf("write %s: %v", path, err)
-	}
-}
-
-func sampleEvolution(id string, title string) *eve.Evolution {
-	head, _ := resolveCommit("HEAD")
-	if head == "" {
-		head = "HEAD"
-	}
-	return &eve.Evolution{
-		EVE: eve.EVEHeader{Version: eve.ProtocolVersion},
-		Metadata: eve.Metadata{
-			ID:        id,
-			Title:     title,
-			Type:      "feature",
-			Status:    "completed",
-			CreatedBy: "test",
-			CreatedAt: "2026-07-02T00:00:00Z",
-			UpdatedAt: "2026-07-02T00:00:00Z",
-		},
-		Intent:  title,
-		Outcome: "Organizations can authenticate with Okta.",
-		Behavior: eve.Behavior{
-			Added: []eve.BehaviorClaim{{Description: "Organizations can log in via Okta"}},
-		},
-		Decisions:     []json.RawMessage{},
-		Risks:         []json.RawMessage{},
-		Verification:  []eve.Verification{{Type: "tests", Status: "passed", Reference: "go test ./..."}},
-		Sessions:      []eve.Session{{Provider: "codex", ID: "session_912"}},
-		Timeline:      []eve.TimelineEntry{{Timestamp: "2026-07-02T00:00:00Z", Event: "committed", Description: "Committed evolution."}},
-		Relationships: eve.Relationships{},
-		Implementation: eve.Implementation{
-			Repositories: map[string]eve.Repository{"eve": {Status: "merged"}},
-			Snapshot:     head,
-			Commits:      []string{head},
-		},
-		Extensions: map[string]json.RawMessage{},
-	}
-}
-
-func behaviorClaims(description string) []eve.BehaviorClaim {
-	return []eve.BehaviorClaim{{Description: description}}
-}
-
-func readFile(t *testing.T, path string) string {
-	t.Helper()
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("read %s: %v", path, err)
-	}
-	return string(data)
+	return recorder.Body.String()
 }
 
 func initTempGitRepo(t *testing.T) string {
 	t.Helper()
 	repo := t.TempDir()
-	runGitIn(t, repo, "init")
-	runGitIn(t, repo, "config", "user.email", "test@example.com")
-	runGitIn(t, repo, "config", "user.name", "Test User")
-	if err := os.WriteFile(filepath.Join(repo, "product.txt"), []byte("first\n"), 0o644); err != nil {
-		t.Fatalf("write product file: %v", err)
+	gitRun(t, repo, "init")
+	gitRun(t, repo, "config", "user.email", "test@example.com")
+	gitRun(t, repo, "config", "user.name", "Test User")
+	if err := os.WriteFile(filepath.Join(repo, "product.txt"), []byte("product\n"), 0o644); err != nil {
+		t.Fatalf("write product: %v", err)
 	}
-	runGitIn(t, repo, "add", "product.txt")
-	runGitIn(t, repo, "commit", "-m", "first")
+	gitRun(t, repo, "add", "product.txt")
+	gitRun(t, repo, "commit", "-m", "initial")
 	return repo
 }
 
-func gitRun(t *testing.T, args ...string) {
-	t.Helper()
-	runGitIn(t, "", args...)
-}
-
-func runGitIn(t *testing.T, dir string, args ...string) {
+func gitRun(t *testing.T, repo string, args ...string) {
 	t.Helper()
 	cmd := exec.Command("git", args...)
-	if dir != "" {
-		cmd.Dir = dir
-	}
-	output, err := cmd.CombinedOutput()
-	if err != nil {
+	cmd.Dir = repo
+	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("git %v: %v\n%s", args, err, output)
 	}
 }
 
-func gitOutput(t *testing.T, args ...string) string {
+func gitOutputForTest(t *testing.T, repo string, args ...string) string {
 	t.Helper()
-	output, err := exec.Command("git", args...).Output()
+	cmd := exec.Command("git", args...)
+	cmd.Dir = repo
+	output, err := cmd.Output()
 	if err != nil {
 		t.Fatalf("git %v: %v", args, err)
 	}
 	return strings.TrimSpace(string(output))
 }
 
-func validCLIJSON() string {
-	return `{
-  "eve": {"version": 1},
-  "metadata": {"status": "active", "type": "custom"},
-  "intent": "Document work.",
-  "outcome": "Work is documented.",
-  "behavior": {},
-  "decisions": [],
-  "risks": [],
-  "verification": [{"status": "passed"}],
-  "sessions": [],
-  "timeline": [],
-  "relationships": {},
-  "implementation": {"repositories": {"web": {"status": "merged"}}},
-  "extensions": {"acme": {"rollout": "25%"}}
-}`
+func sampleSnapshot(id string, title string, gitState string) *eve.Snapshot {
+	return &eve.Snapshot{
+		ID:            id,
+		SchemaVersion: eve.SnapshotSchemaVersion,
+		Title:         title,
+		Type:          "feature",
+		Summary:       "Snapshots are canonical product units.",
+		Relationships: eve.Relationships{
+			Corrects:   []string{},
+			Supersedes: []string{},
+			Reverts:    []string{},
+			DependsOn:  []string{},
+			Related:    []string{},
+		},
+		Risks:     []eve.Risk{},
+		Timeline:  []eve.TimelineEntry{},
+		Decisions: []eve.Decision{},
+		Validation: []eve.Validation{{
+			Command: "go test ./...",
+			Status:  "passed",
+		}},
+		Artifacts: []eve.Artifact{},
+		Implementation: eve.Implementation{
+			Branch:   "master",
+			GitState: gitState,
+			Commits:  []string{gitState},
+			Dirty:    false,
+		},
+		CreatedAt: "2026-07-03T15:00:00Z",
+	}
+}
+
+func writeSnapshot(t *testing.T, repo string, snapshot *eve.Snapshot) {
+	t.Helper()
+	store := repoFromRoot(repo)
+	if err := store.saveSnapshot(snapshot); err != nil {
+		t.Fatalf("save snapshot: %v", err)
+	}
+}
+
+func writeLegacyEvolution(t *testing.T, repo string) {
+	t.Helper()
+	dir := filepath.Join(repo, ".eve", "evolutions")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("mkdir evolutions: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "EV-001.json"), []byte(`{"legacy":true}`), 0o644); err != nil {
+		t.Fatalf("write legacy evolution: %v", err)
+	}
 }

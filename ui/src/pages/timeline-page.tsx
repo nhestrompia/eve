@@ -8,7 +8,7 @@ import { RepositoryActivityView } from '../components/repository-activity-view';
 
 export function TimelinePage() {
   const config = useQuery({ queryKey: ['config'], queryFn: api.config });
-  const evolutions = useQuery({ queryKey: ['evolutions'], queryFn: api.evolutions });
+  const evolutions = useQuery({ queryKey: ['snapshots'], queryFn: api.snapshots });
   const repositories = useQuery({ queryKey: ['repositories'], queryFn: api.repositories });
 
   if (config.data && !config.data.initialized) {

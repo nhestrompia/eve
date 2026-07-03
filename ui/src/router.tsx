@@ -26,7 +26,7 @@ const indexRoute = createRoute({
 
 const evolutionRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/evolutions/$id',
+  path: '/snapshots/$id',
   component: EvolutionDetailPage
 });
 
@@ -38,55 +38,55 @@ const repositoryRoute = createRoute({
 
 const snapshotRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/evolutions/$id/snapshot',
+  path: '/snapshots/$id/snapshot',
   component: SnapshotPage
 });
 
 const sessionRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/evolutions/$id/session/$sessionId',
+  path: '/snapshots/$id/session/$sessionId',
   component: SessionPage
 });
 
 const sessionsOverviewRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/evolutions/$id/sessions',
+  path: '/snapshots/$id/sessions',
   component: SessionsOverviewPage
 });
 
 const verificationRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/evolutions/$id/verification',
+  path: '/snapshots/$id/verification',
   component: VerificationPage
 });
 
 const decisionsRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/evolutions/$id/decisions',
+  path: '/snapshots/$id/decisions',
   component: DecisionsPage
 });
 
 const risksRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/evolutions/$id/risks',
+  path: '/snapshots/$id/risks',
   component: RisksPage
 });
 
 const implementationRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/evolutions/$id/implementation',
+  path: '/snapshots/$id/implementation',
   component: ImplementationPage
 });
 
 const relationshipsRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/evolutions/$id/relationships',
+  path: '/snapshots/$id/relationships',
   component: RelationshipsPage
 });
 
 const activityRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/evolutions/$id/activity',
+  path: '/snapshots/$id/activity',
   component: ActivityPage
 });
 

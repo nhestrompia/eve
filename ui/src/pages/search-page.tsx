@@ -11,7 +11,7 @@ export function SearchPage() {
   const search = useSearch({ from: '/search' });
   const navigate = useNavigate();
   const [query, setQuery] = useState(search.q ?? '');
-  const evolutions = useQuery({ queryKey: ['evolutions'], queryFn: api.evolutions });
+  const evolutions = useQuery({ queryKey: ['snapshots'], queryFn: api.snapshots });
   const results = useQuery({
     queryKey: ['search', search.q],
     queryFn: () => api.search(search.q ?? ''),
@@ -39,7 +39,7 @@ export function SearchPage() {
           {results.data?.results.map((result) => (
             <Link
               key={result.evolution.id}
-              to="/evolutions/$id"
+              to="/snapshots/$id"
               params={{ id: result.evolution.id }}
               className="grid grid-cols-1 gap-2 rounded-lg border bg-white p-4 hover:bg-slate-50 sm:grid-cols-[90px_minmax(0,1fr)] sm:gap-4"
             >

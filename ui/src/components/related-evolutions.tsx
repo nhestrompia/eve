@@ -22,7 +22,7 @@ export function RelatedEvolutions({ evolution }: { evolution: Evolution }) {
         </div>
         <Link
           className="inline-flex items-center gap-2 text-sm font-medium text-blue-700"
-          to="/evolutions/$id/relationships"
+          to="/snapshots/$id/relationships"
           params={{ id: evolution.metadata.id ?? '' }}
         >
           View all relationships <ArrowRight className="size-4" />

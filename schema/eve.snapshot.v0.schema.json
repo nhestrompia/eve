@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://eve.local/schema/eve.snapshot.v0.schema.json",
+  "title": "EVE Snapshot v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "schemaVersion", "title", "type", "summary", "relationships", "risks", "timeline", "decisions", "validation", "artifacts", "implementation", "createdAt"],
+  "properties": {
+    "id": { "type": "string" },
+    "schemaVersion": { "const": "0.1.0" },
+    "title": { "type": "string" },
+    "type": { "type": "string", "enum": ["feature", "bugfix", "experiment", "refactor", "release"] },
+    "summary": { "type": "string" },
+    "userVisibleChange": { "type": "string" },
+    "relationships": { "$ref": "#/$defs/relationships" },
+    "risks": { "type": "array", "items": { "$ref": "#/$defs/risk" } },
+    "timeline": { "type": "array", "items": { "$ref": "#/$defs/timeline_entry" } },
+    "decisions": { "type": "array", "items": { "$ref": "#/$defs/decision" } },
+    "validation": { "type": "array", "items": { "$ref": "#/$defs/validation" } },
+    "artifacts": { "type": "array", "items": { "$ref": "#/$defs/artifact" } },
+    "implementation": { "$ref": "#/$defs/implementation" },
+    "createdAt": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "relationships": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["corrects", "supersedes", "reverts", "dependsOn", "related"],
+      "properties": {
+        "corrects": { "$ref": "#/$defs/id_list" },
+        "supersedes": { "$ref": "#/$defs/id_list" },
+        "reverts": { "$ref": "#/$defs/id_list" },
+        "dependsOn": { "$ref": "#/$defs/id_list" },
+        "related": { "$ref": "#/$defs/id_list" }
+      }
+    },
+    "risk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "severity"],
+      "properties": {
+        "title": { "type": "string" },
+        "severity": { "type": "string", "enum": ["low", "medium", "high"] },
+        "mitigation": { "type": "string" }
+      }
+    },
+    "timeline_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["phase", "title"],
+      "properties": {
+        "phase": { "type": "string", "enum": ["planning", "implementation", "validation", "review", "release"] },
+        "title": { "type": "string" },
+        "summary": { "type": "string" },
+        "occurredAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title"],
+      "properties": {
+        "title": { "type": "string" },
+        "rationale": { "type": "string" }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "status"],
+      "properties": {
+        "command": { "type": "string" },
+        "status": { "type": "string", "enum": ["passed", "failed", "skipped"] },
+        "output": { "type": "string" }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string", "enum": ["screenshot", "video", "preview", "url", "note", "log", "conversation"] },
+        "uri": { "type": "string" },
+        "path": { "type": "string" },
+        "url": { "type": "string" },
+        "mimeType": { "type": "string" },
+        "description": { "type": "string" }
+      }
+    },
+    "implementation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["branch", "gitState", "commits", "dirty"],
+      "properties": {
+        "branch": { "type": "string" },
+        "gitState": { "type": "string" },
+        "baseCommit": { "type": "string" },
+        "commits": { "$ref": "#/$defs/id_list" },
+        "dirty": { "type": "boolean" }
+      }
+    },
+    "id_list": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

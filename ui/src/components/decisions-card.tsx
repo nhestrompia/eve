@@ -38,7 +38,7 @@ export function DecisionsCard({ decisions, evolutionId }: { decisions: unknown[]
         )}
         <Link
           className="inline-flex items-center gap-2 text-sm font-medium text-blue-700"
-          to="/evolutions/$id/decisions"
+          to="/snapshots/$id/decisions"
           params={{ id: evolutionId }}
         >
           View decisions <ArrowRight className="size-4" />

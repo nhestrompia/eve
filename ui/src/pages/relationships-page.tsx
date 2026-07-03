@@ -7,9 +7,9 @@ import { LoadingState } from '../components/loading-state';
 import { EmptyPanel, Header } from './verification-page';
 
 export function RelationshipsPage() {
-  const { id } = useParams({ from: '/evolutions/$id/relationships' });
-  const evolutions = useQuery({ queryKey: ['evolutions'], queryFn: api.evolutions });
-  const detail = useQuery({ queryKey: ['evolution', id], queryFn: () => api.evolution(id) });
+  const { id } = useParams({ from: '/snapshots/$id/relationships' });
+  const evolutions = useQuery({ queryKey: ['snapshots'], queryFn: api.snapshots });
+  const detail = useQuery({ queryKey: ['snapshot-detail', id], queryFn: () => api.snapshotDetail(id) });
 
   const entries = Object.entries(detail.data?.evolution.relationships ?? {}).flatMap(([kind, values]) =>
     (values ?? []).map((value) => ({ kind, value }))

@@ -8,9 +8,9 @@ import { displayRisk } from '../lib/evolution-display';
 import { EmptyPanel, Header } from './verification-page';
 
 export function RisksPage() {
-  const { id } = useParams({ from: '/evolutions/$id/risks' });
-  const evolutions = useQuery({ queryKey: ['evolutions'], queryFn: api.evolutions });
-  const detail = useQuery({ queryKey: ['evolution', id], queryFn: () => api.evolution(id) });
+  const { id } = useParams({ from: '/snapshots/$id/risks' });
+  const evolutions = useQuery({ queryKey: ['snapshots'], queryFn: api.snapshots });
+  const detail = useQuery({ queryKey: ['snapshot-detail', id], queryFn: () => api.snapshotDetail(id) });
 
   return (
     <EvolutionShell evolutions={evolutions.data ?? []} selectedId={id}>

@@ -32,7 +32,7 @@ export function RepositoryActivityView({
   const title = selectedRepo ?? 'Product evolution';
   const details = useQuery({
     queryKey: ['activity-overview-details', evolutions.map((evolution) => evolution.id).join(',')],
-    queryFn: () => Promise.all(evolutions.map((evolution) => api.evolution(evolution.id))),
+    queryFn: () => Promise.all(evolutions.map((evolution) => api.snapshotDetail(evolution.id))),
     enabled: evolutions.length > 0,
     staleTime: 30_000
   });
@@ -314,7 +314,7 @@ function RecentActivityPanel({
             return (
               <Link
                 key={evolution.id}
-                to="/evolutions/$id"
+                to="/snapshots/$id"
                 params={{ id: evolution.id }}
                 className={`grid grid-cols-[40px_minmax(0,1fr)_20px] items-center gap-3 px-3 py-3.5 transition-colors hover:bg-slate-50 sm:grid-cols-[44px_92px_minmax(0,1fr)_112px_24px] sm:gap-4 sm:px-4 ${index > 0 ? 'border-t' : ''}`}
               >

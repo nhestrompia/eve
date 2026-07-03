@@ -32,7 +32,7 @@ export function VerificationSummarySection({ values, evolutionId }: { values: Ve
           </div>
           <Link
             className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-md px-2 text-sm font-medium text-blue-700 hover:bg-blue-50"
-            to="/evolutions/$id/verification"
+            to="/snapshots/$id/verification"
             params={{ id: evolutionId }}
           >
             View all results <ArrowRight className="size-4" />

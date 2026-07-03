@@ -15,10 +15,10 @@ import { compactDate } from '../format';
 import type { GitCommit, SnapshotImage } from '../types';
 
 export function SnapshotPage() {
-  const { id } = useParams({ from: '/evolutions/$id/snapshot' });
-  const evolutions = useQuery({ queryKey: ['evolutions'], queryFn: api.evolutions });
+  const { id } = useParams({ from: '/snapshots/$id/snapshot' });
+  const evolutions = useQuery({ queryKey: ['snapshots'], queryFn: api.snapshots });
   const snapshot = useQuery({ queryKey: ['snapshot', id], queryFn: () => api.snapshot(id), retry: false });
-  const detail = useQuery({ queryKey: ['evolution', id], queryFn: () => api.evolution(id), retry: false });
+  const detail = useQuery({ queryKey: ['snapshot-detail', id], queryFn: () => api.snapshotDetail(id), retry: false });
 
   return (
     <EvolutionShell evolutions={evolutions.data ?? []} selectedId={id}>
