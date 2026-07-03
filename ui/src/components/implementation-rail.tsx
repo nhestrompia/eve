@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router';
-import { ArrowRight, Copy, ExternalLink, FileText, X } from 'lucide-react';
+import { Copy, ExternalLink, FileText, X } from 'lucide-react';
 import { useState } from 'react';
 import { humanDate, shortCommit } from '../format';
 import { displayDecision, displayRisk } from '../lib/evolution-display';
@@ -73,23 +73,42 @@ export function ImplementationRail({
         </Link>
       </section>
 
-      <div className="mt-8 divide-y">
-        <Link to="/snapshots/$id/decisions" params={{ id }} className="flex min-h-14 items-center justify-between gap-4 py-4 hover:text-blue-700">
-          <span className="font-semibold">Decisions ({detail.evolution.decisions.length})</span>
-          <ArrowRight className="size-4" />
-        </Link>
-        <Link to="/snapshots/$id/risks" params={{ id }} className="flex min-h-14 items-center justify-between gap-4 py-4 hover:text-blue-700">
-          <span className="font-semibold">Risks ({detail.evolution.risks.length})</span>
-          <ArrowRight className="size-4" />
-        </Link>
-        {detail.evolution.decisions[0] ? (
-          <p className="py-4 text-sm text-muted-foreground text-pretty">{displayDecision(detail.evolution.decisions[0]).title}</p>
-        ) : null}
-        {detail.evolution.risks[0] ? (
-          <p className="py-4 text-sm text-muted-foreground text-pretty">{displayRisk(detail.evolution.risks[0]).title}</p>
-        ) : null}
+      <div className="mt-8 space-y-6 border-t pt-6">
+        <RailRecordGroup title="Decisions" records={detail.evolution.decisions.map(displayDecision)} emptyText="No decisions recorded." />
+        <RailRecordGroup title="Risks" records={detail.evolution.risks.map(displayRisk)} emptyText="No risks recorded." />
       </div>
     </aside>
+  );
+}
+
+type RailRecord = ReturnType<typeof displayDecision>;
+
+function RailRecordGroup({ title, records, emptyText }: { title: string; records: RailRecord[]; emptyText: string }) {
+  return (
+    <section>
+      <h3 className="font-semibold">
+        {title} ({records.length})
+      </h3>
+      {records.length === 0 ? <p className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-muted-foreground">{emptyText}</p> : null}
+      <div className="mt-3 space-y-3">
+        {records.map((record, index) => (
+          <article key={`${title}-${record.title}-${index}`} className="rounded-lg bg-slate-50 p-3">
+            <h4 className="text-sm font-semibold text-balance">{record.title || `${title.slice(0, -1)} ${index + 1}`}</h4>
+            {record.body ? <p className="mt-2 text-sm text-muted-foreground text-pretty">{record.body}</p> : null}
+            {(record.meta ?? []).length > 0 ? (
+              <dl className="mt-3 grid grid-cols-1 gap-2">
+                {(record.meta ?? []).map((item) => (
+                  <div key={`${item.label}-${item.value}`} className="rounded-md bg-white px-2.5 py-2 shadow-[0_0_0_1px_rgba(15,23,42,0.06)]">
+                    <dt className="text-xs text-muted-foreground">{item.label}</dt>
+                    <dd className="mt-0.5 text-sm font-medium">{item.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : null}
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
 
