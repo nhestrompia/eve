@@ -91,6 +91,16 @@ type snapshotResponse struct {
 	Repository      string             `json:"repository"`
 	Commit          string             `json:"commit"`
 	CheckoutCommand string             `json:"checkoutCommand"`
+	SnapshotImages  []uiSnapshotImage  `json:"snapshotImages"`
+}
+
+type uiSnapshotImage struct {
+	ID         string `json:"id"`
+	Title      string `json:"title"`
+	URL        string `json:"url"`
+	MimeType   string `json:"mimeType"`
+	Source     string `json:"source,omitempty"`
+	AttachedAt string `json:"attachedAt,omitempty"`
 }
 
 type uiSessionRecord struct {
@@ -315,6 +325,8 @@ func (server uiServer) handleEvolutionRoutes(w http.ResponseWriter, r *http.Requ
 		server.handleEvolutionDetail(w, r, id)
 	case len(parts) == 2 && parts[1] == "snapshot":
 		server.handleSnapshot(w, r, id)
+	case len(parts) == 3 && parts[1] == "snapshot-images":
+		server.handleSnapshotImage(w, r, id, parts[2])
 	case len(parts) == 2 && parts[1] == "sessions":
 		server.handleSessions(w, r, id)
 	case len(parts) == 4 && parts[1] == "sessions" && parts[2] != "":
@@ -373,7 +385,40 @@ func (server uiServer) handleSnapshot(w http.ResponseWriter, r *http.Request, id
 		Repository:      target.Repository,
 		Commit:          target.Commit,
 		CheckoutCommand: checkoutCommand(evolution.Metadata.ID, server.repo),
+		SnapshotImages:  server.snapshotImages(evolution),
 	})
+}
+
+func (server uiServer) handleSnapshotImage(w http.ResponseWriter, r *http.Request, id string, imageID string) {
+	if r.Method != http.MethodGet {
+		writeMethodNotAllowed(w)
+		return
+	}
+	evolution, err := server.store.loadCommitted(id)
+	if err != nil {
+		writeAPIError(w, http.StatusNotFound, err)
+		return
+	}
+	for _, image := range server.snapshotImageArtifacts(evolution) {
+		if image.ID != imageID {
+			continue
+		}
+		imagePath := filepath.FromSlash(image.Path)
+		if !snapshotImagePathAllowed(imagePath, server.store.snapshotDir(evolution.Metadata.ID)) {
+			writeAPIError(w, http.StatusNotFound, fmt.Errorf("snapshot image %s not found", imageID))
+			return
+		}
+		if !fileExists(imagePath) {
+			writeAPIError(w, http.StatusNotFound, fmt.Errorf("snapshot image %s not found", imageID))
+			return
+		}
+		if image.MimeType != "" {
+			w.Header().Set("Content-Type", image.MimeType)
+		}
+		http.ServeFile(w, r, imagePath)
+		return
+	}
+	writeAPIError(w, http.StatusNotFound, fmt.Errorf("snapshot image %s not found", imageID))
 }
 
 func (server uiServer) handleSessions(w http.ResponseWriter, r *http.Request, id string) {
@@ -769,6 +814,57 @@ func sessionProviders(sessions []eve.Session) []string {
 	}
 	sort.Strings(providers)
 	return providers
+}
+
+func (server uiServer) snapshotImages(evolution *eve.Evolution) []uiSnapshotImage {
+	artifacts := server.snapshotImageArtifacts(evolution)
+	images := make([]uiSnapshotImage, 0, len(artifacts))
+	for _, artifact := range artifacts {
+		images = append(images, uiSnapshotImage{
+			ID:         artifact.ID,
+			Title:      fallback(artifact.Title, artifact.ID),
+			URL:        "/api/evolutions/" + evolution.Metadata.ID + "/snapshot-images/" + artifact.ID,
+			MimeType:   artifact.MimeType,
+			Source:     artifact.Source,
+			AttachedAt: artifact.AttachedAt,
+		})
+	}
+	return images
+}
+
+func (server uiServer) snapshotImageArtifacts(evolution *eve.Evolution) []snapshotImageArtifact {
+	manifest := server.store.loadSnapshotImageManifest(evolution.Metadata.ID)
+	if len(manifest.Images) > 0 {
+		sortSnapshotImages(manifest.Images)
+		return manifest.Images
+	}
+	var extension snapshotImageExtension
+	if raw, ok := evolution.Extensions["eve.snapshot_images"]; ok && len(raw) > 0 {
+		if err := json.Unmarshal(raw, &extension); err == nil {
+			sortSnapshotImages(extension.Images)
+			return extension.Images
+		}
+	}
+	return nil
+}
+
+func snapshotImagePathAllowed(imagePath string, root string) bool {
+	if strings.TrimSpace(imagePath) == "" || strings.TrimSpace(root) == "" {
+		return false
+	}
+	imageAbs, err := filepath.Abs(imagePath)
+	if err != nil {
+		return false
+	}
+	rootAbs, err := filepath.Abs(root)
+	if err != nil {
+		return false
+	}
+	rel, err := filepath.Rel(rootAbs, imageAbs)
+	if err != nil {
+		return false
+	}
+	return rel != "." && rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator))
 }
 
 func (server uiServer) sessionRecords(evolution *eve.Evolution) []uiSessionRecord {

@@ -155,6 +155,16 @@ export type SnapshotResponse = {
   repository: string;
   commit: string;
   checkoutCommand: string;
+  snapshotImages: SnapshotImage[];
+};
+
+export type SnapshotImage = {
+  id: string;
+  title: string;
+  url: string;
+  mimeType: string;
+  source?: string;
+  attachedAt?: string;
 };
 
 export type ConfigResponse = {

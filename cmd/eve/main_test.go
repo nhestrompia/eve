@@ -83,6 +83,7 @@ func TestInitCreatesStructure(t *testing.T) {
 		filepath.Join(eveDir, "staged"),
 		filepath.Join(eveDir, "evolutions"),
 		filepath.Join(eveDir, "sessions"),
+		filepath.Join(eveDir, "snapshots"),
 	} {
 		if _, err := os.Stat(path); err != nil {
 			t.Fatalf("expected %s: %v", path, err)
@@ -209,6 +210,77 @@ func TestManualAddSubcommands(t *testing.T) {
 	code := run([]string{"status"}, &stdout, &stderr)
 	if code != 0 {
 		t.Fatalf("status exit code = %d, want 0; stderr = %s\nstdout = %s", code, stderr.String(), stdout.String())
+	}
+}
+
+func TestAddImplementationSnapshotImageLifecycle(t *testing.T) {
+	eveDir := filepath.Join(t.TempDir(), ".eve")
+	t.Setenv("EVE_DIR", eveDir)
+	source := writePNGSource(t, "screenshot.png")
+	var stdout, stderr bytes.Buffer
+	mustRun(t, []string{"init"}, &stdout, &stderr)
+	mustRun(t, []string{"add", "title", "Snapshot Images", "--type", "feature"}, &stdout, &stderr)
+	mustRun(t, []string{"add", "behavior", "--added", "Agents can attach screenshots to product snapshots"}, &stdout, &stderr)
+	mustRun(t, []string{"add", "verification", "--status", "passed", "--reference", "go test ./..."}, &stdout, &stderr)
+	mustRun(t, []string{"add", "session", "codex:session_912", "--source", writeTranscriptSource(t)}, &stdout, &stderr)
+	mustRun(t, []string{"add", "outcome", "Snapshots display attached screenshots."}, &stdout, &stderr)
+
+	stdout.Reset()
+	stderr.Reset()
+	code := run([]string{"add", "implementation", "--snapshot", "HEAD", "--image", source}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("add implementation image exit code = %d, stderr = %s", code, stderr.String())
+	}
+	if _, err := os.Stat(filepath.Join(eveDir, "staged", "snapshots", "screenshot.png")); err != nil {
+		t.Fatalf("expected staged snapshot image: %v", err)
+	}
+	stagedManifest := loadSnapshotImageManifest(filepath.Join(eveDir, "staged", "snapshots", "manifest.json"))
+	if len(stagedManifest.Images) != 1 || stagedManifest.Images[0].ID != "screenshot" || stagedManifest.Images[0].MimeType != "image/png" {
+		t.Fatalf("staged manifest = %#v, want screenshot png", stagedManifest)
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	code = run([]string{"commit"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("commit exit code = %d, stderr = %s\nstdout = %s", code, stderr.String(), stdout.String())
+	}
+	if _, err := os.Stat(filepath.Join(eveDir, "snapshots", "EV-001", "screenshot.png")); err != nil {
+		t.Fatalf("expected committed snapshot image: %v", err)
+	}
+	committed, err := eve.LoadFile(filepath.Join(eveDir, "evolutions", "EV-001.json"))
+	if err != nil {
+		t.Fatalf("load committed evolution: %v", err)
+	}
+	var extension snapshotImageExtension
+	if err := json.Unmarshal(committed.Extensions["eve.snapshot_images"], &extension); err != nil {
+		t.Fatalf("parse snapshot image extension: %v", err)
+	}
+	if len(extension.Images) != 1 || !strings.Contains(extension.Images[0].Path, ".eve/snapshots/EV-001/screenshot.png") {
+		t.Fatalf("snapshot image extension = %#v, want final image path", extension)
+	}
+}
+
+func TestAddImplementationSnapshotImageValidation(t *testing.T) {
+	eveDir := filepath.Join(t.TempDir(), ".eve")
+	t.Setenv("EVE_DIR", eveDir)
+	var stdout, stderr bytes.Buffer
+	mustRun(t, []string{"init"}, &stdout, &stderr)
+
+	code := run([]string{"add", "implementation", "--image", filepath.Join(t.TempDir(), "missing.png")}, &stdout, &stderr)
+	if code != 1 || !strings.Contains(stderr.String(), "read snapshot image") {
+		t.Fatalf("missing image code = %d stderr = %q, want read failure", code, stderr.String())
+	}
+
+	source := filepath.Join(t.TempDir(), "notes.txt")
+	if err := os.WriteFile(source, []byte("not an image"), 0o600); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	stdout.Reset()
+	stderr.Reset()
+	code = run([]string{"add", "implementation", "--image", source}, &stdout, &stderr)
+	if code != 1 || !strings.Contains(stderr.String(), "unsupported snapshot image") {
+		t.Fatalf("unsupported image code = %d stderr = %q, want unsupported failure", code, stderr.String())
 	}
 }
 
@@ -404,6 +476,15 @@ func TestUIAPIServesStaticAndEvolutionData(t *testing.T) {
 	ev.Outcome = "Product history is browsable as snapshots."
 	ev.Implementation.Commits = nil
 	saveEvolutionJSON(t, filepath.Join(eveDir, "evolutions", "EV-001.json"), ev)
+	store := newStore()
+	if _, err := store.writeSnapshotImageArtifact(
+		store.snapshotDir("EV-001"),
+		store.snapshotImageManifestPath("EV-001"),
+		"EV-001",
+		writePNGSource(t, "dashboard.png"),
+	); err != nil {
+		t.Fatalf("write snapshot image artifact: %v", err)
+	}
 
 	handler := newUIServer(newStore(), "", "localhost:0").routes()
 
@@ -432,6 +513,19 @@ func TestUIAPIServesStaticAndEvolutionData(t *testing.T) {
 	requestJSON(t, handler, http.MethodGet, "/api/evolutions/EV-001/snapshot", nil, &snapshot)
 	if snapshot.CheckoutCommand != "eve checkout EV-001" || snapshot.Commit == "" {
 		t.Fatalf("snapshot = %#v, want checkout command and commit", snapshot)
+	}
+	if len(snapshot.SnapshotImages) != 1 || snapshot.SnapshotImages[0].ID != "dashboard" || snapshot.SnapshotImages[0].URL == "" {
+		t.Fatalf("snapshot images = %#v, want dashboard image metadata", snapshot.SnapshotImages)
+	}
+	image := httptest.NewRecorder()
+	handler.ServeHTTP(image, httptest.NewRequest(http.MethodGet, snapshot.SnapshotImages[0].URL, nil))
+	if image.Code != http.StatusOK || image.Header().Get("Content-Type") != "image/png" || image.Body.Len() == 0 {
+		t.Fatalf("image response code = %d content-type = %q len = %d", image.Code, image.Header().Get("Content-Type"), image.Body.Len())
+	}
+	missingImage := httptest.NewRecorder()
+	handler.ServeHTTP(missingImage, httptest.NewRequest(http.MethodGet, "/api/evolutions/EV-001/snapshot-images/not-recorded", nil))
+	if missingImage.Code != http.StatusNotFound {
+		t.Fatalf("missing image status = %d, want 404", missingImage.Code)
 	}
 
 	var search searchResponse
@@ -633,6 +727,26 @@ func writeTranscriptSource(t *testing.T) string {
 `
 	if err := os.WriteFile(source, []byte(transcript), 0o600); err != nil {
 		t.Fatalf("write source transcript: %v", err)
+	}
+	return source
+}
+
+func writePNGSource(t *testing.T, name string) string {
+	t.Helper()
+	source := filepath.Join(t.TempDir(), name)
+	data := []byte{
+		0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+		0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+		0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+		0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53,
+		0xde, 0x00, 0x00, 0x00, 0x0c, 0x49, 0x44, 0x41,
+		0x54, 0x78, 0x9c, 0x63, 0x60, 0x60, 0x60, 0x00,
+		0x00, 0x00, 0x04, 0x00, 0x01, 0xf6, 0x17, 0x38,
+		0x55, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e,
+		0x44, 0xae, 0x42, 0x60, 0x82,
+	}
+	if err := os.WriteFile(source, data, 0o600); err != nil {
+		t.Fatalf("write png source: %v", err)
 	}
 	return source
 }

@@ -113,6 +113,10 @@ func runInit(args []string, stdout io.Writer, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "create sessions directory: %v\n", err)
 		return 2
 	}
+	if err := os.MkdirAll(store.snapshotsRootDir(), 0o755); err != nil {
+		fmt.Fprintf(stderr, "create snapshots directory: %v\n", err)
+		return 2
+	}
 	config := map[string]any{
 		"eve": map[string]any{
 			"version": eve.ProtocolVersion,
@@ -388,11 +392,13 @@ func runAddImplementation(args []string, stdout io.Writer, stderr io.Writer) int
 	snapshotRef := fs.String("snapshot", "", "snapshot commit ref")
 	repository := fs.String("repository", currentRepositoryName(), "repository name")
 	status := fs.String("status", "merged", "repository status")
+	images := repeatedFlag{}
+	fs.Var(&images, "image", "snapshot image path")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
-	if strings.TrimSpace(*commitRef) == "" && strings.TrimSpace(*snapshotRef) == "" {
-		fmt.Fprintln(stderr, "eve add implementation requires --commit or --snapshot")
+	if strings.TrimSpace(*commitRef) == "" && strings.TrimSpace(*snapshotRef) == "" && len(images) == 0 {
+		fmt.Fprintln(stderr, "eve add implementation requires --commit, --snapshot, or --image")
 		return 2
 	}
 
@@ -413,6 +419,13 @@ func runAddImplementation(args []string, stdout io.Writer, stderr io.Writer) int
 			}
 			setImplementationSnapshot(evolution, snapshot, strings.TrimSpace(*repository), strings.TrimSpace(*status))
 			messages = append(messages, "snapshot "+snapshot)
+		}
+		for _, image := range images {
+			artifact, err := addSnapshotImage(store, evolution, image)
+			if err != nil {
+				return "", err
+			}
+			messages = append(messages, "image "+artifact.ID)
 		}
 		addTimeline(evolution, "implementation_staged", "Staged implementation.")
 		return "Staged implementation " + strings.Join(messages, ", ") + "\n", nil
@@ -498,6 +511,10 @@ func runEVECommit(args []string, stdout io.Writer, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "%v\n", err)
 		return 1
 	}
+	if err := store.promoteStagedSnapshotImages(id, evolution); err != nil {
+		fmt.Fprintf(stderr, "%v\n", err)
+		return 1
+	}
 	if err := store.saveCommitted(evolution); err != nil {
 		fmt.Fprintf(stderr, "%v\n", err)
 		return 1
@@ -515,6 +532,9 @@ func runEVECommit(args []string, stdout io.Writer, stderr io.Writer) int {
 	fmt.Fprintf(stdout, "Wrote %s\n", filepath.ToSlash(finalPath))
 	if len(evolution.Sessions) > 0 {
 		fmt.Fprintf(stdout, "Wrote %s\n", filepath.ToSlash(store.sessionDir(id)))
+	}
+	if len(store.loadSnapshotImageManifest(id).Images) > 0 {
+		fmt.Fprintf(stdout, "Wrote %s\n", filepath.ToSlash(store.snapshotDir(id)))
 	}
 	fmt.Fprintln(stdout)
 	fmt.Fprintln(stdout, "git add .eve/")
@@ -832,7 +852,7 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  eve add verification --status passed --reference command")
 	fmt.Fprintln(w, "  eve add session provider:id --source transcript.jsonl --sanitize")
 	fmt.Fprintln(w, "  eve add outcome <outcome>")
-	fmt.Fprintln(w, "  eve add implementation --snapshot HEAD --commit HEAD --repository name --status merged")
+	fmt.Fprintln(w, "  eve add implementation --snapshot HEAD --commit HEAD --repository name --status merged --image screenshot.png")
 	fmt.Fprintln(w, "  eve status")
 	fmt.Fprintln(w, "  eve commit")
 	fmt.Fprintln(w, "  eve snapshot EV-001")
@@ -888,6 +908,25 @@ type sessionArtifact struct {
 
 type sessionExtension struct {
 	Sessions []sessionArtifact `json:"sessions"`
+}
+
+type snapshotImageManifest struct {
+	EvolutionID string                  `json:"evolution_id,omitempty"`
+	UpdatedAt   string                  `json:"updated_at"`
+	Images      []snapshotImageArtifact `json:"images"`
+}
+
+type snapshotImageArtifact struct {
+	ID         string `json:"id"`
+	Title      string `json:"title,omitempty"`
+	Path       string `json:"path"`
+	MimeType   string `json:"mime_type"`
+	Source     string `json:"source,omitempty"`
+	AttachedAt string `json:"attached_at"`
+}
+
+type snapshotImageExtension struct {
+	Images []snapshotImageArtifact `json:"images"`
 }
 
 type sessionConversation struct {
@@ -947,6 +986,14 @@ func (store localStore) stagedSessionManifestPath() string {
 	return filepath.Join(store.stagedSessionsDir(), "manifest.json")
 }
 
+func (store localStore) stagedSnapshotsDir() string {
+	return filepath.Join(store.stagedDir(), "snapshots")
+}
+
+func (store localStore) stagedSnapshotImageManifestPath() string {
+	return filepath.Join(store.stagedSnapshotsDir(), "manifest.json")
+}
+
 func (store localStore) evolutionsDir() string {
 	return filepath.Join(store.root, "evolutions")
 }
@@ -959,12 +1006,24 @@ func (store localStore) sessionsRootDir() string {
 	return filepath.Join(store.root, "sessions")
 }
 
+func (store localStore) snapshotsRootDir() string {
+	return filepath.Join(store.root, "snapshots")
+}
+
 func (store localStore) sessionDir(id string) string {
 	return filepath.Join(store.sessionsRootDir(), id)
 }
 
 func (store localStore) sessionManifestPath(id string) string {
 	return filepath.Join(store.sessionDir(id), "manifest.json")
+}
+
+func (store localStore) snapshotDir(id string) string {
+	return filepath.Join(store.snapshotsRootDir(), id)
+}
+
+func (store localStore) snapshotImageManifestPath(id string) string {
+	return filepath.Join(store.snapshotDir(id), "manifest.json")
 }
 
 func (store localStore) requireInitialized() error {
@@ -981,7 +1040,10 @@ func (store localStore) ensureStagedDirs() error {
 	if err := store.requireInitialized(); err != nil {
 		return err
 	}
-	return os.MkdirAll(store.stagedSessionsDir(), 0o755)
+	if err := os.MkdirAll(store.stagedSessionsDir(), 0o755); err != nil {
+		return err
+	}
+	return os.MkdirAll(store.stagedSnapshotsDir(), 0o755)
 }
 
 func (store localStore) emptyStaged() *eve.Evolution {
@@ -1225,6 +1287,17 @@ func setImplementationSnapshot(evolution *eve.Evolution, snapshot string, reposi
 	evolution.Implementation.Snapshot = snapshot
 }
 
+func addSnapshotImage(store localStore, evolution *eve.Evolution, source string) (snapshotImageArtifact, error) {
+	artifact, err := store.writeSnapshotImageArtifact(store.stagedSnapshotsDir(), store.stagedSnapshotImageManifestPath(), "", source)
+	if err != nil {
+		return snapshotImageArtifact{}, err
+	}
+	if err := upsertSnapshotImageExtension(evolution, artifact); err != nil {
+		return snapshotImageArtifact{}, err
+	}
+	return artifact, nil
+}
+
 func ensureImplementationRepository(evolution *eve.Evolution, repository string, status string) {
 	if repository == "" {
 		repository = currentRepositoryName()
@@ -1365,6 +1438,82 @@ func (store localStore) writeSessionArtifacts(dir string, manifestPath string, e
 	return artifact, nil
 }
 
+func (store localStore) writeSnapshotImageArtifact(dir string, manifestPath string, evolutionID string, source string) (snapshotImageArtifact, error) {
+	source = strings.TrimSpace(source)
+	if source == "" {
+		return snapshotImageArtifact{}, fmt.Errorf("snapshot image path is required")
+	}
+	info, err := os.Stat(source)
+	if err != nil {
+		return snapshotImageArtifact{}, fmt.Errorf("read snapshot image %q: %w", source, err)
+	}
+	if info.IsDir() {
+		return snapshotImageArtifact{}, fmt.Errorf("snapshot image %q is a directory", source)
+	}
+	ext := strings.ToLower(filepath.Ext(source))
+	mimeType, ok := snapshotImageMimeType(ext)
+	if !ok {
+		return snapshotImageArtifact{}, fmt.Errorf("unsupported snapshot image %q; supported extensions: png, jpg, jpeg, webp, gif", source)
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return snapshotImageArtifact{}, fmt.Errorf("create snapshot image directory: %w", err)
+	}
+	manifest := loadSnapshotImageManifest(manifestPath)
+	title := strings.TrimSuffix(filepath.Base(source), filepath.Ext(source))
+	id := snapshotImageID(manifest.Images, safeArtifactName(title), source)
+	target := filepath.Join(dir, id+ext)
+	if err := copyFile(source, target); err != nil {
+		return snapshotImageArtifact{}, err
+	}
+	artifact := snapshotImageArtifact{
+		ID:         id,
+		Title:      title,
+		Path:       filepath.ToSlash(target),
+		MimeType:   mimeType,
+		Source:     filepath.ToSlash(source),
+		AttachedAt: nowUTC(),
+	}
+	if err := upsertSnapshotImageManifest(manifestPath, evolutionID, artifact); err != nil {
+		return snapshotImageArtifact{}, err
+	}
+	return artifact, nil
+}
+
+func snapshotImageMimeType(ext string) (string, bool) {
+	switch strings.ToLower(ext) {
+	case ".png":
+		return "image/png", true
+	case ".jpg", ".jpeg":
+		return "image/jpeg", true
+	case ".webp":
+		return "image/webp", true
+	case ".gif":
+		return "image/gif", true
+	default:
+		return "", false
+	}
+}
+
+func snapshotImageID(images []snapshotImageArtifact, base string, source string) string {
+	if base == "" {
+		base = "snapshot-image"
+	}
+	source = filepath.ToSlash(source)
+	used := map[string]string{}
+	for _, image := range images {
+		used[image.ID] = filepath.ToSlash(image.Source)
+	}
+	if existingSource, ok := used[base]; !ok || existingSource == source {
+		return base
+	}
+	for index := 2; ; index++ {
+		candidate := fmt.Sprintf("%s-%d", base, index)
+		if existingSource, ok := used[candidate]; !ok || existingSource == source {
+			return candidate
+		}
+	}
+}
+
 func upsertSessionManifest(path string, evolutionID string, artifact sessionArtifact) error {
 	manifest := sessionManifest{EvolutionID: evolutionID, Sessions: []sessionArtifact{}}
 	data, err := os.ReadFile(path)
@@ -1399,12 +1548,54 @@ func upsertSessionManifest(path string, evolutionID string, artifact sessionArti
 	return nil
 }
 
+func upsertSnapshotImageManifest(path string, evolutionID string, artifact snapshotImageArtifact) error {
+	manifest := snapshotImageManifest{EvolutionID: evolutionID, Images: []snapshotImageArtifact{}}
+	data, err := os.ReadFile(path)
+	if err == nil {
+		if err := json.Unmarshal(data, &manifest); err != nil {
+			return fmt.Errorf("parse snapshot image manifest: %w", err)
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("read snapshot image manifest: %w", err)
+	}
+	manifest.EvolutionID = evolutionID
+	manifest.UpdatedAt = nowUTC()
+	replaced := false
+	for i, existing := range manifest.Images {
+		if existing.ID == artifact.ID {
+			manifest.Images[i] = artifact
+			replaced = true
+			break
+		}
+	}
+	if !replaced {
+		manifest.Images = append(manifest.Images, artifact)
+	}
+	sortSnapshotImages(manifest.Images)
+	data, err = json.MarshalIndent(manifest, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal snapshot image manifest: %w", err)
+	}
+	if err := os.WriteFile(path, append(data, '\n'), 0o644); err != nil {
+		return fmt.Errorf("write snapshot image manifest: %w", err)
+	}
+	return nil
+}
+
 func (store localStore) loadStagedSessionManifest() sessionManifest {
 	return loadSessionManifest(store.stagedSessionManifestPath())
 }
 
+func (store localStore) loadStagedSnapshotImageManifest() snapshotImageManifest {
+	return loadSnapshotImageManifest(store.stagedSnapshotImageManifestPath())
+}
+
 func (store localStore) loadSessionManifest(id string) sessionManifest {
 	return loadSessionManifest(store.sessionManifestPath(id))
+}
+
+func (store localStore) loadSnapshotImageManifest(id string) snapshotImageManifest {
+	return loadSnapshotImageManifest(store.snapshotImageManifestPath(id))
 }
 
 func loadSessionManifest(path string) sessionManifest {
@@ -1415,6 +1606,18 @@ func loadSessionManifest(path string) sessionManifest {
 	}
 	if err := json.Unmarshal(data, &manifest); err != nil {
 		return sessionManifest{}
+	}
+	return manifest
+}
+
+func loadSnapshotImageManifest(path string) snapshotImageManifest {
+	var manifest snapshotImageManifest
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return manifest
+	}
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		return snapshotImageManifest{}
 	}
 	return manifest
 }
@@ -1471,6 +1674,46 @@ func (store localStore) promoteStagedSessions(id string, evolution *eve.Evolutio
 	return nil
 }
 
+func (store localStore) promoteStagedSnapshotImages(id string, evolution *eve.Evolution) error {
+	manifest := store.loadStagedSnapshotImageManifest()
+	if len(manifest.Images) == 0 {
+		return nil
+	}
+	if err := os.MkdirAll(store.snapshotDir(id), 0o755); err != nil {
+		return fmt.Errorf("create final snapshot image directory: %w", err)
+	}
+	var finalArtifacts []snapshotImageArtifact
+	for _, artifact := range manifest.Images {
+		finalPath := filepath.Join(store.snapshotDir(id), filepath.Base(artifact.Path))
+		if err := copyFile(artifact.Path, finalPath); err != nil {
+			return err
+		}
+		artifact.Path = filepath.ToSlash(finalPath)
+		finalArtifacts = append(finalArtifacts, artifact)
+	}
+	manifest.EvolutionID = id
+	manifest.UpdatedAt = nowUTC()
+	manifest.Images = finalArtifacts
+	sortSnapshotImages(manifest.Images)
+	data, err := json.MarshalIndent(manifest, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal final snapshot image manifest: %w", err)
+	}
+	if err := os.WriteFile(store.snapshotImageManifestPath(id), append(data, '\n'), 0o644); err != nil {
+		return fmt.Errorf("write final snapshot image manifest: %w", err)
+	}
+	extension := snapshotImageExtension{Images: finalArtifacts}
+	raw, err := json.Marshal(extension)
+	if err != nil {
+		return fmt.Errorf("marshal snapshot image extension: %w", err)
+	}
+	if evolution.Extensions == nil {
+		evolution.Extensions = map[string]json.RawMessage{}
+	}
+	evolution.Extensions["eve.snapshot_images"] = raw
+	return nil
+}
+
 func copyFile(src string, dst string) error {
 	data, err := os.ReadFile(src)
 	if err != nil {
@@ -1480,6 +1723,12 @@ func copyFile(src string, dst string) error {
 		return fmt.Errorf("write %s: %w", dst, err)
 	}
 	return nil
+}
+
+func sortSnapshotImages(images []snapshotImageArtifact) {
+	sort.Slice(images, func(i, j int) bool {
+		return images[i].ID < images[j].ID
+	})
 }
 
 func sortSessionArtifacts(artifacts []sessionArtifact) {
@@ -2232,6 +2481,36 @@ func upsertSessionExtension(evolution *eve.Evolution, artifact sessionArtifact) 
 		return fmt.Errorf("marshal eve.sessions extension: %w", err)
 	}
 	evolution.Extensions["eve.sessions"] = raw
+	return nil
+}
+
+func upsertSnapshotImageExtension(evolution *eve.Evolution, artifact snapshotImageArtifact) error {
+	if evolution.Extensions == nil {
+		evolution.Extensions = map[string]json.RawMessage{}
+	}
+	var extension snapshotImageExtension
+	if raw, ok := evolution.Extensions["eve.snapshot_images"]; ok && len(raw) > 0 {
+		if err := json.Unmarshal(raw, &extension); err != nil {
+			return fmt.Errorf("parse eve.snapshot_images extension: %w", err)
+		}
+	}
+	replaced := false
+	for i, existing := range extension.Images {
+		if existing.ID == artifact.ID {
+			extension.Images[i] = artifact
+			replaced = true
+			break
+		}
+	}
+	if !replaced {
+		extension.Images = append(extension.Images, artifact)
+	}
+	sortSnapshotImages(extension.Images)
+	raw, err := json.Marshal(extension)
+	if err != nil {
+		return fmt.Errorf("marshal eve.snapshot_images extension: %w", err)
+	}
+	evolution.Extensions["eve.snapshot_images"] = raw
 	return nil
 }
 

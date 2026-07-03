@@ -1,6 +1,6 @@
 import { useParams } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import { GitCommitHorizontal } from 'lucide-react';
+import { ExternalLink, GitCommitHorizontal, ImageIcon } from 'lucide-react';
 import { api } from '../api';
 import { BehaviorCard } from '../components/behavior-card';
 import { Button } from '../components/ui/button';
@@ -12,7 +12,7 @@ import { LoadingState } from '../components/loading-state';
 import { SnapshotTimeline } from '../components/snapshot-timeline';
 import { VerificationCard } from '../components/verification-card';
 import { compactDate } from '../format';
-import type { GitCommit } from '../types';
+import type { GitCommit, SnapshotImage } from '../types';
 
 export function SnapshotPage() {
   const { id } = useParams({ from: '/evolutions/$id/snapshot' });
@@ -44,6 +44,7 @@ export function SnapshotPage() {
               </div>
               <CheckoutActions snapshot={snapshot.data} />
             </section>
+            {snapshot.data.snapshotImages.length > 0 ? <SnapshotImagesSection images={snapshot.data.snapshotImages} /> : null}
             <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <BehaviorCard behavior={snapshot.data.behavior} />
               <VerificationCard values={snapshot.data.verification} evolutionId={snapshot.data.id} />
@@ -55,6 +56,39 @@ export function SnapshotPage() {
         </div>
       ) : null}
     </EvolutionShell>
+  );
+}
+
+function SnapshotImagesSection({ images }: { images: SnapshotImage[] }) {
+  return (
+    <section className="rounded-lg border bg-white p-5 sm:p-6">
+      <div className="mb-5 flex items-center gap-2">
+        <ImageIcon className="size-4 text-blue-600" />
+        <h2 className="text-lg font-semibold">Snapshots</h2>
+      </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {images.map((image) => (
+          <a
+            key={image.id}
+            href={image.url}
+            target="_blank"
+            rel="noreferrer"
+            className="group overflow-hidden rounded-lg border bg-slate-50 transition-colors hover:bg-slate-100"
+          >
+            <span className="block aspect-video overflow-hidden bg-white">
+              <img src={image.url} alt={image.title || 'Snapshot image'} loading="lazy" className="h-full w-full object-contain" />
+            </span>
+            <span className="flex items-start justify-between gap-3 border-t bg-white px-4 py-3">
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-semibold">{image.title || image.id}</span>
+                {image.source ? <span className="mt-1 block truncate text-xs text-muted-foreground">{image.source}</span> : null}
+              </span>
+              <ExternalLink className="mt-0.5 size-4 shrink-0 text-slate-500 transition-colors group-hover:text-slate-950" />
+            </span>
+          </a>
+        ))}
+      </div>
+    </section>
   );
 }
 

@@ -58,7 +58,7 @@ go run ./cmd/eve add behavior --added "Organizations can log in via Okta"
 go run ./cmd/eve add verification --status passed --reference "go test ./..."
 go run ./cmd/eve add session codex:session_912 --source transcript.jsonl --sanitize
 go run ./cmd/eve add outcome "Organizations can authenticate with Okta."
-go run ./cmd/eve add implementation --snapshot HEAD --commit HEAD --repository eve --status merged
+go run ./cmd/eve add implementation --snapshot HEAD --commit HEAD --repository eve --status merged --image screenshot.png
 ```
 
 Read committed Evolutions:
@@ -103,6 +103,7 @@ Initialized structure:
   staged/
   evolutions/
   sessions/
+  snapshots/
 ```
 
 Committed product history:
@@ -113,6 +114,9 @@ Committed product history:
 .eve/sessions/EV-001/
   codex-session-912.md
   codex-session-912.jsonl
+  manifest.json
+.eve/snapshots/EV-001/
+  screenshot.png
   manifest.json
 ```
 
