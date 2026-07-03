@@ -620,7 +620,7 @@ func (server uiServer) repositorySummaries(evolutions []*eve.Evolution) []reposi
 			if evolution.Implementation.Snapshot != "" {
 				row.SnapshotCount++
 			}
-			row.CommitCount += len(evolution.Implementation.Commits)
+			row.CommitCount += implementationCommitCount(evolution)
 			latest := fallback(evolution.Metadata.UpdatedAt, evolution.Metadata.CreatedAt)
 			if latest > row.LatestAt {
 				row.LatestAt = latest
@@ -687,13 +687,31 @@ func summarizeEvolution(evolution *eve.Evolution) evolutionSummary {
 		Status:              evolution.Metadata.Status,
 		Outcome:             evolution.Outcome,
 		Snapshot:            evolution.Implementation.Snapshot,
-		CommitCount:         len(evolution.Implementation.Commits),
+		CommitCount:         implementationCommitCount(evolution),
 		VerificationState:   verificationState(evolution.Verification),
 		VerificationSummary: verificationSummary(evolution.Verification),
 		SessionProviders:    sessionProviders(evolution.Sessions),
 		CreatedAt:           evolution.Metadata.CreatedAt,
 		UpdatedAt:           evolution.Metadata.UpdatedAt,
 	}
+}
+
+func implementationCommitCount(evolution *eve.Evolution) int {
+	seen := map[string]bool{}
+	count := 0
+	add := func(value string) {
+		value = strings.TrimSpace(value)
+		if value == "" || seen[value] {
+			return
+		}
+		seen[value] = true
+		count++
+	}
+	for _, commit := range evolution.Implementation.Commits {
+		add(commit)
+	}
+	add(evolution.Implementation.Snapshot)
+	return count
 }
 
 func verificationState(values []eve.Verification) string {

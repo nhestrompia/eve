@@ -102,7 +102,7 @@ function ContributionGraph({ evolutions }: { evolutions: EvolutionSummary[] }) {
   const peakCommits = Math.max(0, ...weeks.flat().map((day) => day.commitCount));
 
   return (
-    <div className="rounded-lg bg-white p-5 shadow-[0_0_0_1px_rgba(15,23,42,0.08)]">
+    <div className="inline-flex max-w-full flex-col rounded-lg bg-white p-5 shadow-[0_0_0_1px_rgba(15,23,42,0.08)]">
       <div className="w-full">
         <div
           className="mb-2 grid gap-x-[3px] text-xs text-muted-foreground"
@@ -148,7 +148,7 @@ function ContributionGraph({ evolutions }: { evolutions: EvolutionSummary[] }) {
           ))}
         </div>
       </div>
-      <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
+      <div className="mt-4 flex items-center justify-between gap-8 text-sm text-muted-foreground">
         <span>
           {maxCount > 0
             ? `Peak day: ${maxCount} ${maxCount === 1 ? 'Evolution' : 'Evolutions'} · ${peakCommits} ${peakCommits === 1 ? 'commit' : 'commits'}`

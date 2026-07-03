@@ -402,6 +402,7 @@ func TestUIAPIServesStaticAndEvolutionData(t *testing.T) {
 	mustRun(t, []string{"init"}, &stdout, &stderr)
 	ev := sampleEvolution("EV-001", "Git-like product staging")
 	ev.Outcome = "Product history is browsable as snapshots."
+	ev.Implementation.Commits = nil
 	saveEvolutionJSON(t, filepath.Join(eveDir, "evolutions", "EV-001.json"), ev)
 
 	handler := newUIServer(newStore(), "", "localhost:0").routes()
@@ -417,8 +418,8 @@ func TestUIAPIServesStaticAndEvolutionData(t *testing.T) {
 
 	var rows []evolutionSummary
 	requestJSON(t, handler, http.MethodGet, "/api/evolutions", nil, &rows)
-	if len(rows) != 1 || rows[0].ID != "EV-001" || rows[0].Snapshot == "" || rows[0].CommitCount != len(ev.Implementation.Commits) {
-		t.Fatalf("timeline rows = %#v, want EV-001 with snapshot and commit count", rows)
+	if len(rows) != 1 || rows[0].ID != "EV-001" || rows[0].Snapshot == "" || rows[0].CommitCount != 1 {
+		t.Fatalf("timeline rows = %#v, want EV-001 with snapshot commit count", rows)
 	}
 
 	var detail evolutionDetailResponse
