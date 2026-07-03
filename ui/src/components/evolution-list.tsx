@@ -41,7 +41,7 @@ export function EvolutionList({ evolutions, selectedId }: { evolutions: Evolutio
             >
               <CheckCircle2 className="size-4 text-emerald-600" />
               <span className="min-w-0">
-                <span className="block truncate font-semibold">{evolution.title || 'Untitled Evolution'}</span>
+                <span className="block truncate font-semibold">{evolution.title || 'Untitled Snapshot'}</span>
                 <span className="block text-sm text-muted-foreground">{compactDate(evolution.updatedAt || evolution.createdAt)}</span>
               </span>
               <span className="font-mono text-sm text-muted-foreground">#{evolution.id.replace('EV-', '')}</span>

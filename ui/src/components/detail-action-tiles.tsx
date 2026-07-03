@@ -9,27 +9,27 @@ export function DetailActionTiles({ detail }: { detail: DetailResponse }) {
   const tiles = [
     {
       title: 'Implementation',
-      subtitle: `${detail.commits.length} commits · ${detail.sessions.length} sessions`,
+      subtitle: `${detail.commits.length} commits · ${detail.snapshot.artifacts.length} artifacts`,
       icon: Code2,
-      description: 'Git repositories, snapshot commit, contributed commits, and implementation sessions.',
+      description: 'Git state, contributed commits, and Snapshot artifacts.',
       content: <ImplementationDialogContent detail={detail} />
     },
     {
       title: 'Decisions & Risks',
       subtitle: `${detail.evolution.decisions.length} decisions · ${detail.evolution.risks.length} risks`,
       icon: Scale,
-      description: 'Recorded product decisions and known risks for this Evolution.',
+      description: 'Recorded product decisions and known risks for this Snapshot.',
       content: <DecisionsRisksDialogContent detail={detail} />
     },
     {
-      title: 'Related Evolutions',
+      title: 'Related Snapshots',
       subtitle: relationshipSummary(detail),
       icon: GitFork,
-      description: 'How this Evolution connects to other product states.',
+      description: 'How this Snapshot connects to other product states.',
       content: <RelationshipsDialogContent detail={detail} />
     },
     {
-      title: 'Evolution Activity',
+      title: 'Snapshot Activity',
       subtitle: `${activityEntries(detail.evolution).length} events`,
       icon: Clock3,
       description: 'Recorded lifecycle events for this product state.',
@@ -38,7 +38,7 @@ export function DetailActionTiles({ detail }: { detail: DetailResponse }) {
   ];
 
   return (
-    <section className="border-t py-8" aria-label="Evolution detail sections">
+    <section className="border-t py-8" aria-label="Snapshot detail sections">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {tiles.map((tile, index) => {
           const Icon = tile.icon;
@@ -102,7 +102,7 @@ function ImplementationDialogContent({ detail }: { detail: DetailResponse }) {
       </div>
 
       <DialogSection title={`Commits (${detail.commits.length})`}>
-        {detail.commits.length === 0 ? <EmptyDialogState text="No contributed commits are recorded for this Evolution." /> : null}
+        {detail.commits.length === 0 ? <EmptyDialogState text="No contributed commits are recorded for this Snapshot." /> : null}
         <div className="space-y-3">
           {detail.commits.map((commit) => (
             <article key={commit.hash} className="grid grid-cols-1 gap-3 rounded-lg bg-white p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.08)] sm:grid-cols-[96px_minmax(0,1fr)_112px] sm:gap-4">
@@ -117,21 +117,21 @@ function ImplementationDialogContent({ detail }: { detail: DetailResponse }) {
         </div>
       </DialogSection>
 
-      <DialogSection title={`Sessions (${detail.sessions.length})`}>
-        {detail.sessions.length === 0 ? <EmptyDialogState text="No AI sessions are recorded for this Evolution." /> : null}
+      <DialogSection title={`Artifacts (${detail.snapshot.artifacts.length})`}>
+        {detail.snapshot.artifacts.length === 0 ? <EmptyDialogState text="No artifacts are recorded for this Snapshot." /> : null}
         <div className="space-y-3">
-          {detail.sessions.map((session) => (
-            <article key={session.key} className="grid grid-cols-[40px_minmax(0,1fr)] items-start gap-3 rounded-lg bg-white p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.08)] sm:grid-cols-[40px_minmax(0,1fr)_110px]">
+          {detail.snapshot.artifacts.map((artifact, index) => (
+            <article key={`${artifact.type}-${artifact.path ?? artifact.url ?? artifact.uri ?? index}`} className="grid grid-cols-[40px_minmax(0,1fr)] items-start gap-3 rounded-lg bg-white p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.08)] sm:grid-cols-[40px_minmax(0,1fr)_110px]">
               <span className="flex size-10 items-center justify-center rounded-lg bg-violet-50 text-violet-700">
                 <FileText className="size-4" />
               </span>
               <div className="min-w-0">
-                <h3 className="truncate font-semibold">{session.providerName}</h3>
+                <h3 className="truncate font-semibold capitalize">{artifact.type}</h3>
                 <p className="mt-1 truncate text-sm text-muted-foreground">
-                  {session.title || session.localSources[0]?.title || session.id}
+                  {artifact.description || artifact.path || artifact.url || artifact.uri || 'Artifact reference'}
                 </p>
               </div>
-              <span className="col-start-2 w-fit rounded-md bg-emerald-50 px-2 py-1 text-center text-xs font-medium text-emerald-700 sm:col-start-auto sm:w-auto">{session.status}</span>
+              <span className="col-start-2 w-fit rounded-md bg-emerald-50 px-2 py-1 text-center text-xs font-medium text-emerald-700 sm:col-start-auto sm:w-auto">{artifact.mimeType || 'reference'}</span>
             </article>
           ))}
         </div>
@@ -144,12 +144,12 @@ function DecisionsRisksDialogContent({ detail }: { detail: DetailResponse }) {
   return (
     <div className="grid gap-6">
       <DialogSection title={`Decisions (${detail.evolution.decisions.length})`}>
-        {detail.evolution.decisions.length === 0 ? <EmptyDialogState text="No decisions are recorded in this Evolution." /> : null}
+        {detail.evolution.decisions.length === 0 ? <EmptyDialogState text="No decisions are recorded in this Snapshot." /> : null}
         <RecordList records={detail.evolution.decisions.map(displayDecision)} emptyPrefix="Decision" />
       </DialogSection>
 
       <DialogSection title={`Risks (${detail.evolution.risks.length})`}>
-        {detail.evolution.risks.length === 0 ? <EmptyDialogState text="No risks are recorded in this Evolution." /> : null}
+        {detail.evolution.risks.length === 0 ? <EmptyDialogState text="No risks are recorded in this Snapshot." /> : null}
         <RecordList records={detail.evolution.risks.map(displayRisk)} emptyPrefix="Risk" />
       </DialogSection>
     </div>
@@ -162,7 +162,7 @@ function RelationshipsDialogContent({ detail }: { detail: DetailResponse }) {
   );
 
   if (entries.length === 0) {
-    return <EmptyDialogState text="No relationships are recorded in this Evolution." />;
+    return <EmptyDialogState text="No relationships are recorded in this Snapshot." />;
   }
 
   return (

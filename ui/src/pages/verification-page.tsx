@@ -20,7 +20,7 @@ export function VerificationPage() {
           <Header eyebrow={id} title="Verification" subtitle="Checks and evidence recorded for this product state." />
           <div className="grid gap-4">
             {detail.data.evolution.verification.length === 0 ? (
-              <EmptyPanel text="No verification is recorded in this Evolution." />
+              <EmptyPanel text="No verification is recorded in this Snapshot." />
             ) : (
               detail.data.evolution.verification.map((item, index) => {
                 const Icon = item.status === 'failed' ? XCircle : item.status === 'pending' ? Circle : CheckCircle2;

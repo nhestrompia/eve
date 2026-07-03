@@ -10,8 +10,6 @@ import { RepositoryPage } from './pages/repository-page';
 import { RelationshipsPage } from './pages/relationships-page';
 import { RisksPage } from './pages/risks-page';
 import { SearchPage } from './pages/search-page';
-import { SessionsOverviewPage } from './pages/sessions-overview-page';
-import { SessionPage } from './pages/session-page';
 import { SnapshotPage } from './pages/snapshot-page';
 import { TimelinePage } from './pages/timeline-page';
 import { VerificationPage } from './pages/verification-page';
@@ -40,18 +38,6 @@ const snapshotRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/snapshots/$id/snapshot',
   component: SnapshotPage
-});
-
-const sessionRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/snapshots/$id/session/$sessionId',
-  component: SessionPage
-});
-
-const sessionsOverviewRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/snapshots/$id/sessions',
-  component: SessionsOverviewPage
 });
 
 const verificationRoute = createRoute({
@@ -114,8 +100,6 @@ const routeTree = rootRoute.addChildren([
   repositoryRoute,
   evolutionRoute,
   snapshotRoute,
-  sessionRoute,
-  sessionsOverviewRoute,
   verificationRoute,
   decisionsRoute,
   risksRoute,

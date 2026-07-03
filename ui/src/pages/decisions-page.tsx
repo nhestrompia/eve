@@ -18,8 +18,8 @@ export function DecisionsPage() {
       {detail.error ? <ErrorState error={detail.error} /> : null}
       {detail.data ? (
         <section className="space-y-6">
-          <Header eyebrow={id} title="Decisions" subtitle="Recorded product or implementation decisions for this Evolution." />
-          {detail.data.evolution.decisions.length === 0 ? <EmptyPanel text="No decisions are recorded in this Evolution." /> : null}
+          <Header eyebrow={id} title="Decisions" subtitle="Recorded product or implementation decisions for this Snapshot." />
+          {detail.data.evolution.decisions.length === 0 ? <EmptyPanel text="No decisions are recorded in this Snapshot." /> : null}
           <div className="grid gap-4">
             {detail.data.evolution.decisions.map((decision, index) => {
               const record = displayDecision(decision);

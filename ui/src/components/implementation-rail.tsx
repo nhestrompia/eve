@@ -1,9 +1,9 @@
 import { Link } from '@tanstack/react-router';
-import { Copy, ExternalLink, FileText, X } from 'lucide-react';
+import { Copy, FileText, X } from 'lucide-react';
 import { useState } from 'react';
 import { humanDate, shortCommit } from '../format';
 import { displayDecision, displayRisk } from '../lib/evolution-display';
-import type { DetailResponse, EvolutionSummary, SessionRecord, SnapshotResponse } from '../types';
+import type { DetailResponse, EvolutionSummary, SnapshotArtifact, SnapshotResponse } from '../types';
 import { SnapshotTimeline } from './snapshot-timeline';
 import { Button } from './ui/button';
 
@@ -18,6 +18,7 @@ export function ImplementationRail({
 }) {
   const id = detail.summary.id;
   const commit = snapshot?.commit || detail.evolution.implementation.snapshot || '';
+  const artifacts = detail.snapshot.artifacts ?? [];
   const [copied, setCopied] = useState(false);
 
   const copyCommit = async () => {
@@ -57,20 +58,13 @@ export function ImplementationRail({
       <SnapshotTimeline evolutions={evolutions} selectedId={id} className="mt-6" />
 
       <section className="mt-8">
-        <h3 className="font-semibold">Implementation Sessions ({detail.sessions.length})</h3>
-        <div className="mt-5 space-y-6">
-          {detail.sessions.length === 0 ? <p className="text-sm text-muted-foreground">No AI sessions are recorded for this Evolution.</p> : null}
-          {detail.sessions.slice(0, 4).map((session, index) => (
-            <SessionRailItem key={session.key} session={session} index={index} isLast={index === detail.sessions.length - 1} evolutionId={id} />
+        <h3 className="font-semibold">Artifacts ({artifacts.length})</h3>
+        <div className="mt-4 space-y-3">
+          {artifacts.length === 0 ? <p className="rounded-lg bg-slate-50 p-3 text-sm text-muted-foreground">No artifacts are recorded for this Snapshot.</p> : null}
+          {artifacts.slice(0, 5).map((artifact, index) => (
+            <ArtifactRailItem key={`${artifact.type}-${artifact.path ?? artifact.url ?? artifact.uri ?? index}`} artifact={artifact} />
           ))}
         </div>
-        <Link
-          to="/snapshots/$id/sessions"
-          params={{ id }}
-          className="mt-6 inline-flex min-h-10 items-center gap-2 rounded-md px-2 text-sm font-medium text-blue-700 hover:bg-blue-50"
-        >
-          View conversation threads <ExternalLink className="size-3.5" />
-        </Link>
       </section>
 
       <div className="mt-8 space-y-6 border-t pt-6">
@@ -112,60 +106,25 @@ function RailRecordGroup({ title, records, emptyText }: { title: string; records
   );
 }
 
-function SessionRailItem({
-  session,
-  index,
-  isLast,
-  evolutionId
-}: {
-  session: SessionRecord;
-  index: number;
-  isLast: boolean;
-  evolutionId: string;
-}) {
+function ArtifactRailItem({ artifact }: { artifact: SnapshotArtifact }) {
+  const label = artifact.description || artifact.path || artifact.url || artifact.uri || artifact.type;
+  const href = artifact.url || (artifact.path?.startsWith('http') ? artifact.path : '');
   const content = (
-    <>
-      <div className="relative flex justify-center">
-        <span className="z-10 flex size-6 items-center justify-center rounded-full bg-white font-mono text-xs shadow-[0_0_0_1px_rgba(15,23,42,0.18)]">
-          {index + 1}
-        </span>
-        {!isLast ? <span className="absolute top-6 h-16 w-px bg-slate-200" /> : null}
-      </div>
-      <div className="flex size-9 items-center justify-center rounded-lg bg-violet-50 text-violet-700">
+    <article className="grid grid-cols-[36px_minmax(0,1fr)] gap-3 rounded-lg bg-slate-50 p-3">
+      <span className="flex size-9 items-center justify-center rounded-lg bg-white text-slate-700 shadow-[0_0_0_1px_rgba(15,23,42,0.08)]">
         <FileText className="size-4" />
-      </div>
-      <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <p className="truncate font-semibold">{session.providerName}</p>
-          <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700">{session.status}</span>
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground text-pretty">
-          {session.hasTranscript
-            ? session.title || `${session.preview.messageCount} messages captured`
-            : session.localSources[0]?.title || `Reference only: ${session.id}`}
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {session.preview.messageCount
-            ? `${session.preview.messageCount} messages`
-            : session.localSources[0]?.match
-              ? `Matched by ${session.localSources[0].match}`
-              : session.captureHint}
-        </p>
-      </div>
-    </>
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-semibold capitalize">{artifact.type}</span>
+        <span className="mt-1 block truncate text-xs text-muted-foreground">{label}</span>
+      </span>
+    </article>
   );
 
-  if (session.hasTranscript || session.localSources.length > 0) {
-    return (
-      <Link
-        to="/snapshots/$id/session/$sessionId"
-        params={{ id: evolutionId, sessionId: session.key }}
-        className="grid grid-cols-[24px_40px_minmax(0,1fr)] gap-4 rounded-lg py-1 hover:text-blue-700"
-      >
-        {content}
-      </Link>
-    );
-  }
-
-  return <div className="grid grid-cols-[24px_40px_minmax(0,1fr)] gap-4 py-1">{content}</div>;
+  if (!href) return content;
+  return (
+    <a href={href} target="_blank" rel="noreferrer" className="block rounded-lg hover:text-blue-700">
+      {content}
+    </a>
+  );
 }

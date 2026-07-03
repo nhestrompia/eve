@@ -107,6 +107,67 @@ Tools:
 from the repository at completion time: branch, Git state, commits, and dirty
 status.
 
+### Use EVE MCP from Codex
+
+Codex can start EVE as a local stdio MCP server. Add this to a trusted
+project-scoped `.codex/config.toml` or to `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.eve]
+command = "go"
+args = ["run", "./cmd/eve", "mcp-stdio"]
+cwd = "/Users/nhestrompia/Documents/eve"
+startup_timeout_sec = 20
+tool_timeout_sec = 120
+```
+
+Or add it with the Codex CLI:
+
+```sh
+codex mcp add eve -- go run ./cmd/eve mcp-stdio
+```
+
+Use `/mcp` inside Codex to confirm the server is connected.
+
+If `eve dev` is already running, Codex can also connect over Streamable HTTP:
+
+```toml
+[mcp_servers.eve]
+url = "http://localhost:4317/mcp"
+startup_timeout_sec = 20
+tool_timeout_sec = 120
+```
+
+### Use EVE MCP from Claude Code
+
+For a personal/project-local setup, add the stdio server:
+
+```sh
+claude mcp add --transport stdio eve -- go run ./cmd/eve mcp-stdio
+```
+
+For a team-shared project config, create `.mcp.json` in the repository root:
+
+```json
+{
+  "mcpServers": {
+    "eve": {
+      "command": "go",
+      "args": ["run", "./cmd/eve", "mcp-stdio"]
+    }
+  }
+}
+```
+
+Claude Code prompts for approval before using project-scoped `.mcp.json`
+servers. Use `/mcp` inside Claude Code or `claude mcp list` to check status.
+
+If `eve dev` is already running, Claude Code can connect over HTTP:
+
+```sh
+claude mcp add --transport http eve http://localhost:4317/mcp
+```
+
 ## Storage
 
 Initialized structure:

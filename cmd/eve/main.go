@@ -315,6 +315,7 @@ type repoSummary struct {
 	Head           string `json:"head,omitempty"`
 	Dirty          bool   `json:"dirty"`
 	RemoteURL      string `json:"remoteUrl,omitempty"`
+	LatestGitState string `json:"latestGitState,omitempty"`
 }
 
 type repoDetail struct {
@@ -467,6 +468,7 @@ func (repo repository) summary() (repoSummary, error) {
 		summary.LatestAt = snapshots[0].CreatedAt
 		summary.LatestSnapshot = snapshots[0].ID
 		summary.LatestTitle = snapshots[0].Title
+		summary.LatestGitState = snapshots[0].Implementation.GitState
 	}
 	return summary, nil
 }

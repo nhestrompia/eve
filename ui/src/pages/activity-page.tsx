@@ -19,7 +19,7 @@ export function ActivityPage() {
       {detail.error ? <ErrorState error={detail.error} /> : null}
       {detail.data ? (
         <section className="space-y-6">
-          <Header eyebrow={id} title="Evolution Activity" subtitle="Recorded lifecycle events for this product state." />
+          <Header eyebrow={id} title="Snapshot Activity" subtitle="Recorded lifecycle events for this product state." />
           <ol className="rounded-lg bg-white p-5 shadow-[0_0_0_1px_rgba(15,23,42,0.08)]">
             {activityEntries(detail.data.evolution).map((entry, index, entries) => (
               <li key={`${entry.event}-${entry.timestamp}-${index}`} className="grid grid-cols-[24px_minmax(0,1fr)] gap-4 pb-6 last:pb-0">

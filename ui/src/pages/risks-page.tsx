@@ -19,7 +19,7 @@ export function RisksPage() {
       {detail.data ? (
         <section className="space-y-6">
           <Header eyebrow={id} title="Risks" subtitle="Known risks recorded with this product state." />
-          {detail.data.evolution.risks.length === 0 ? <EmptyPanel text="No risks are recorded in this Evolution." /> : null}
+          {detail.data.evolution.risks.length === 0 ? <EmptyPanel text="No risks are recorded in this Snapshot." /> : null}
           <div className="grid gap-4">
             {detail.data.evolution.risks.map((risk, index) => {
               const record = displayRisk(risk);

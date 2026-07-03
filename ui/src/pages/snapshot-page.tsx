@@ -104,7 +104,7 @@ function SnapshotCommitsDialog({ commits, loading }: { commits: GitCommit[]; loa
       <DialogContent className="max-w-[720px]">
         <DialogHeader>
           <DialogTitle>Snapshot commits</DialogTitle>
-          <DialogDescription>Commits recorded for this Evolution implementation.</DialogDescription>
+          <DialogDescription>Commits recorded for this Snapshot implementation.</DialogDescription>
         </DialogHeader>
         <div className="max-h-[54dvh] overflow-auto pr-1">
           {loading ? <p className="rounded-lg border bg-slate-50 p-4 text-sm text-muted-foreground">Loading commits...</p> : null}

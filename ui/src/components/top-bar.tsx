@@ -1,5 +1,5 @@
-import { Link, useRouterState } from '@tanstack/react-router';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { Link, useRouterState } from '@tanstack/react-router';
 import { Code2, ExternalLink, Link as LinkIcon, MoreHorizontal, Search } from 'lucide-react';
 import { useState } from 'react';
 import { api } from '../api';
@@ -7,12 +7,16 @@ import { Button } from './ui/button';
 
 export function TopBar({ onSearch }: { onSearch: () => void }) {
   const state = useRouterState();
+  const config = useQuery({ queryKey: ['config'], queryFn: api.config, refetchInterval: 10_000 });
   const [copied, setCopied] = useState(false);
-  const match = state.location.pathname.match(/^\/snapshots\/([^/]+)/);
-  const id = match ? decodeURIComponent(match[1]) : undefined;
+  const match = state.location.pathname.match(/snap_[^/]+|EV-\d+/);
+  const id = match?.[0];
   const repoMatch = state.location.pathname.match(/^\/repositories\/([^/]+)/);
   const repo = repoMatch ? decodeURIComponent(repoMatch[1]) : undefined;
   const hasDetailRail = /^\/snapshots\/[^/]+$/.test(state.location.pathname);
+  const currentGitState = config.data?.currentGitState;
+  const latestGitState = config.data?.latestGitState;
+  const isBehindLatest = Boolean(currentGitState && latestGitState && currentGitState !== latestGitState);
   const repository = useQuery({
     queryKey: ['repository', repo],
     queryFn: () => api.repository(repo ?? ''),
@@ -48,6 +52,11 @@ export function TopBar({ onSearch }: { onSearch: () => void }) {
             <span>›</span>
             <span className="truncate font-semibold text-foreground">{id}</span>
           </>
+        ) : null}
+        {isBehindLatest ? (
+          <span className="hidden max-w-[260px] truncate rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 shadow-[0_0_0_1px_rgba(245,158,11,0.16)] lg:inline">
+            Viewing an earlier product version
+          </span>
         ) : null}
       </div>
       <div className="flex shrink-0 items-center justify-end gap-2 md:gap-3">

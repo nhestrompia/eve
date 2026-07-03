@@ -1,9 +1,10 @@
 import { Copy, Download, Link as LinkIcon, MoreHorizontal, Terminal } from 'lucide-react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
+import { toast } from 'sonner';
 import { api } from '../api';
-import type { CheckoutResponse, SnapshotResponse } from '../types';
+import type { SnapshotResponse } from '../types';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,7 +21,27 @@ import { Button } from './ui/button';
 export function CheckoutActions({ snapshot }: { snapshot: SnapshotResponse }) {
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
-  const checkout = useMutation({ mutationFn: () => api.checkout(snapshot.id) });
+  const queryClient = useQueryClient();
+  const checkout = useMutation({
+    mutationFn: () => api.checkout(snapshot.id),
+    onSuccess: (result) => {
+      void queryClient.invalidateQueries({ queryKey: ['config'] });
+      if (result.exitCode === 0) {
+        toast.success('Snapshot checked out', {
+          description: `${result.repository || 'Repository'} is now at ${result.commit.slice(0, 12)}.`
+        });
+        return;
+      }
+      toast.error('Checkout failed', {
+        description: (result.stderr || result.stdout || 'EVE could not checkout this snapshot.').trim()
+      });
+    },
+    onError: (error) => {
+      toast.error('Checkout failed', {
+        description: error instanceof Error ? error.message : 'EVE could not checkout this snapshot.'
+      });
+    }
+  });
 
   const copy = async () => {
     await navigator.clipboard.writeText(snapshot.checkoutCommand);
@@ -63,7 +84,9 @@ export function CheckoutActions({ snapshot }: { snapshot: SnapshotResponse }) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => checkout.mutate()}>Run checkout</AlertDialogAction>
+            <AlertDialogAction disabled={checkout.isPending} onClick={() => checkout.mutate()}>
+              {checkout.isPending ? 'Checking out...' : 'Run checkout'}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -71,21 +94,6 @@ export function CheckoutActions({ snapshot }: { snapshot: SnapshotResponse }) {
         <Terminal className="size-4" />
         {copied ? 'Command copied' : 'Copy command'}
       </Button>
-      <CheckoutResult result={checkout.data} error={checkout.error} />
     </div>
-  );
-}
-
-function CheckoutResult({ result, error }: { result?: CheckoutResponse; error: unknown }) {
-  if (error instanceof Error) {
-    return <pre className="w-full whitespace-pre-wrap rounded-lg border bg-red-50 p-3 font-mono text-xs text-red-700 sm:w-[250px]">{error.message}</pre>;
-  }
-  if (!result) return null;
-  return (
-    <pre className="w-full whitespace-pre-wrap rounded-lg border bg-slate-950 p-3 font-mono text-xs text-white sm:w-[250px]">
-      {result.exitCode === 0 ? 'Product snapshot restored\n' : ''}
-      {result.stdout}
-      {result.stderr}
-    </pre>
   );
 }

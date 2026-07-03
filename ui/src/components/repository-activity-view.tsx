@@ -33,7 +33,7 @@ export function RepositoryActivityView({
   evolutions: EvolutionSummary[];
   selectedRepo?: string;
 }) {
-  const title = selectedRepo ?? "Product evolution";
+  const title = selectedRepo ?? 'Product snapshots';
   const details = useQuery({
     queryKey: [
       "activity-overview-details",
@@ -91,7 +91,7 @@ export function RepositoryActivityView({
           <section className="space-y-3">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-semibold">Evolution activity</h2>
+                <h2 className="text-lg font-semibold">Snapshot activity</h2>
                 <CircleHelp className="size-4 text-muted-foreground" />
               </div>
               {/* <button className="inline-flex h-9 w-fit items-center gap-2 rounded-md bg-white px-3 text-xs font-semibold shadow-[0_0_0_1px_rgba(15,23,42,0.12)] transition-colors hover:bg-slate-50">
@@ -450,9 +450,7 @@ function RecentActivityPanel({
                 </span>
                 <span className="min-w-0">
                   <span className="flex min-w-0 items-center gap-3">
-                    <strong className="truncate text-sm font-semibold">
-                      {evolution.title || "Untitled Evolution"}
-                    </strong>
+                    <strong className="truncate text-sm font-semibold">{evolution.title || 'Untitled Snapshot'}</strong>
                     <StatusBadge status={evolution.status} />
                   </span>
                   <span className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
@@ -499,12 +497,12 @@ type PlatformStats = {
 
 function PlatformOverview({ stats }: { stats: PlatformStats }) {
   const tiles = [
-    ["Total evolutions", stats.evolutions],
-    ["Snapshots", stats.snapshots],
-    ["Commits", stats.commits],
-    ["Implementation sessions", stats.sessions],
-    ["Decisions", stats.decisions],
-    ["Risks", stats.risks],
+    ['Total snapshots', stats.evolutions],
+    ['Snapshots', stats.snapshots],
+    ['Commits', stats.commits],
+    ['Artifacts', stats.sessions],
+    ['Decisions', stats.decisions],
+    ['Risks', stats.risks]
   ] as const;
   return (
     <RailCard title="Platform overview" eyebrow="Last 12 months">

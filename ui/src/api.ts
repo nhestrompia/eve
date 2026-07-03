@@ -31,6 +31,7 @@ type RepoAPI = {
   primaryLanguage?: string;
   sizeBytes?: number;
   createdAt?: string;
+  latestGitState?: string;
 };
 
 type SnapshotDetailAPI = {
@@ -84,6 +85,7 @@ function adaptRepo(repo: RepoAPI): RepositorySummary {
     latestEvolution: repo.latestSnapshot,
     latestSnapshot: repo.latestSnapshot,
     latestTitle: repo.latestTitle,
+    latestGitState: repo.latestGitState,
     sessionProviders: []
   };
 }

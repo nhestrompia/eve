@@ -18,7 +18,7 @@ export function RelatedEvolutions({ evolution }: { evolution: Evolution }) {
       <CardHeader className="flex-col gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <GitBranch className="size-4 text-slate-600" />
-          <h2 className="text-sm font-semibold text-balance">Related Evolutions</h2>
+          <h2 className="text-sm font-semibold text-balance">Related Snapshots</h2>
         </div>
         <Link
           className="inline-flex items-center gap-2 text-sm font-medium text-blue-700"

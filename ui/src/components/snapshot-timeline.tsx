@@ -136,7 +136,7 @@ function SnapshotTimelineContent({
       <div className="min-w-0">
         <div className="flex items-center justify-between gap-3">
           <p className="truncate font-medium">
-            {evolution.title || "Untitled Evolution"}
+            {evolution.title || "Untitled Snapshot"}
           </p>
           <code
             className={cn(
@@ -144,7 +144,7 @@ function SnapshotTimelineContent({
               isSelected && "text-blue-700",
             )}
           >
-            {evolution.id.replace(/^EV-/, "#")}
+            {evolution.id}
           </code>
         </div>
         <div className="mt-1 flex items-center justify-between gap-3 text-xs text-muted-foreground">

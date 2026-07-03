@@ -1,8 +1,9 @@
 import { Link } from '@tanstack/react-router';
 import { Box, CalendarDays, Download, Tag, Users } from 'lucide-react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { api } from '../api';
-import { humanDate, shortCommit } from '../format';
+import { humanDate } from '../format';
 import type { DetailResponse, SnapshotResponse } from '../types';
 import {
   AlertDialog,
@@ -19,7 +20,27 @@ import { Button } from './ui/button';
 import { StatusBadge } from './status-badge';
 
 export function EvolutionHero({ detail, snapshot }: { detail: DetailResponse; snapshot?: SnapshotResponse }) {
-  const checkout = useMutation({ mutationFn: () => api.checkout(detail.summary.id) });
+  const queryClient = useQueryClient();
+  const checkout = useMutation({
+    mutationFn: () => api.checkout(detail.summary.id),
+    onSuccess: (result) => {
+      void queryClient.invalidateQueries({ queryKey: ['config'] });
+      if (result.exitCode === 0) {
+        toast.success('Snapshot checked out', {
+          description: `${result.repository || 'Repository'} is now at ${result.commit.slice(0, 12)}.`
+        });
+        return;
+      }
+      toast.error('Checkout failed', {
+        description: (result.stderr || result.stdout || 'EVE could not checkout this snapshot.').trim()
+      });
+    },
+    onError: (error) => {
+      toast.error('Checkout failed', {
+        description: error instanceof Error ? error.message : 'EVE could not checkout this snapshot.'
+      });
+    }
+  });
   const author = detailAuthor(detail);
 
   return (
@@ -28,7 +49,7 @@ export function EvolutionHero({ detail, snapshot }: { detail: DetailResponse; sn
         <StatusBadge status={detail.summary.status} />
         <div className="mt-6">
           <h1 className="text-2xl font-semibold leading-tight tracking-[-0.01em] text-balance sm:text-[34px]">
-            {detail.summary.title || 'Untitled Evolution'}
+            {detail.summary.title || 'Untitled Snapshot'}
           </h1>
         </div>
         <p className="mt-4 max-w-[68ch] text-[15px] leading-6 text-pretty">
@@ -41,14 +62,12 @@ export function EvolutionHero({ detail, snapshot }: { detail: DetailResponse; sn
           </span>
           <span className="inline-flex items-center gap-2">
             <Users className="size-4" />
-            by {author}
+            Recorded by {author}
           </span>
-          {detail.summary.snapshot ? (
-            <span className="inline-flex items-center gap-2">
-              <Tag className="size-4" />
-              Snapshot {shortCommit(detail.summary.snapshot)}
-            </span>
-          ) : null}
+          <span className="inline-flex items-center gap-2">
+            <Tag className="size-4" />
+            Snapshot {detail.summary.id}
+          </span>
         </div>
       </div>
 
@@ -70,7 +89,9 @@ export function EvolutionHero({ detail, snapshot }: { detail: DetailResponse; sn
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={() => checkout.mutate()}>Run checkout</AlertDialogAction>
+              <AlertDialogAction disabled={checkout.isPending} onClick={() => checkout.mutate()}>
+                {checkout.isPending ? 'Checking out...' : 'Run checkout'}
+              </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -80,16 +101,6 @@ export function EvolutionHero({ detail, snapshot }: { detail: DetailResponse; sn
             View snapshot
           </Link>
         </Button>
-        {checkout.error instanceof Error ? (
-          <pre className="whitespace-pre-wrap rounded-lg bg-red-50 p-3 font-mono text-xs text-red-700">{checkout.error.message}</pre>
-        ) : null}
-        {checkout.data ? (
-          <pre className="whitespace-pre-wrap rounded-lg bg-slate-950 p-3 font-mono text-xs text-white">
-            {checkout.data.exitCode === 0 ? 'Product snapshot restored\n' : ''}
-            {checkout.data.stdout}
-            {checkout.data.stderr}
-          </pre>
-        ) : null}
       </div>
     </section>
   );

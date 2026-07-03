@@ -18,7 +18,7 @@ export function ImplementationPage() {
       {detail.error ? <ErrorState error={detail.error} /> : null}
       {detail.data ? (
         <section className="space-y-6">
-          <Header eyebrow={id} title="Implementation" subtitle="Git repositories, snapshot commit, and contributed commits for this Evolution." />
+          <Header eyebrow={id} title="Implementation" subtitle="Git repositories, snapshot commit, and contributed commits for this Snapshot." />
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <article className="rounded-lg border bg-white p-5">
               <p className="text-sm text-muted-foreground">Snapshot commit</p>
@@ -36,7 +36,7 @@ export function ImplementationPage() {
               </div>
             </article>
           </div>
-          {detail.data.commits.length === 0 ? <EmptyPanel text="No contributed commits are recorded for this Evolution." /> : null}
+          {detail.data.commits.length === 0 ? <EmptyPanel text="No contributed commits are recorded for this Snapshot." /> : null}
           <div className="grid gap-4">
             {detail.data.commits.map((commit) => (
               <article key={commit.hash} className="rounded-lg border bg-white p-5">

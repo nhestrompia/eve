@@ -22,7 +22,7 @@ export function TimelinePage() {
   if (evolutions.isLoading || repositories.isLoading) {
     return (
       <EvolutionShell evolutions={[]} selectedId={undefined}>
-        <LoadingState label="Loading Evolutions" />
+        <LoadingState label="Loading Snapshots" />
       </EvolutionShell>
     );
   }
@@ -45,7 +45,7 @@ export function TimelinePage() {
   if (!evolutions.data?.length) {
     return (
       <EvolutionShell evolutions={[]} selectedId={undefined}>
-        <EmptyState title="No Evolutions found" detail="Committed records from .eve/evolutions will appear here." />
+        <EmptyState title="No Snapshots found" detail="Committed records from .eve/snapshots will appear here." />
       </EvolutionShell>
     );
   }

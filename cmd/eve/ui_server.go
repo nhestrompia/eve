@@ -37,6 +37,11 @@ type configResponse struct {
 	Addr                  string `json:"addr"`
 	EveDir                string `json:"eveDir"`
 	Initialized           bool   `json:"initialized"`
+	CurrentGitState       string `json:"currentGitState,omitempty"`
+	CurrentBranch         string `json:"currentBranch,omitempty"`
+	CurrentDirty          bool   `json:"currentDirty"`
+	LatestSnapshot        string `json:"latestSnapshot,omitempty"`
+	LatestGitState        string `json:"latestGitState,omitempty"`
 }
 
 type snapshotSummary struct {
@@ -177,6 +182,14 @@ func (server runtimeServer) handleConfig(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	_, err := os.Stat(server.repo.configPath())
+	summary, summaryErr := server.repo.summary()
+	facts, factsErr := deriveGitFacts(server.repo)
+	if summaryErr != nil {
+		summary = repoSummary{}
+	}
+	if factsErr != nil {
+		facts = gitFacts{}
+	}
 	writeJSON(w, http.StatusOK, configResponse{
 		SnapshotSchemaVersion: eve.SnapshotSchemaVersion,
 		CLIVersion:            eve.CLIVersion,
@@ -184,6 +197,11 @@ func (server runtimeServer) handleConfig(w http.ResponseWriter, r *http.Request)
 		Addr:                  server.addr,
 		EveDir:                server.repo.eveDir,
 		Initialized:           err == nil,
+		CurrentGitState:       facts.GitState,
+		CurrentBranch:         facts.Branch,
+		CurrentDirty:          facts.Dirty,
+		LatestSnapshot:        summary.LatestSnapshot,
+		LatestGitState:        summary.LatestGitState,
 	})
 }
 

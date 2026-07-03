@@ -34,7 +34,7 @@ export function EvolutionDetailPage() {
           <ImplementationRail detail={detail.data} evolutions={rows} snapshot={snapshot.data} />
         </div>
       ) : null}
-      {!detail.isLoading && !detail.error && !detail.data ? <EmptyState title="Evolution not found" detail={`${id} is not available.`} /> : null}
+      {!detail.isLoading && !detail.error && !detail.data ? <EmptyState title="Snapshot not found" detail={`${id} is not available.`} /> : null}
     </EvolutionShell>
   );
 }

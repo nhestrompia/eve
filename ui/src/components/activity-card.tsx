@@ -9,7 +9,7 @@ export function ActivityCard({ evolution }: { evolution: Evolution }) {
   return (
     <Card>
       <CardHeader>
-        <SectionHeading icon={Clock} title="Evolution Activity" />
+        <SectionHeading icon={Clock} title="Snapshot Activity" />
       </CardHeader>
       <CardContent>
         <ol className="relative space-y-5">

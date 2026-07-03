@@ -33,7 +33,7 @@ export function SearchCommand({ open, onOpenChange }: { open: boolean; onOpenCha
             autoFocus
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search evolutions, behavior, sessions, commits..."
+            placeholder="Search snapshots, summaries, validation, commits..."
             className="border-0 shadow-none focus-visible:ring-0"
           />
           <Button variant="ghost" size="icon" aria-label="Close search" onClick={() => onOpenChange(false)}>
@@ -42,7 +42,7 @@ export function SearchCommand({ open, onOpenChange }: { open: boolean; onOpenCha
         </div>
         <div className="mt-4 max-h-[420px] overflow-auto">
           {query.trim() === '' ? <p className="p-4 text-muted-foreground">Type to search product history.</p> : null}
-          {results.data?.results.length === 0 ? <p className="p-4 text-muted-foreground">No matching Evolutions.</p> : null}
+          {results.data?.results.length === 0 ? <p className="p-4 text-muted-foreground">No matching Snapshots.</p> : null}
           <div className="space-y-2">
             {results.data?.results.map((result) => (
               <Link

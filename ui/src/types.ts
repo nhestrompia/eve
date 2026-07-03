@@ -231,6 +231,11 @@ export type ConfigResponse = {
   addr: string;
   eveDir: string;
   initialized: boolean;
+  currentGitState?: string;
+  currentBranch?: string;
+  currentDirty: boolean;
+  latestSnapshot?: string;
+  latestGitState?: string;
 };
 
 export type RepositorySummary = {
@@ -252,6 +257,7 @@ export type RepositorySummary = {
   latestEvolution: string;
   latestSnapshot?: string;
   latestTitle: string;
+  latestGitState?: string;
   sessionProviders: string[];
 };
 

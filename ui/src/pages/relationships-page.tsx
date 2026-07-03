@@ -21,8 +21,8 @@ export function RelationshipsPage() {
       {detail.error ? <ErrorState error={detail.error} /> : null}
       {detail.data ? (
         <section className="space-y-6">
-          <Header eyebrow={id} title="Relationships" subtitle="How this Evolution connects to other product states." />
-          {entries.length === 0 ? <EmptyPanel text="No relationships are recorded in this Evolution." /> : null}
+          <Header eyebrow={id} title="Relationships" subtitle="How this Snapshot connects to other product states." />
+          {entries.length === 0 ? <EmptyPanel text="No relationships are recorded in this Snapshot." /> : null}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {entries.map((entry) => (
               <article key={`${entry.kind}-${entry.value}`} className="rounded-lg border bg-white p-5">

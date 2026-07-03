@@ -14,7 +14,7 @@ export function RisksCard({ risks, evolutionId }: { risks: unknown[]; evolutionI
       </CardHeader>
       <CardContent>
         {rendered.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No risks are recorded in this Evolution.</p>
+          <p className="text-sm text-muted-foreground">No risks are recorded in this Snapshot.</p>
         ) : (
           <ul className="list-disc space-y-3 pl-5 text-sm text-muted-foreground">
             {rendered.map((risk, index) => (

@@ -1,4 +1,5 @@
 import { Outlet } from '@tanstack/react-router';
+import { Toaster } from 'sonner';
 import { useEffect, useState } from 'react';
 import { SearchCommand } from './search-command';
 import { Sidebar } from './sidebar';
@@ -26,6 +27,7 @@ export function AppShell() {
         <Outlet />
       </div>
       <SearchCommand open={searchOpen} onOpenChange={setSearchOpen} />
+      <Toaster position="bottom-right" richColors closeButton />
     </div>
   );
 }

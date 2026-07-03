@@ -14,7 +14,7 @@ export function DecisionsCard({ decisions, evolutionId }: { decisions: unknown[]
       </CardHeader>
       <CardContent className="space-y-4">
         {decisions.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No decisions are recorded in this Evolution.</p>
+          <p className="text-sm text-muted-foreground">No decisions are recorded in this Snapshot.</p>
         ) : (
           <>
             <div>
