@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import { ArrowRight, GitCommitHorizontal } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { compactDate, monthYear, shortCommit } from '../format';
 import type { EvolutionSummary, RepositorySummary } from '../types';
 import { StatusBadge } from './status-badge';
@@ -74,6 +75,8 @@ export function RepositoryActivityView({
 }
 
 function ContributionGraph({ evolutions }: { evolutions: EvolutionSummary[] }) {
+  const graphMeasureRef = useRef<HTMLDivElement>(null);
+  const [visibleWeeks, setVisibleWeeks] = useState(MIN_ACTIVITY_WEEKS);
   const counts = new Map<string, ActivityDay>();
   for (const evolution of evolutions) {
     const date = parseDate(evolution.updatedAt || evolution.createdAt);
@@ -85,11 +88,33 @@ function ContributionGraph({ evolutions }: { evolutions: EvolutionSummary[] }) {
       commitCount: current.commitCount + (evolution.commitCount ?? 0)
     });
   }
+
+  useEffect(() => {
+    const element = graphMeasureRef.current;
+    if (!element) return;
+
+    const updateVisibleWeeks = () => {
+      const width = element.getBoundingClientRect().width;
+      const usableWidth = Math.max(0, width - DAY_LABEL_WIDTH);
+      const nextWeeks = clamp(
+        Math.floor((usableWidth + ACTIVITY_CELL_GAP) / (ACTIVITY_CELL_SIZE + ACTIVITY_CELL_GAP)),
+        MIN_ACTIVITY_WEEKS,
+        MAX_ACTIVITY_WEEKS
+      );
+      setVisibleWeeks((current) => (current === nextWeeks ? current : nextWeeks));
+    };
+
+    updateVisibleWeeks();
+    const observer = new ResizeObserver(updateVisibleWeeks);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
   const today = new Date();
   const start = new Date(today);
-  start.setDate(today.getDate() - (ACTIVITY_WEEKS - 1) * 7);
+  start.setDate(today.getDate() - (visibleWeeks - 1) * 7);
   start.setDate(start.getDate() - start.getDay());
-  const weeks = Array.from({ length: ACTIVITY_WEEKS }, (_, week) =>
+  const weeks = Array.from({ length: visibleWeeks }, (_, week) =>
     Array.from({ length: 7 }, (_, day) => {
       const date = new Date(start);
       date.setDate(start.getDate() + week * 7 + day);
@@ -102,11 +127,14 @@ function ContributionGraph({ evolutions }: { evolutions: EvolutionSummary[] }) {
   const peakCommits = Math.max(0, ...weeks.flat().map((day) => day.commitCount));
 
   return (
-    <div className="inline-flex max-w-full flex-col rounded-lg bg-white p-5 shadow-[0_0_0_1px_rgba(15,23,42,0.08)]">
-      <div className="w-full">
+    <div className="w-full rounded-lg bg-white p-5 shadow-[0_0_0_1px_rgba(15,23,42,0.08)]">
+      <div ref={graphMeasureRef} className="w-full">
         <div
           className="mb-2 grid gap-x-[3px] text-xs text-muted-foreground"
-          style={{ gridTemplateColumns: `30px repeat(${ACTIVITY_WEEKS}, 12px)` }}
+          style={{
+            gridTemplateColumns: `${DAY_LABEL_WIDTH}px repeat(${visibleWeeks}, ${ACTIVITY_CELL_SIZE}px)`,
+            columnGap: ACTIVITY_CELL_GAP
+          }}
         >
           <span />
           {monthLabels.map((label) => (
@@ -119,8 +147,14 @@ function ContributionGraph({ evolutions }: { evolutions: EvolutionSummary[] }) {
             </span>
           ))}
         </div>
-        <div className="grid gap-x-[3px]" style={{ gridTemplateColumns: `30px repeat(${ACTIVITY_WEEKS}, 12px)` }}>
-          <div className="grid grid-rows-7 gap-y-[3px] text-xs leading-3 text-muted-foreground">
+        <div
+          className="grid"
+          style={{
+            gridTemplateColumns: `${DAY_LABEL_WIDTH}px repeat(${visibleWeeks}, ${ACTIVITY_CELL_SIZE}px)`,
+            columnGap: ACTIVITY_CELL_GAP
+          }}
+        >
+          <div className="grid grid-rows-7 text-xs leading-3 text-muted-foreground" style={{ rowGap: ACTIVITY_CELL_GAP }}>
             {['', 'Mon', '', 'Wed', '', 'Fri', ''].map((label, index) => (
               <span key={`${label}-${index}`} className="h-3">
                 {label}
@@ -128,7 +162,7 @@ function ContributionGraph({ evolutions }: { evolutions: EvolutionSummary[] }) {
             ))}
           </div>
           {weeks.map((week) => (
-            <div key={isoDay(week[0].date)} className="grid grid-rows-7 gap-y-[3px]">
+            <div key={isoDay(week[0].date)} className="grid grid-rows-7" style={{ rowGap: ACTIVITY_CELL_GAP }}>
               {week.map((day) => {
                 const label = activityLabel(day);
                 return (
@@ -258,6 +292,10 @@ function heatClass(count: number, maxCount: number) {
   return 'bg-emerald-800';
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
 function parseDate(value?: string) {
   if (!value) return undefined;
   const date = new Date(value);
@@ -269,4 +307,8 @@ function isoDay(date: Date) {
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const ACTIVITY_WEEKS = 18;
+const ACTIVITY_CELL_SIZE = 12;
+const ACTIVITY_CELL_GAP = 3;
+const DAY_LABEL_WIDTH = 30;
+const MIN_ACTIVITY_WEEKS = 18;
+const MAX_ACTIVITY_WEEKS = 53;
