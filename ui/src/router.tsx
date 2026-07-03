@@ -1,7 +1,6 @@
 import { createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
 import { AppShell } from './components/app-shell';
 import { ActivityPage } from './pages/activity-page';
-import { ConfigPage } from './pages/config-page';
 import { DecisionsPage } from './pages/decisions-page';
 import { EvolutionDetailPage } from './pages/evolution-detail-page';
 import { ImplementationPage } from './pages/implementation-page';
@@ -12,7 +11,6 @@ import { RisksPage } from './pages/risks-page';
 import { SearchPage } from './pages/search-page';
 import { SessionsOverviewPage } from './pages/sessions-overview-page';
 import { SessionPage } from './pages/session-page';
-import { SnapshotPage } from './pages/snapshot-page';
 import { TimelinePage } from './pages/timeline-page';
 import { VerificationPage } from './pages/verification-page';
 
@@ -34,12 +32,6 @@ const repositoryRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/repositories/$repo',
   component: RepositoryPage
-});
-
-const snapshotRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/evolutions/$id/snapshot',
-  component: SnapshotPage
 });
 
 const sessionRoute = createRoute({
@@ -103,17 +95,10 @@ const jsonRoute = createRoute({
   component: RawJsonPage
 });
 
-const configRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/config',
-  component: ConfigPage
-});
-
 const routeTree = rootRoute.addChildren([
   indexRoute,
   repositoryRoute,
   evolutionRoute,
-  snapshotRoute,
   sessionRoute,
   sessionsOverviewRoute,
   verificationRoute,
@@ -123,8 +108,7 @@ const routeTree = rootRoute.addChildren([
   relationshipsRoute,
   activityRoute,
   searchRoute,
-  jsonRoute,
-  configRoute
+  jsonRoute
 ]);
 
 export const router = createRouter({ routeTree });

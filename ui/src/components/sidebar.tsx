@@ -1,18 +1,21 @@
 import { Link, useNavigate } from '@tanstack/react-router';
-import { BookOpen, FileClock, GitBranch, History, Plus, Search, Settings, Sun } from 'lucide-react';
+import { BookOpen, GitBranch, History, Moon, Search, Sun } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { api } from '../api';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 
 export function Sidebar() {
   const config = useQuery({ queryKey: ['config'], queryFn: api.config });
-  const evolutions = useQuery({ queryKey: ['evolutions'], queryFn: api.evolutions });
   const repositories = useQuery({ queryKey: ['repositories'], queryFn: api.repositories });
-  const firstEvolution = evolutions.data?.[0]?.id;
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark-preview'));
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark-preview', isDark);
+  }, [isDark]);
 
   const submitSearch = (event: FormEvent) => {
     event.preventDefault();
@@ -54,32 +57,6 @@ export function Sidebar() {
           <History className="size-4 text-blue-600" />
           Activity
         </Link>
-        {firstEvolution ? (
-          <Link
-            to="/evolutions/$id/snapshot"
-            params={{ id: firstEvolution }}
-            className="flex h-12 items-center gap-4 rounded-lg px-4 text-muted-foreground hover:bg-slate-50 hover:text-foreground"
-          >
-            <FileClock className="size-4" />
-            Snapshots
-          </Link>
-        ) : (
-          <span
-            aria-disabled="true"
-            className="flex h-12 items-center gap-4 rounded-lg px-4 text-muted-foreground opacity-60"
-          >
-            <FileClock className="size-4" />
-            Snapshots
-          </span>
-        )}
-        <Link
-          to="/search"
-          search={{ q: '' }}
-          className="flex h-12 items-center gap-4 rounded-lg px-4 text-muted-foreground hover:bg-slate-50 hover:text-foreground"
-        >
-          <Search className="size-4" />
-          Search
-        </Link>
       </nav>
 
       <div className="mx-7 my-6 border-t" />
@@ -103,13 +80,6 @@ export function Sidebar() {
             </Link>
           ))}
         </div>
-        <Link
-          to="/config"
-          className="mt-3 flex min-h-10 items-center gap-3 rounded-lg px-2 text-muted-foreground hover:bg-slate-50 hover:text-foreground"
-        >
-          <Plus className="size-4" />
-          Repository config
-        </Link>
       </div>
 
       <div className="mt-auto flex items-center justify-between border-t p-5">
@@ -118,18 +88,14 @@ export function Sidebar() {
           <p className="text-xs text-muted-foreground">{config.data?.repository ?? 'repository'}</p>
         </div>
         <div className="flex gap-1">
-          <Button asChild variant="ghost" size="icon" aria-label="Open EVE config">
-            <Link to="/config">
-              <Settings className="size-4" />
-            </Link>
-          </Button>
           <Button
             variant="ghost"
             size="icon"
-            aria-label="Toggle theme"
-            onClick={() => document.documentElement.classList.toggle('dark-preview')}
+            aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-pressed={isDark}
+            onClick={() => setIsDark((value) => !value)}
           >
-            <Sun className="size-4" />
+            {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
           </Button>
         </div>
       </div>

@@ -57,6 +57,8 @@
   --card-foreground: oklch(0.94 0.006 247);
   --popover: oklch(0.28 0.018 264);
   --popover-foreground: oklch(0.94 0.006 247);
+  --primary: oklch(0.68 0.16 260);
+  --primary-foreground: oklch(0.12 0.02 264);
   --secondary: oklch(0.34 0.018 264);
   --secondary-foreground: oklch(0.94 0.006 247);
   --muted: oklch(0.34 0.018 264);
@@ -65,6 +67,49 @@
   --accent-foreground: oklch(0.9 0.04 260);
   --border: oklch(0.42 0.018 264);
   --input: oklch(0.42 0.018 264);
+  --ring: oklch(0.68 0.16 260);
+  --shadow-border:
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 1px 2px -1px rgba(0, 0, 0, 0.45),
+    0 2px 4px 0 rgba(0, 0, 0, 0.28);
+}
+
+:root.dark-preview .bg-white,
+:root.dark-preview .bg-white\/72,
+:root.dark-preview .bg-white\/78,
+:root.dark-preview .bg-white\/88 {
+  background-color: var(--card);
+}
+
+:root.dark-preview .bg-slate-50,
+:root.dark-preview .bg-slate-50\/70,
+:root.dark-preview .bg-slate-100,
+:root.dark-preview .bg-blue-50,
+:root.dark-preview .hover\:bg-slate-50:hover,
+:root.dark-preview .hover\:bg-blue-50:hover {
+  background-color: var(--secondary);
+}
+
+:root.dark-preview .hover\:bg-blue-50:hover {
+  color: var(--accent-foreground);
+}
+
+:root.dark-preview .text-slate-950 {
+  color: var(--foreground);
+}
+
+:root.dark-preview .text-slate-700,
+:root.dark-preview .text-slate-600,
+:root.dark-preview .text-slate-500 {
+  color: var(--muted-foreground);
+}
+
+:root.dark-preview .text-blue-700 {
+  color: var(--primary);
+}
+
+:root.dark-preview .ring-blue-100 {
+  --tw-ring-color: color-mix(in oklch, var(--primary) 28%, transparent);
 }
 
 * {

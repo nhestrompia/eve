@@ -1,5 +1,4 @@
-import { Link } from '@tanstack/react-router';
-import { Box, CalendarDays, Download, Users } from 'lucide-react';
+import { CalendarDays, Download, Users } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { api } from '../api';
 import { humanDate } from '../format';
@@ -71,12 +70,6 @@ export function EvolutionHero({ detail, snapshot }: { detail: DetailResponse; sn
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-        <Button asChild variant="outline" className="h-12 justify-start gap-3 rounded-lg pl-5">
-          <Link to="/evolutions/$id/snapshot" params={{ id: detail.summary.id }}>
-            <Box className="size-4" />
-            View Snapshot
-          </Link>
-        </Button>
         {checkout.error instanceof Error ? (
           <pre className="whitespace-pre-wrap rounded-lg bg-red-50 p-3 font-mono text-xs text-red-700">{checkout.error.message}</pre>
         ) : null}

@@ -7,11 +7,10 @@ import type { EvolutionSummary } from '../types';
 type SnapshotTimelineProps = {
   evolutions: EvolutionSummary[];
   selectedId?: string;
-  route?: 'detail' | 'snapshot';
   className?: string;
 };
 
-export function SnapshotTimeline({ evolutions, selectedId, route = 'detail', className }: SnapshotTimelineProps) {
+export function SnapshotTimeline({ evolutions, selectedId, className }: SnapshotTimelineProps) {
   const snapshots = [...evolutions]
     .filter((evolution) => evolution.snapshot)
     .sort((a, b) => {
@@ -43,7 +42,6 @@ export function SnapshotTimeline({ evolutions, selectedId, route = 'detail', cla
               evolution={evolution}
               isSelected={evolution.id === selectedId}
               isLast={index === snapshots.length - 1}
-              route={route}
             />
           ))}
         </div>
@@ -55,25 +53,15 @@ export function SnapshotTimeline({ evolutions, selectedId, route = 'detail', cla
 function SnapshotTimelineLink({
   evolution,
   isSelected,
-  isLast,
-  route
+  isLast
 }: {
   evolution: EvolutionSummary;
   isSelected: boolean;
   isLast: boolean;
-  route: 'detail' | 'snapshot';
 }) {
   const content = (
     <SnapshotTimelineContent evolution={evolution} isSelected={isSelected} isLast={isLast} />
   );
-
-  if (route === 'snapshot') {
-    return (
-      <Link to="/evolutions/$id/snapshot" params={{ id: evolution.id }} className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
-        {content}
-      </Link>
-    );
-  }
 
   return (
     <Link to="/evolutions/$id" params={{ id: evolution.id }} className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
