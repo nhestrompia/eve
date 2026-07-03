@@ -8,11 +8,11 @@ export function VerificationSummarySection({ values, evolutionId }: { values: Ve
 
   return (
     <section className="grid grid-cols-[44px_minmax(0,1fr)] gap-5 border-t py-8">
-      <div className="flex size-10 items-center justify-center rounded-full bg-violet-50 text-violet-700 shadow-[0_0_0_1px_rgba(124,58,237,0.08)]">
+      <div className="flex size-10 items-center justify-center rounded-full bg-slate-100 text-slate-700 shadow-[0_0_0_1px_rgba(15,23,42,0.06)]">
         <ShieldCheck className="size-5" />
       </div>
       <div className="min-w-0">
-        <h2 className="text-lg font-semibold text-balance">Verification</h2>
+        <h2 className="text-lg font-semibold text-balance">Verification (initial)</h2>
         <div className="mt-6 max-w-[640px] rounded-lg bg-white p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.08),0_6px_16px_-12px_rgba(15,23,42,0.34)]">
           {visible.length === 0 ? <p className="p-2 text-muted-foreground">No verification is recorded for this state.</p> : null}
           <div className="space-y-1">

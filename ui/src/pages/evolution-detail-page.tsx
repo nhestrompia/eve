@@ -24,7 +24,7 @@ export function EvolutionDetailPage() {
       {detail.isLoading ? <LoadingState label={`Loading ${id}`} /> : null}
       {detail.error ? <ErrorState error={detail.error} /> : null}
       {detail.data ? (
-        <div className="grid min-h-[calc(100dvh-76px)] grid-cols-[minmax(0,1fr)_400px]">
+        <div className="min-h-[calc(100dvh-76px)] pr-[460px]">
           <main className="min-w-0 px-9">
             <EvolutionHero detail={detail.data} snapshot={snapshot.data} />
             <BehaviorSummarySection behavior={detail.data.evolution.behavior} />

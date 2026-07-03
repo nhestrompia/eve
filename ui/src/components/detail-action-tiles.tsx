@@ -40,16 +40,18 @@ export function DetailActionTiles({ detail }: { detail: DetailResponse }) {
   return (
     <section className="border-t py-8" aria-label="Evolution detail sections">
       <div className="grid grid-cols-4 gap-3">
-        {tiles.map((tile) => {
+        {tiles.map((tile, index) => {
           const Icon = tile.icon;
           return (
             <Dialog key={tile.title}>
               <DialogTrigger asChild>
-                <button className="group grid min-h-[76px] grid-cols-[32px_minmax(0,1fr)] items-center gap-3 rounded-lg bg-white px-4 py-3 text-left shadow-[0_0_0_1px_rgba(15,23,42,0.12)] transition-[background-color,box-shadow,scale] duration-150 hover:bg-slate-50 hover:shadow-[0_0_0_1px_rgba(15,23,42,0.16),0_10px_22px_-18px_rgba(15,23,42,0.45)] active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                  <Icon className="size-6 text-slate-600" />
+                <button
+                  className={`group grid min-h-[74px] grid-cols-[28px_minmax(0,1fr)] items-center gap-3 rounded-lg bg-white px-4 py-3 text-left transition-[background-color,box-shadow,scale] duration-150 hover:bg-slate-50 hover:shadow-[0_0_0_1px_rgba(15,23,42,0.16),0_10px_22px_-18px_rgba(15,23,42,0.45)] active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${index === 0 ? 'shadow-[0_0_0_1px_rgba(15,23,42,0.28)]' : 'shadow-[0_0_0_1px_rgba(15,23,42,0.1)]'}`}
+                >
+                  <Icon className="size-5 text-slate-600" />
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold leading-5">{tile.title}</span>
-                    <span className="mt-0.5 block truncate text-sm leading-5 text-muted-foreground">{tile.subtitle}</span>
+                    <span className="block truncate text-xs font-semibold leading-4">{tile.title}</span>
+                    <span className="mt-0.5 block truncate text-[11px] leading-4 text-muted-foreground">{tile.subtitle}</span>
                   </span>
                 </button>
               </DialogTrigger>

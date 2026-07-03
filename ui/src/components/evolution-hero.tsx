@@ -1,7 +1,8 @@
-import { CalendarDays, Download, Users } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
+import { Box, CalendarDays, Download, Tag, Users } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { api } from '../api';
-import { humanDate } from '../format';
+import { humanDate, shortCommit } from '../format';
 import type { DetailResponse, SnapshotResponse } from '../types';
 import {
   AlertDialog,
@@ -45,15 +46,21 @@ export function EvolutionHero({ detail, snapshot }: { detail: DetailResponse; sn
             <Users className="size-4" />
             by {providers}
           </span>
+          {detail.summary.snapshot ? (
+            <span className="inline-flex items-center gap-2">
+              <Tag className="size-4" />
+              Snapshot {shortCommit(detail.summary.snapshot)}
+            </span>
+          ) : null}
         </div>
       </div>
 
       <div className="flex flex-col justify-center gap-3">
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button className="h-12 justify-start gap-3 rounded-lg pl-5">
+            <Button className="h-12 justify-start gap-3 rounded-lg bg-slate-950 pl-5 text-white shadow-[0_8px_18px_-14px_rgba(15,23,42,0.7)] hover:bg-slate-900">
               <Download className="size-4" />
-              Checkout Snapshot
+              Checkout snapshot
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
@@ -70,6 +77,12 @@ export function EvolutionHero({ detail, snapshot }: { detail: DetailResponse; sn
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        <Button asChild variant="outline" className="h-12 justify-start gap-3 rounded-lg pl-5">
+          <Link to="/evolutions/$id/snapshot" params={{ id: detail.summary.id }}>
+            <Box className="size-4" />
+            View snapshot
+          </Link>
+        </Button>
         {checkout.error instanceof Error ? (
           <pre className="whitespace-pre-wrap rounded-lg bg-red-50 p-3 font-mono text-xs text-red-700">{checkout.error.message}</pre>
         ) : null}

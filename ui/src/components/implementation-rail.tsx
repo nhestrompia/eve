@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import { ArrowRight, Copy, ExternalLink, FileText, X } from 'lucide-react';
 import { useState } from 'react';
-import { compactDate, humanDate, shortCommit } from '../format';
+import { humanDate, shortCommit } from '../format';
 import { displayDecision, displayRisk } from '../lib/evolution-display';
 import type { DetailResponse, EvolutionSummary, SessionRecord, SnapshotResponse } from '../types';
 import { SnapshotTimeline } from './snapshot-timeline';
@@ -28,7 +28,7 @@ export function ImplementationRail({
   };
 
   return (
-    <aside className="min-h-[calc(100dvh-76px)] border-l bg-white px-7 py-8">
+    <aside className="fixed right-0 top-0 z-30 h-dvh w-[460px] overflow-y-auto border-l bg-white px-7 py-8">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <FileText className="size-4" />
@@ -41,7 +41,7 @@ export function ImplementationRail({
         </Button>
       </div>
 
-      <section className="mt-8">
+      <section className="mt-4">
         <p className="text-sm font-medium">Snapshot</p>
         <div className="mt-3 flex h-12 items-center justify-between gap-3 rounded-lg bg-white px-4 shadow-[0_0_0_1px_rgba(15,23,42,0.1)]">
           <code className="min-w-0 truncate font-mono font-semibold tabular-nums">{commit ? shortCommit(commit) : 'None recorded'}</code>
@@ -54,35 +54,7 @@ export function ImplementationRail({
         </p>
       </section>
 
-      <SnapshotTimeline evolutions={evolutions} selectedId={id} className="mt-8" />
-
-      <section className="mt-8">
-        <h3 className="font-semibold">Commits ({detail.commits.length})</h3>
-        <div className="mt-4 space-y-3 rounded-lg bg-white p-3 shadow-[0_0_0_1px_rgba(15,23,42,0.08)]">
-          {detail.commits.length === 0 ? <p className="p-2 text-sm text-muted-foreground">No contributed commits were resolved locally.</p> : null}
-          {detail.commits.slice(0, 3).map((commitRecord) => (
-            <div key={commitRecord.hash} className="grid grid-cols-[76px_minmax(0,1fr)] gap-3 rounded-md px-2 py-2">
-              <code className="rounded-md bg-secondary px-2 py-1 text-center font-mono text-xs font-semibold text-slate-700">
-                {commitRecord.shortHash}
-              </code>
-              <div className="min-w-0">
-                <p className="truncate font-medium">{commitRecord.subject}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {compactDate(commitRecord.committedAt || commitRecord.authoredAt)}
-                  {commitRecord.authorName ? ` · ${commitRecord.authorName}` : ''}
-                </p>
-              </div>
-            </div>
-          ))}
-          <Link
-            to="/evolutions/$id/implementation"
-            params={{ id }}
-            className="inline-flex min-h-10 items-center gap-2 rounded-md px-2 text-sm font-medium text-blue-700 hover:bg-blue-50"
-          >
-            View implementation <ExternalLink className="size-3.5" />
-          </Link>
-        </div>
-      </section>
+      <SnapshotTimeline evolutions={evolutions} selectedId={id} className="mt-6" />
 
       <section className="mt-8">
         <h3 className="font-semibold">Implementation Sessions ({detail.sessions.length})</h3>

@@ -11,7 +11,7 @@ export function BehaviorSummarySection({ behavior }: { behavior: Behavior }) {
 
   return (
     <section className="grid grid-cols-[44px_minmax(0,1fr)] gap-5 py-8">
-      <div className="flex size-10 items-center justify-center rounded-full bg-blue-50 text-blue-700 shadow-[0_0_0_1px_rgba(37,99,235,0.08)]">
+      <div className="flex size-10 items-center justify-center rounded-full bg-slate-100 text-slate-700 shadow-[0_0_0_1px_rgba(15,23,42,0.06)]">
         <Target className="size-5" />
       </div>
       <div className="min-w-0">

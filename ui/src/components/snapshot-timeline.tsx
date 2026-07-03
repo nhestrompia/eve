@@ -7,10 +7,11 @@ import type { EvolutionSummary } from '../types';
 type SnapshotTimelineProps = {
   evolutions: EvolutionSummary[];
   selectedId?: string;
+  route?: 'detail' | 'snapshot';
   className?: string;
 };
 
-export function SnapshotTimeline({ evolutions, selectedId, className }: SnapshotTimelineProps) {
+export function SnapshotTimeline({ evolutions, selectedId, route = 'detail', className }: SnapshotTimelineProps) {
   const snapshots = [...evolutions]
     .filter((evolution) => evolution.snapshot)
     .sort((a, b) => {
@@ -19,6 +20,8 @@ export function SnapshotTimeline({ evolutions, selectedId, className }: Snapshot
       if (left !== right) return left - right;
       return b.id.localeCompare(a.id);
     });
+  const selectedIndex = Math.max(0, snapshots.findIndex((evolution) => evolution.id === selectedId));
+  const visibleSnapshots = snapshots.slice(selectedIndex, selectedIndex + 6);
 
   return (
     <section className={cn('space-y-4', className)}>
@@ -35,16 +38,27 @@ export function SnapshotTimeline({ evolutions, selectedId, className }: Snapshot
           No repository snapshots are recorded yet.
         </div>
       ) : (
-        <div className="space-y-1">
-          {snapshots.map((evolution, index) => (
-            <SnapshotTimelineLink
-              key={evolution.id}
-              evolution={evolution}
-              isSelected={evolution.id === selectedId}
-              isLast={index === snapshots.length - 1}
-            />
-          ))}
-        </div>
+        <>
+          <div className="space-y-1">
+            {visibleSnapshots.map((evolution, index) => (
+              <SnapshotTimelineLink
+                key={evolution.id}
+                evolution={evolution}
+                isSelected={evolution.id === selectedId}
+                isLast={index === visibleSnapshots.length - 1}
+                route={route}
+              />
+            ))}
+          </div>
+          {snapshots.length > visibleSnapshots.length ? (
+            <Link
+              to="/"
+              className="inline-flex min-h-9 items-center rounded-md px-3 text-sm font-medium shadow-[0_0_0_1px_rgba(15,23,42,0.12)] hover:bg-slate-50"
+            >
+              View all {snapshots.length} evolutions
+            </Link>
+          ) : null}
+        </>
       )}
     </section>
   );
@@ -53,15 +67,25 @@ export function SnapshotTimeline({ evolutions, selectedId, className }: Snapshot
 function SnapshotTimelineLink({
   evolution,
   isSelected,
-  isLast
+  isLast,
+  route
 }: {
   evolution: EvolutionSummary;
   isSelected: boolean;
   isLast: boolean;
+  route: 'detail' | 'snapshot';
 }) {
   const content = (
     <SnapshotTimelineContent evolution={evolution} isSelected={isSelected} isLast={isLast} />
   );
+
+  if (route === 'snapshot') {
+    return (
+      <Link to="/evolutions/$id/snapshot" params={{ id: evolution.id }} className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+        {content}
+      </Link>
+    );
+  }
 
   return (
     <Link to="/evolutions/$id" params={{ id: evolution.id }} className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
