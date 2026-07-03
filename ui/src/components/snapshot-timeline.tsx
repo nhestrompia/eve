@@ -20,9 +20,6 @@ export function SnapshotTimeline({ evolutions, selectedId, route = 'detail', cla
       if (left !== right) return left - right;
       return b.id.localeCompare(a.id);
     });
-  const selectedIndex = Math.max(0, snapshots.findIndex((evolution) => evolution.id === selectedId));
-  const visibleSnapshots = snapshots.slice(selectedIndex, selectedIndex + 6);
-
   return (
     <section className={cn('space-y-4', className)}>
       <div className="flex items-center justify-between gap-3">
@@ -38,27 +35,17 @@ export function SnapshotTimeline({ evolutions, selectedId, route = 'detail', cla
           No repository snapshots are recorded yet.
         </div>
       ) : (
-        <>
-          <div className="space-y-1">
-            {visibleSnapshots.map((evolution, index) => (
-              <SnapshotTimelineLink
-                key={evolution.id}
-                evolution={evolution}
-                isSelected={evolution.id === selectedId}
-                isLast={index === visibleSnapshots.length - 1}
-                route={route}
-              />
-            ))}
-          </div>
-          {snapshots.length > visibleSnapshots.length ? (
-            <Link
-              to="/"
-              className="inline-flex min-h-9 items-center rounded-md px-3 text-sm font-medium shadow-[0_0_0_1px_rgba(15,23,42,0.12)] hover:bg-slate-50"
-            >
-              View all {snapshots.length} evolutions
-            </Link>
-          ) : null}
-        </>
+        <div className="max-h-[34rem] space-y-1 overflow-y-auto overscroll-contain pr-1">
+          {snapshots.map((evolution, index) => (
+            <SnapshotTimelineLink
+              key={evolution.id}
+              evolution={evolution}
+              isSelected={evolution.id === selectedId}
+              isLast={index === snapshots.length - 1}
+              route={route}
+            />
+          ))}
+        </div>
       )}
     </section>
   );
