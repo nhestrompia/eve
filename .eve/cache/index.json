@@ -1,12 +1,13 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 3,
-  "latestAt": "2026-07-03T22:08:28Z",
-  "latestSnapshot": "snap_bb89ffece0af2d7d",
-  "latestTitle": "Snapshot UI attribution and modal layout fixes",
+  "snapshotCount": 6,
+  "latestAt": "2026-07-03T23:22:29Z",
+  "latestSnapshot": "snap_9f27c6b09c394521",
+  "latestTitle": "Dedicated repository overview page",
   "branch": "main",
-  "head": "fec6db44f43811c11ea722a196933e87112833e3",
+  "head": "4f8ad76a3b06d372e8d92b0d0b3721b57a40bee6",
   "dirty": true,
-  "remoteUrl": "https://github.com/nhestrompia/eve"
+  "remoteUrl": "https://github.com/nhestrompia/eve",
+  "latestGitState": "4f8ad76a3b06d372e8d92b0d0b3721b57a40bee6"
 }
