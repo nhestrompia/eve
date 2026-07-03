@@ -105,22 +105,22 @@ function ContributionGraph({ evolutions }: { evolutions: EvolutionSummary[] }) {
     <div className="rounded-lg bg-white p-5 shadow-[0_0_0_1px_rgba(15,23,42,0.08)]">
       <div className="w-full">
         <div
-          className="mb-2 grid gap-x-1 text-xs text-muted-foreground"
-          style={{ gridTemplateColumns: `30px repeat(${ACTIVITY_WEEKS}, minmax(0, 1fr))` }}
+          className="mb-2 grid gap-x-[3px] text-xs text-muted-foreground"
+          style={{ gridTemplateColumns: `30px repeat(${ACTIVITY_WEEKS}, 12px)` }}
         >
           <span />
           {monthLabels.map((label) => (
             <span
               key={`${label.name}-${label.week}`}
-              className="h-4 truncate"
+              className="h-4 overflow-visible whitespace-nowrap"
               style={{ gridColumn: `${label.week + 2} / span ${label.span}` }}
             >
               {label.name}
             </span>
           ))}
         </div>
-        <div className="grid gap-x-1" style={{ gridTemplateColumns: `30px repeat(${ACTIVITY_WEEKS}, minmax(0, 1fr))` }}>
-          <div className="grid grid-rows-7 gap-1 text-xs leading-3 text-muted-foreground">
+        <div className="grid gap-x-[3px]" style={{ gridTemplateColumns: `30px repeat(${ACTIVITY_WEEKS}, 12px)` }}>
+          <div className="grid grid-rows-7 gap-y-[3px] text-xs leading-3 text-muted-foreground">
             {['', 'Mon', '', 'Wed', '', 'Fri', ''].map((label, index) => (
               <span key={`${label}-${index}`} className="h-3">
                 {label}
@@ -128,7 +128,7 @@ function ContributionGraph({ evolutions }: { evolutions: EvolutionSummary[] }) {
             ))}
           </div>
           {weeks.map((week) => (
-            <div key={isoDay(week[0].date)} className="grid grid-rows-7 justify-items-center gap-1">
+            <div key={isoDay(week[0].date)} className="grid grid-rows-7 gap-y-[3px]">
               {week.map((day) => {
                 const label = activityLabel(day);
                 return (
@@ -136,7 +136,7 @@ function ContributionGraph({ evolutions }: { evolutions: EvolutionSummary[] }) {
                     key={isoDay(day.date)}
                     aria-label={label}
                     title={label}
-                    className={`group/day relative block size-3 rounded-[3px] ${heatClass(day.evolutionCount, maxCount)} ${day.date > today ? 'opacity-40' : ''}`}
+                    className={`group/day relative block size-3 rounded-[2px] ${heatClass(day.evolutionCount, maxCount)} ${day.date > today ? 'opacity-40' : ''}`}
                   >
                     <span className="pointer-events-none absolute bottom-5 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-950 px-2 py-1 text-[11px] font-medium text-white shadow-lg group-hover/day:block">
                       {label}
