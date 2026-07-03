@@ -1,0 +1,12 @@
+{
+  "id": "eve",
+  "root": "/Users/nhestrompia/Documents/eve",
+  "snapshotCount": 3,
+  "latestAt": "2026-07-03T22:08:28Z",
+  "latestSnapshot": "snap_bb89ffece0af2d7d",
+  "latestTitle": "Snapshot UI attribution and modal layout fixes",
+  "branch": "main",
+  "head": "fec6db44f43811c11ea722a196933e87112833e3",
+  "dirty": true,
+  "remoteUrl": "https://github.com/nhestrompia/eve"
+}
