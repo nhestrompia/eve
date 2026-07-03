@@ -35,8 +35,8 @@ export function CheckoutActions({ snapshot }: { snapshot: SnapshotResponse }) {
   };
 
   return (
-    <div className="flex flex-col items-end gap-4">
-      <div className="flex gap-3">
+    <div className="flex w-full flex-col items-stretch gap-4 sm:w-auto sm:items-end">
+      <div className="flex justify-end gap-3">
         <Button variant="outline" className="gap-2" onClick={copyLink}>
           <LinkIcon className="size-4" />
           {linkCopied ? 'Copied' : 'Copy link'}
@@ -49,7 +49,7 @@ export function CheckoutActions({ snapshot }: { snapshot: SnapshotResponse }) {
       </div>
       <AlertDialog>
         <AlertDialogTrigger asChild>
-          <Button className="h-12 w-[250px] gap-3 bg-slate-950 text-white hover:bg-slate-900">
+          <Button className="h-12 w-full gap-3 bg-slate-950 text-white hover:bg-slate-900 sm:w-[250px]">
             <Download className="size-4" />
             Checkout snapshot
           </Button>
@@ -67,7 +67,7 @@ export function CheckoutActions({ snapshot }: { snapshot: SnapshotResponse }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <Button variant="outline" className="h-12 w-[250px] gap-3" onClick={copy}>
+      <Button variant="outline" className="h-12 w-full gap-3 sm:w-[250px]" onClick={copy}>
         <Terminal className="size-4" />
         {copied ? 'Command copied' : 'Copy command'}
       </Button>
@@ -78,11 +78,11 @@ export function CheckoutActions({ snapshot }: { snapshot: SnapshotResponse }) {
 
 function CheckoutResult({ result, error }: { result?: CheckoutResponse; error: unknown }) {
   if (error instanceof Error) {
-    return <pre className="w-[250px] whitespace-pre-wrap rounded-lg border bg-red-50 p-3 font-mono text-xs text-red-700">{error.message}</pre>;
+    return <pre className="w-full whitespace-pre-wrap rounded-lg border bg-red-50 p-3 font-mono text-xs text-red-700 sm:w-[250px]">{error.message}</pre>;
   }
   if (!result) return null;
   return (
-    <pre className="w-[250px] whitespace-pre-wrap rounded-lg border bg-slate-950 p-3 font-mono text-xs text-white">
+    <pre className="w-full whitespace-pre-wrap rounded-lg border bg-slate-950 p-3 font-mono text-xs text-white sm:w-[250px]">
       {result.exitCode === 0 ? 'Product snapshot restored\n' : ''}
       {result.stdout}
       {result.stderr}

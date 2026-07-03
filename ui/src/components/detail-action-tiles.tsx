@@ -39,7 +39,7 @@ export function DetailActionTiles({ detail }: { detail: DetailResponse }) {
 
   return (
     <section className="border-t py-8" aria-label="Evolution detail sections">
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {tiles.map((tile, index) => {
           const Icon = tile.icon;
           return (
@@ -82,7 +82,7 @@ function ImplementationDialogContent({ detail }: { detail: DetailResponse }) {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <article className="rounded-lg bg-secondary p-4">
           <p className="text-sm text-muted-foreground">Snapshot commit</p>
           <p className="mt-2 break-all font-mono text-base font-semibold">{snapshot || 'None recorded'}</p>
@@ -92,7 +92,7 @@ function ImplementationDialogContent({ detail }: { detail: DetailResponse }) {
           <div className="mt-3 space-y-2">
             {repositories.length === 0 ? <p className="text-sm text-muted-foreground">No repositories recorded.</p> : null}
             {repositories.map(([name, repo]) => (
-              <div key={name} className="flex items-center justify-between gap-4 rounded-md bg-white px-3 py-2 shadow-[0_0_0_1px_rgba(15,23,42,0.06)]">
+              <div key={name} className="flex flex-col gap-1 rounded-md bg-white px-3 py-2 shadow-[0_0_0_1px_rgba(15,23,42,0.06)] sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                 <span className="font-semibold">{name}</span>
                 <span className="text-muted-foreground">{repo.status || 'unknown'}</span>
               </div>
@@ -105,13 +105,13 @@ function ImplementationDialogContent({ detail }: { detail: DetailResponse }) {
         {detail.commits.length === 0 ? <EmptyDialogState text="No contributed commits are recorded for this Evolution." /> : null}
         <div className="space-y-3">
           {detail.commits.map((commit) => (
-            <article key={commit.hash} className="grid grid-cols-[96px_minmax(0,1fr)_112px] gap-4 rounded-lg bg-white p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.08)]">
+            <article key={commit.hash} className="grid grid-cols-1 gap-3 rounded-lg bg-white p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.08)] sm:grid-cols-[96px_minmax(0,1fr)_112px] sm:gap-4">
               <code className="font-mono font-semibold text-blue-700">{commit.shortHash}</code>
               <div className="min-w-0">
                 <h3 className="truncate font-semibold">{commit.subject}</h3>
                 <p className="mt-1 text-sm text-muted-foreground">{commit.authorName || 'Unknown author'}</p>
               </div>
-              <span className="text-right text-sm text-muted-foreground">{compactDate(commit.committedAt || commit.authoredAt)}</span>
+              <span className="text-sm text-muted-foreground sm:text-right">{compactDate(commit.committedAt || commit.authoredAt)}</span>
             </article>
           ))}
         </div>
@@ -121,7 +121,7 @@ function ImplementationDialogContent({ detail }: { detail: DetailResponse }) {
         {detail.sessions.length === 0 ? <EmptyDialogState text="No AI sessions are recorded for this Evolution." /> : null}
         <div className="space-y-3">
           {detail.sessions.map((session) => (
-            <article key={session.key} className="grid grid-cols-[40px_minmax(0,1fr)_110px] items-start gap-3 rounded-lg bg-white p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.08)]">
+            <article key={session.key} className="grid grid-cols-[40px_minmax(0,1fr)] items-start gap-3 rounded-lg bg-white p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.08)] sm:grid-cols-[40px_minmax(0,1fr)_110px]">
               <span className="flex size-10 items-center justify-center rounded-lg bg-violet-50 text-violet-700">
                 <FileText className="size-4" />
               </span>
@@ -131,7 +131,7 @@ function ImplementationDialogContent({ detail }: { detail: DetailResponse }) {
                   {session.title || session.localSources[0]?.title || session.id}
                 </p>
               </div>
-              <span className="rounded-md bg-emerald-50 px-2 py-1 text-center text-xs font-medium text-emerald-700">{session.status}</span>
+              <span className="col-start-2 w-fit rounded-md bg-emerald-50 px-2 py-1 text-center text-xs font-medium text-emerald-700 sm:col-start-auto sm:w-auto">{session.status}</span>
             </article>
           ))}
         </div>
@@ -166,7 +166,7 @@ function RelationshipsDialogContent({ detail }: { detail: DetailResponse }) {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       {entries.map((entry) => (
         <article key={`${entry.kind}-${entry.value}`} className="rounded-lg bg-white p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.08)]">
           <p className="text-sm capitalize text-muted-foreground">{entry.kind.replaceAll('_', ' ')}</p>
@@ -223,7 +223,7 @@ function RecordList({ records, emptyPrefix }: { records: ReturnType<typeof displ
           <h4 className="font-semibold text-balance">{record.title || `${emptyPrefix} ${index + 1}`}</h4>
           {record.body ? <p className="mt-2 text-sm text-muted-foreground text-pretty">{record.body}</p> : null}
           {record.meta && record.meta.length > 0 ? (
-            <dl className="mt-4 grid grid-cols-3 gap-3">
+            <dl className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
               {record.meta.map((item) => (
                 <div key={`${item.label}-${item.value}`} className="rounded-md bg-secondary px-3 py-2">
                   <dt className="text-xs text-muted-foreground">{item.label}</dt>

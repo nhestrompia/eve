@@ -18,12 +18,12 @@ export function JourneyCard({ detail }: { detail: DetailResponse }) {
       <CardContent>
         <div className="space-y-5">
           {sessions.length > 0 ? sessions.map((session, index) => (
-            <div key={session.key} className="grid grid-cols-[24px_36px_96px_minmax(0,1fr)] items-center gap-4 text-xs">
+            <div key={session.key} className="grid grid-cols-[24px_36px_minmax(0,1fr)] items-center gap-3 text-xs sm:grid-cols-[24px_36px_96px_minmax(0,1fr)] sm:gap-4">
               <span className="flex size-6 items-center justify-center rounded-full border bg-white font-mono text-muted-foreground">{index + 1}</span>
               <span className="flex size-8 items-center justify-center rounded-lg bg-violet-50 text-violet-700">
                 <FileText className="size-4" />
               </span>
-              <span className="font-semibold capitalize">{session.provider}</span>
+              <span className="hidden font-semibold capitalize sm:block">{session.provider}</span>
               <span className="min-w-0">
                 <span className="block truncate text-muted-foreground">
                   {session.hasTranscript ? `Transcript: ${session.title || session.id}` : `Reference only: ${session.id}`}

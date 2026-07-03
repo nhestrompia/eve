@@ -26,16 +26,16 @@ export function SessionsOverviewPage() {
           <div className="grid gap-4">
             {sessions.data.sessions.map((session) => (
               <article key={session.key} className="rounded-lg bg-white p-5 shadow-[0_0_0_1px_rgba(15,23,42,0.08)]">
-                <div className="flex items-start justify-between gap-6">
-                  <div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+                  <div className="min-w-0">
                     <p className="font-semibold">{session.providerName}</p>
-                    <p className="mt-1 font-mono text-sm text-muted-foreground">{session.id}</p>
+                    <p className="mt-1 break-all font-mono text-sm text-muted-foreground">{session.id}</p>
                   </div>
-                  <span className="rounded-md bg-secondary px-2 py-1 text-sm">
+                  <span className="w-fit rounded-md bg-secondary px-2 py-1 text-sm">
                     {session.hasTranscript ? 'Transcript attached' : session.localSources.length > 0 ? 'Local transcript found' : 'Reference only'}
                   </span>
                 </div>
-                <div className="mt-5 grid grid-cols-4 gap-3">
+                <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
                   <Metric label="Events" value={session.preview.eventCount} />
                   <Metric label="Messages" value={session.preview.messageCount} />
                   <Metric label="User" value={session.preview.userMessages} />
@@ -58,14 +58,14 @@ export function SessionsOverviewPage() {
                     <p className="text-sm font-semibold">Matching local source files</p>
                     <div className="mt-2 space-y-2">
                       {(session.localSources ?? []).map((source) => (
-                        <div key={source.path} className="grid grid-cols-[minmax(0,1fr)_110px_120px] gap-3 rounded-md bg-slate-50 px-3 py-2 text-sm">
+                        <div key={source.path} className="grid grid-cols-1 gap-2 rounded-md bg-slate-50 px-3 py-2 text-sm sm:grid-cols-[minmax(0,1fr)_110px_120px] sm:gap-3">
                           <span className="min-w-0">
                             <span className="block truncate font-medium">{source.title || source.path}</span>
                             <span className="block truncate font-mono text-xs text-muted-foreground">{source.path}</span>
                             {source.match ? <span className="block text-xs text-muted-foreground">Matched by {source.match}</span> : null}
                           </span>
                           <span>{source.format}</span>
-                          <span className="text-right text-muted-foreground">{compactDate(source.modifiedAt)}</span>
+                          <span className="text-muted-foreground sm:text-right">{compactDate(source.modifiedAt)}</span>
                         </div>
                       ))}
                     </div>
@@ -76,14 +76,14 @@ export function SessionsOverviewPage() {
           </div>
           <section className="rounded-lg border bg-white p-5">
             <h2 className="text-lg font-semibold">Supported conversation sources</h2>
-            <div className="mt-4 grid grid-cols-2 gap-4">
+            <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
               {sessions.data.providers.map((provider) => (
                 <article key={provider.provider} className="rounded-lg border p-4">
-                  <div className="flex items-center justify-between gap-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                     <h3 className="font-semibold">{provider.name}</h3>
                     <span className="rounded-md border px-2 py-1 text-xs">{provider.available ? 'Root found' : 'No root found'}</span>
                   </div>
-                  <code className="mt-3 block font-mono text-xs">{provider.importCommand}</code>
+                  <code className="mt-3 block break-all font-mono text-xs">{provider.importCommand}</code>
                   <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
                     {provider.displays.map((item) => (
                       <li key={item}>{item}</li>

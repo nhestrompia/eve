@@ -28,7 +28,7 @@ export function DecisionsPage() {
                   <h2 className="text-lg font-semibold text-balance">{record.title}</h2>
                   {record.body ? <p className="mt-3 max-w-3xl text-muted-foreground text-pretty">{record.body}</p> : null}
                   {record.meta && record.meta.length > 0 ? (
-                    <dl className="mt-5 grid grid-cols-3 gap-3">
+                    <dl className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
                       {record.meta.map((item) => (
                         <div key={`${item.label}-${item.value}`} className="rounded-md bg-secondary px-3 py-2">
                           <dt className="text-xs text-muted-foreground">{item.label}</dt>

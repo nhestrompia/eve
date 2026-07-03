@@ -19,9 +19,9 @@ export function SnapshotPage() {
       {snapshot.isLoading ? <LoadingState label={`Resolving ${id}`} /> : null}
       {snapshot.error ? <ErrorState error={snapshot.error} /> : null}
       {snapshot.data ? (
-        <div className="grid grid-cols-[minmax(0,1fr)_360px] gap-7">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px] xl:gap-7">
           <div className="space-y-6">
-            <section className="grid grid-cols-[minmax(0,1fr)_250px] gap-8 rounded-lg border bg-white p-8">
+            <section className="grid grid-cols-1 gap-6 rounded-lg border bg-white p-5 sm:p-8 lg:grid-cols-[minmax(0,1fr)_250px] lg:gap-8">
               <div>
                 <p className="font-mono text-sm font-semibold text-blue-700">{snapshot.data.id}</p>
                 <h1 className="mt-3 text-3xl font-semibold text-balance">{snapshot.data.title}</h1>
@@ -33,7 +33,7 @@ export function SnapshotPage() {
               </div>
               <CheckoutActions snapshot={snapshot.data} />
             </section>
-            <section className="grid grid-cols-2 gap-4">
+            <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <BehaviorCard behavior={snapshot.data.behavior} />
               <VerificationCard values={snapshot.data.verification} evolutionId={snapshot.data.id} />
             </section>

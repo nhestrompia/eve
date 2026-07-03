@@ -17,9 +17,9 @@ export function EvolutionShell({
   children: ReactNode;
 }) {
   return (
-    <div className={showHistoryRail ? 'grid grid-cols-[260px_minmax(0,1fr)]' : 'min-w-0'}>
+    <div className={showHistoryRail ? 'grid min-w-0 grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)]' : 'min-w-0'}>
       {showHistoryRail ? <EvolutionList evolutions={evolutions} selectedId={selectedId} /> : null}
-      <main className={cn('min-h-[calc(100dvh-76px)] min-w-0 p-11', contentClassName)}>{children}</main>
+      <main className={cn('min-h-[calc(100dvh-76px)] min-w-0 p-5 sm:p-7 lg:p-11', contentClassName)}>{children}</main>
     </div>
   );
 }

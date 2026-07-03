@@ -25,8 +25,8 @@ export function SearchCommand({ open, onOpenChange }: { open: boolean; onOpenCha
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-40 flex items-start justify-center bg-slate-950/30 pt-28">
-      <div className="w-[720px] rounded-lg border bg-white p-4 shadow-lg">
+    <div className="fixed inset-0 z-40 flex items-start justify-center bg-slate-950/30 px-4 pt-20 sm:pt-28">
+      <div className="w-full max-w-[720px] rounded-lg border bg-white p-4 shadow-lg">
         <div className="flex items-center gap-3">
           <Search className="size-4 text-muted-foreground" />
           <Input
@@ -50,7 +50,7 @@ export function SearchCommand({ open, onOpenChange }: { open: boolean; onOpenCha
                 to="/evolutions/$id"
                 params={{ id: result.evolution.id }}
                 onClick={() => onOpenChange(false)}
-                className="grid grid-cols-[80px_minmax(0,1fr)] gap-4 rounded-lg border p-3 hover:bg-slate-50"
+                className="grid grid-cols-1 gap-2 rounded-lg border p-3 hover:bg-slate-50 sm:grid-cols-[80px_minmax(0,1fr)] sm:gap-4"
               >
                 <span className="font-mono font-semibold text-blue-700">{result.evolution.id}</span>
                 <span className="min-w-0">

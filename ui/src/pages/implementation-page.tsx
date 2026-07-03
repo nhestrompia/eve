@@ -19,7 +19,7 @@ export function ImplementationPage() {
       {detail.data ? (
         <section className="space-y-6">
           <Header eyebrow={id} title="Implementation" subtitle="Git repositories, snapshot commit, and contributed commits for this Evolution." />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <article className="rounded-lg border bg-white p-5">
               <p className="text-sm text-muted-foreground">Snapshot commit</p>
               <p className="mt-2 break-all font-mono text-lg font-semibold">{detail.data.evolution.implementation.snapshot || 'None recorded'}</p>
@@ -28,7 +28,7 @@ export function ImplementationPage() {
               <p className="text-sm text-muted-foreground">Repositories</p>
               <div className="mt-3 space-y-2">
                 {Object.entries(detail.data.evolution.implementation.repositories ?? {}).map(([name, repo]) => (
-                  <div key={name} className="flex justify-between rounded-md bg-slate-50 px-3 py-2">
+                  <div key={name} className="flex flex-col gap-1 rounded-md bg-slate-50 px-3 py-2 sm:flex-row sm:justify-between">
                     <span className="font-semibold">{name}</span>
                     <span className="text-muted-foreground">{repo.status || 'unknown'}</span>
                   </div>
@@ -40,13 +40,13 @@ export function ImplementationPage() {
           <div className="grid gap-4">
             {detail.data.commits.map((commit) => (
               <article key={commit.hash} className="rounded-lg border bg-white p-5">
-                <div className="grid grid-cols-[120px_minmax(0,1fr)_160px] gap-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-[120px_minmax(0,1fr)_160px] sm:gap-4">
                   <code className="font-mono font-semibold text-blue-700">{commit.shortHash}</code>
                   <div>
                     <h2 className="font-semibold">{commit.subject}</h2>
                     <p className="mt-1 text-sm text-muted-foreground">{commit.authorName || 'Unknown author'}</p>
                   </div>
-                  <span className="text-right text-muted-foreground">{compactDate(commit.committedAt || commit.authoredAt)}</span>
+                  <span className="text-muted-foreground sm:text-right">{compactDate(commit.committedAt || commit.authoredAt)}</span>
                 </div>
               </article>
             ))}

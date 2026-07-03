@@ -44,9 +44,9 @@ export function ProductSnapshotCard({ detail, snapshot }: { detail: DetailRespon
           <dd>{detail.summary.updatedAt ? new Date(detail.summary.updatedAt).toLocaleString() : 'Unknown'}</dd>
         </dl>
       </CardContent>
-      <CardFooter className="border-t bg-slate-50/70 text-xs text-muted-foreground">
-        <span className="mr-3 size-2 rounded-full bg-emerald-500" />
-        Snapshot commit recorded in <span className="ml-1 font-mono">implementation.snapshot</span>.
+      <CardFooter className="flex-wrap gap-1 border-t bg-slate-50/70 text-xs text-muted-foreground">
+        <span className="mr-2 size-2 rounded-full bg-emerald-500" />
+        Snapshot commit recorded in <span className="font-mono">implementation.snapshot</span>.
       </CardFooter>
     </Card>
   );

@@ -23,11 +23,11 @@ export function RelationshipsPage() {
         <section className="space-y-6">
           <Header eyebrow={id} title="Relationships" subtitle="How this Evolution connects to other product states." />
           {entries.length === 0 ? <EmptyPanel text="No relationships are recorded in this Evolution." /> : null}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {entries.map((entry) => (
               <article key={`${entry.kind}-${entry.value}`} className="rounded-lg border bg-white p-5">
                 <p className="text-sm capitalize text-muted-foreground">{entry.kind.replaceAll('_', ' ')}</p>
-                <p className="mt-2 font-mono text-lg font-semibold">{entry.value}</p>
+                <p className="mt-2 break-all font-mono text-lg font-semibold">{entry.value}</p>
               </article>
             ))}
           </div>

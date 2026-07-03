@@ -18,14 +18,14 @@ export function ConfigPage() {
             <p className="font-mono text-sm text-muted-foreground">Repository Config</p>
             <h1 className="mt-2 text-3xl font-semibold text-balance">EVE UI source</h1>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="rounded-lg border bg-white p-5">
               <p className="text-sm text-muted-foreground">Repository</p>
-              <p className="mt-2 font-mono text-lg">{config.data.repository}</p>
+              <p className="mt-2 break-all font-mono text-lg">{config.data.repository}</p>
             </div>
             <div className="rounded-lg border bg-white p-5">
               <p className="text-sm text-muted-foreground">EVE directory</p>
-              <p className="mt-2 font-mono text-lg">{config.data.eveDir}</p>
+              <p className="mt-2 break-all font-mono text-lg">{config.data.eveDir}</p>
             </div>
             <div className="rounded-lg border bg-white p-5">
               <p className="text-sm text-muted-foreground">CLI version</p>

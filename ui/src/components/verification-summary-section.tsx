@@ -20,10 +20,10 @@ export function VerificationSummarySection({ values, evolutionId }: { values: Ve
               const Icon = item.status === 'failed' ? XCircle : item.status === 'pending' ? Circle : CheckCircle2;
               const tone = item.status === 'failed' ? 'text-red-600' : item.status === 'pending' ? 'text-orange-500' : 'text-emerald-600';
               return (
-                <div key={`${item.status}-${item.reference}-${index}`} className="grid grid-cols-[20px_minmax(0,1fr)_96px] items-center gap-4 rounded-md px-2 py-3">
+                <div key={`${item.status}-${item.reference}-${index}`} className="grid grid-cols-[20px_minmax(0,1fr)] items-center gap-3 rounded-md px-2 py-3 sm:grid-cols-[20px_minmax(0,1fr)_96px] sm:gap-4">
                   <Icon className={`size-4 ${tone}`} />
                   <span className="truncate">{item.reference || item.type || 'Verification'}</span>
-                  <span className={`text-right text-sm ${item.status === 'failed' ? 'text-red-600' : 'text-muted-foreground'}`}>
+                  <span className={`col-start-2 text-sm sm:col-start-auto sm:text-right ${item.status === 'failed' ? 'text-red-600' : 'text-muted-foreground'}`}>
                     {titleCase(item.status || 'unknown')}
                   </span>
                 </div>

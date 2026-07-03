@@ -15,7 +15,7 @@ export function RelatedEvolutions({ evolution }: { evolution: Evolution }) {
 
   return (
     <Card>
-      <CardHeader className="flex-row items-center justify-between space-y-0">
+      <CardHeader className="flex-col gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <GitBranch className="size-4 text-slate-600" />
           <h2 className="text-sm font-semibold text-balance">Related Evolutions</h2>
@@ -28,11 +28,11 @@ export function RelatedEvolutions({ evolution }: { evolution: Evolution }) {
           View all relationships <ArrowRight className="size-4" />
         </Link>
       </CardHeader>
-      <CardContent className="grid grid-cols-4 gap-6">
+      <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
         {items.map(([label, value]) => (
           <div key={label} className="space-y-2">
             <p className="text-xs text-muted-foreground">{label}</p>
-            <p className="font-mono text-xs">{value}</p>
+            <p className="break-all font-mono text-xs">{value}</p>
           </div>
         ))}
       </CardContent>

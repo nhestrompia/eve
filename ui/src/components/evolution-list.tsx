@@ -13,8 +13,8 @@ export function EvolutionList({ evolutions, selectedId }: { evolutions: Evolutio
   const groupLabel = monthYear(sorted[0]?.updatedAt || sorted[0]?.createdAt);
 
   return (
-    <aside className="sticky top-[76px] h-[calc(100dvh-76px)] overflow-hidden border-r bg-white/72">
-      <div className="flex h-16 items-center justify-between border-b px-7">
+    <aside className="border-b bg-white/72 lg:sticky lg:top-[76px] lg:h-[calc(100dvh-76px)] lg:overflow-hidden lg:border-b-0 lg:border-r">
+      <div className="flex h-14 items-center justify-between border-b px-5 lg:h-16 lg:px-7">
         <h2 className="font-semibold">{evolutions.length} {evolutions.length === 1 ? 'Evolution' : 'Evolutions'}</h2>
         <Button
           variant="ghost"
@@ -27,7 +27,7 @@ export function EvolutionList({ evolutions, selectedId }: { evolutions: Evolutio
           <ListFilter className="size-4" />
         </Button>
       </div>
-      <div className="h-[calc(100%-64px)] overflow-auto px-4 py-5">
+      <div className="max-h-72 overflow-auto px-3 py-4 lg:h-[calc(100%-64px)] lg:max-h-none lg:px-4 lg:py-5">
         <p className="mb-4 px-3 text-xs font-medium text-muted-foreground">{groupLabel}</p>
         <div className="space-y-2">
           {sorted.map((evolution) => (

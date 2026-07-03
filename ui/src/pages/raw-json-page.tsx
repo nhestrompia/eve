@@ -20,7 +20,7 @@ export function RawJsonPage() {
             <p className="font-mono text-sm font-semibold text-blue-700">{id}</p>
             <h1 className="mt-2 text-3xl font-semibold text-balance">Raw canonical JSON</h1>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <JsonSection id="verification" title="Verification" value={detail.data.evolution.verification} />
             <JsonSection id="decisions" title="Decisions" value={detail.data.evolution.decisions} />
             <JsonSection id="risks" title="Risks" value={detail.data.evolution.risks} />

@@ -23,11 +23,11 @@ export function EvolutionHero({ detail, snapshot }: { detail: DetailResponse; sn
   const providers = detail.summary.sessionProviders.join(' & ') || 'EVE';
 
   return (
-    <section className="grid grid-cols-[minmax(0,1fr)_260px] gap-8 py-14">
+    <section className="grid grid-cols-1 gap-6 py-8 sm:py-10 lg:grid-cols-[minmax(0,1fr)_260px] lg:gap-8 lg:py-14">
       <div className="min-w-0">
         <StatusBadge status={detail.summary.status} />
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          <h1 className="text-[34px] font-semibold leading-tight tracking-[-0.01em] text-balance">
+          <h1 className="text-2xl font-semibold leading-tight tracking-[-0.01em] text-balance sm:text-[34px]">
             {detail.summary.title || 'Untitled Evolution'}
           </h1>
           <span className="rounded-lg bg-secondary px-3 py-1 font-mono text-lg font-semibold tabular-nums text-muted-foreground">
@@ -55,7 +55,7 @@ export function EvolutionHero({ detail, snapshot }: { detail: DetailResponse; sn
         </div>
       </div>
 
-      <div className="flex flex-col justify-center gap-3">
+      <div className="flex flex-col justify-center gap-3 sm:max-w-sm lg:max-w-none">
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button className="h-12 justify-start gap-3 rounded-lg bg-slate-950 pl-5 text-white shadow-[0_8px_18px_-14px_rgba(15,23,42,0.7)] hover:bg-slate-900">

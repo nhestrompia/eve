@@ -20,15 +20,15 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="sticky top-0 flex h-dvh flex-col border-r bg-white/78">
-      <div className="flex h-[76px] items-center gap-3 px-7">
+    <aside className="flex flex-col border-b bg-white/78 md:sticky md:top-0 md:h-dvh md:border-b-0 md:border-r">
+      <div className="flex h-16 items-center gap-3 px-4 md:h-[76px] md:px-7">
         <div className="flex size-9 items-center justify-center rounded-full bg-slate-950 text-white">
           <GitBranch className="size-5" />
         </div>
         <span className="text-[26px] font-semibold text-balance">EVE</span>
       </div>
 
-      <form onSubmit={submitSearch} className="px-5 pb-5">
+      <form onSubmit={submitSearch} className="hidden px-5 pb-5 md:block">
         <label className="sr-only" htmlFor="sidebar-search">
           Search Evolutions
         </label>
@@ -45,10 +45,10 @@ export function Sidebar() {
         </div>
       </form>
 
-      <nav className="space-y-1 px-4">
+      <nav className="flex gap-1 overflow-x-auto px-3 pb-3 md:block md:space-y-1 md:overflow-visible md:px-4 md:pb-0">
         <Link
           to="/"
-          className="flex h-12 items-center gap-4 rounded-lg px-4 font-medium text-slate-950"
+          className="flex h-11 shrink-0 items-center gap-3 rounded-lg px-4 font-medium text-slate-950 md:h-12 md:gap-4"
           activeProps={{ className: 'bg-slate-100 shadow-sm' }}
         >
           <History className="size-4 text-blue-600" />
@@ -58,13 +58,13 @@ export function Sidebar() {
           <Link
             to="/evolutions/$id/snapshot"
             params={{ id: firstEvolution }}
-            className="flex h-12 items-center gap-4 rounded-lg px-4 text-muted-foreground hover:bg-slate-50 hover:text-foreground"
+            className="flex h-11 shrink-0 items-center gap-3 rounded-lg px-4 text-muted-foreground hover:bg-slate-50 hover:text-foreground md:h-12 md:gap-4"
           >
             <FileClock className="size-4" />
             Snapshots
           </Link>
         ) : (
-          <span aria-disabled="true" className="flex h-12 items-center gap-4 rounded-lg px-4 text-muted-foreground opacity-60">
+          <span aria-disabled="true" className="flex h-11 shrink-0 items-center gap-3 rounded-lg px-4 text-muted-foreground opacity-60 md:h-12 md:gap-4">
             <FileClock className="size-4" />
             Snapshots
           </span>
@@ -72,29 +72,29 @@ export function Sidebar() {
         <Link
           to="/search"
           search={{ q: '' }}
-          className="flex h-12 items-center gap-4 rounded-lg px-4 text-muted-foreground hover:bg-slate-50 hover:text-foreground"
+          className="flex h-11 shrink-0 items-center gap-3 rounded-lg px-4 text-muted-foreground hover:bg-slate-50 hover:text-foreground md:h-12 md:gap-4"
         >
           <Search className="size-4" />
           Search
         </Link>
       </nav>
 
-      <div className="mx-7 my-6 border-t" />
+      <div className="mx-4 border-t md:mx-7 md:my-6" />
 
-      <div className="px-5">
+      <div className="px-4 py-3 md:px-5 md:py-0">
         <p className="mb-3 px-2 text-xs font-medium text-muted-foreground">Repositories</p>
-        <div className="space-y-1">
+        <div className="flex gap-2 overflow-x-auto md:block md:space-y-1 md:overflow-visible">
           {(repositories.data?.length ? repositories.data : [{ name: config.data?.repository ?? 'eve', evolutionCount: 0 }]).map((repo) => (
             <Link
               key={repo.name}
               to="/repositories/$repo"
               params={{ repo: repo.name }}
-              className="flex min-h-12 items-center justify-between rounded-lg px-3 hover:bg-slate-50"
+              className="flex min-h-11 shrink-0 items-center justify-between gap-3 rounded-lg px-3 hover:bg-slate-50 md:min-h-12 md:w-full"
               activeProps={{ className: 'bg-slate-100 shadow-sm' }}
             >
               <span className="flex min-w-0 items-center gap-3">
                 <BookOpen className="size-4 shrink-0 text-slate-500" />
-                <span className="truncate font-semibold">{repo.name}</span>
+                <span className="max-w-36 truncate font-semibold md:max-w-none">{repo.name}</span>
               </span>
               <span className="ml-3 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-muted-foreground">{repo.evolutionCount}</span>
             </Link>
@@ -102,14 +102,14 @@ export function Sidebar() {
         </div>
         <Link
           to="/config"
-          className="mt-3 flex min-h-10 items-center gap-3 rounded-lg px-2 text-muted-foreground hover:bg-slate-50 hover:text-foreground"
+          className="mt-3 flex min-h-10 w-fit items-center gap-3 rounded-lg px-2 text-muted-foreground hover:bg-slate-50 hover:text-foreground md:w-auto"
         >
           <Plus className="size-4" />
           Add repository
         </Link>
       </div>
 
-      <div className="mt-auto flex items-center justify-between border-t p-5">
+      <div className="mt-auto flex items-center justify-between border-t p-4 md:p-5">
         <div>
           <p className="font-semibold leading-4">Local</p>
           <p className="text-xs text-muted-foreground">{config.data?.repository ?? 'repository'}</p>

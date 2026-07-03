@@ -27,15 +27,15 @@ export function VerificationPage() {
                 const tone = item.status === 'failed' ? 'text-red-600' : item.status === 'pending' ? 'text-orange-500' : 'text-emerald-600';
                 return (
                   <article key={`${item.status}-${index}`} className="rounded-lg border bg-white p-5">
-                    <div className="flex items-start justify-between gap-6">
-                      <div className="flex gap-4">
-                        <Icon className={`mt-1 size-5 ${tone}`} />
-                        <div>
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+                      <div className="flex min-w-0 gap-4">
+                        <Icon className={`mt-1 size-5 shrink-0 ${tone}`} />
+                        <div className="min-w-0">
                           <h2 className="font-semibold capitalize">{item.type || 'Verification'}</h2>
-                          <p className="mt-2 font-mono text-sm text-muted-foreground">{item.reference || 'No command/reference recorded.'}</p>
+                          <p className="mt-2 break-all font-mono text-sm text-muted-foreground">{item.reference || 'No command/reference recorded.'}</p>
                         </div>
                       </div>
-                      <span className="rounded-md border px-2 py-1 text-sm capitalize">{item.status}</span>
+                      <span className="w-fit rounded-md border px-2 py-1 text-sm capitalize">{item.status}</span>
                     </div>
                   </article>
                 );

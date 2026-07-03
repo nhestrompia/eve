@@ -30,7 +30,7 @@ export function SearchPage() {
           <p className="font-mono text-sm text-muted-foreground">Find State</p>
           <h1 className="mt-2 text-3xl font-semibold text-balance">Search</h1>
         </div>
-        <form className="flex gap-3" onSubmit={submit}>
+        <form className="flex flex-col gap-3 sm:flex-row" onSubmit={submit}>
           <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search product history" />
           <Button type="submit">Search</Button>
         </form>
@@ -41,7 +41,7 @@ export function SearchPage() {
               key={result.evolution.id}
               to="/evolutions/$id"
               params={{ id: result.evolution.id }}
-              className="grid grid-cols-[90px_minmax(0,1fr)] gap-4 rounded-lg border bg-white p-4 hover:bg-slate-50"
+              className="grid grid-cols-1 gap-2 rounded-lg border bg-white p-4 hover:bg-slate-50 sm:grid-cols-[90px_minmax(0,1fr)] sm:gap-4"
             >
               <span className="font-mono font-semibold text-blue-700">{result.evolution.id}</span>
               <span className="min-w-0">

@@ -43,20 +43,20 @@ export function RepositoryActivityView({
   const stats = buildPlatformStats(evolutions, detailRows);
 
   return (
-    <main className="min-h-[calc(100dvh-76px)] min-w-0 bg-slate-50/35 px-8 py-8">
-      <div className="grid grid-cols-1 gap-7 xl:grid-cols-[minmax(0,1fr)_350px]">
+    <main className="min-h-[calc(100dvh-76px)] min-w-0 bg-slate-50/35 px-4 py-5 sm:px-6 sm:py-7 lg:px-8 lg:py-8">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_350px] xl:gap-7">
         <section className="min-w-0 space-y-7">
           <header className="grid grid-cols-1 items-end gap-7 xl:grid-cols-[minmax(400px,0.8fr)_minmax(0,1.2fr)]">
             <div>
               <p className="font-mono text-xs font-semibold uppercase tracking-wide text-slate-600">Overview</p>
-              <h1 className="mt-4 text-[34px] font-semibold leading-tight tracking-[-0.01em] text-balance">{title}</h1>
+              <h1 className="mt-4 text-2xl font-semibold leading-tight tracking-[-0.01em] text-balance sm:text-[34px]">{title}</h1>
               <p className="mt-3 max-w-[54ch] text-sm leading-6 text-muted-foreground text-pretty">
                 {selectedRepo
                   ? 'Track product states, snapshots, sessions, and verification recorded for this repository.'
                   : 'Track and understand how your products are evolving across repositories.'}
               </p>
             </div>
-            <div className="flex min-w-0 flex-wrap gap-3 xl:justify-end">
+            <div className="flex min-w-0 gap-3 overflow-x-auto pb-1 xl:flex-wrap xl:justify-end xl:overflow-visible xl:pb-0">
               {repoRows.slice(0, 4).map((repo, index) => (
                 <RepositoryOverviewCard key={repo.name} repo={repo} tone={REPO_TONES[index % REPO_TONES.length]} selected={selectedRepo === repo.name} />
               ))}
@@ -64,12 +64,12 @@ export function RepositoryActivityView({
           </header>
 
           <section className="space-y-3">
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-semibold">Evolution activity</h2>
                 <CircleHelp className="size-4 text-muted-foreground" />
               </div>
-              <button className="inline-flex h-9 items-center gap-2 rounded-md bg-white px-3 text-xs font-semibold shadow-[0_0_0_1px_rgba(15,23,42,0.12)] transition-colors hover:bg-slate-50">
+              <button className="inline-flex h-9 w-fit items-center gap-2 rounded-md bg-white px-3 text-xs font-semibold shadow-[0_0_0_1px_rgba(15,23,42,0.12)] transition-colors hover:bg-slate-50">
                 Last 12 months <ChevronDown className="size-4" />
               </button>
             </div>
@@ -253,7 +253,7 @@ function ContributionGraph({ evolutions }: { evolutions: EvolutionSummary[] }) {
           ))}
         </div>
       </div>
-      <div className="mt-4 flex items-center justify-between gap-8 text-sm text-muted-foreground">
+      <div className="mt-4 flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:gap-8">
         <span>
           {maxCount > 0
             ? `Peak day: ${maxCount} ${maxCount === 1 ? 'Evolution' : 'Evolutions'} · ${peakCommits} ${peakCommits === 1 ? 'commit' : 'commits'}`
@@ -286,9 +286,9 @@ function RecentActivityPanel({
 
   return (
     <section className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-lg font-semibold">Recent activity</h2>
-        <button className="inline-flex h-9 items-center gap-2 rounded-md bg-white px-3 text-xs font-semibold shadow-[0_0_0_1px_rgba(15,23,42,0.12)] transition-colors hover:bg-slate-50">
+        <button className="inline-flex h-9 w-fit items-center gap-2 rounded-md bg-white px-3 text-xs font-semibold shadow-[0_0_0_1px_rgba(15,23,42,0.12)] transition-colors hover:bg-slate-50">
           All activity types <ChevronDown className="size-4" />
         </button>
       </div>
@@ -315,12 +315,12 @@ function RecentActivityPanel({
                 key={evolution.id}
                 to="/evolutions/$id"
                 params={{ id: evolution.id }}
-                className={`grid grid-cols-[44px_92px_minmax(0,1fr)_112px_24px] items-center gap-4 px-4 py-3.5 transition-colors hover:bg-slate-50 ${index > 0 ? 'border-t' : ''}`}
+                className={`grid grid-cols-[40px_minmax(0,1fr)_20px] items-center gap-3 px-3 py-3.5 transition-colors hover:bg-slate-50 sm:grid-cols-[44px_92px_minmax(0,1fr)_112px_24px] sm:gap-4 sm:px-4 ${index > 0 ? 'border-t' : ''}`}
               >
                 <span className={`flex size-9 items-center justify-center rounded-full ${tone.soft} ${tone.text}`}>
                   <Icon className="size-5" />
                 </span>
-                <span className="truncate text-sm font-semibold">{repo}</span>
+                <span className="hidden truncate text-sm font-semibold sm:block">{repo}</span>
                 <span className="min-w-0">
                   <span className="flex min-w-0 items-center gap-3">
                     <strong className="truncate text-sm font-semibold">{evolution.title || 'Untitled Evolution'}</strong>
@@ -332,7 +332,7 @@ function RecentActivityPanel({
                     <span>by {primaryProvider(evolution, detail)}</span>
                   </span>
                 </span>
-                <span className="text-right text-xs text-muted-foreground">{compactDate(evolution.updatedAt || evolution.createdAt)}</span>
+                <span className="hidden text-right text-xs text-muted-foreground sm:block">{compactDate(evolution.updatedAt || evolution.createdAt)}</span>
                 <ArrowRight className="size-4 text-slate-500" />
               </Link>
             );
@@ -667,5 +667,5 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 const ACTIVITY_CELL_SIZE = 12;
 const ACTIVITY_CELL_GAP = 3;
 const DAY_LABEL_WIDTH = 30;
-const MIN_ACTIVITY_WEEKS = 18;
+const MIN_ACTIVITY_WEEKS = 12;
 const MAX_ACTIVITY_WEEKS = 53;

@@ -19,7 +19,7 @@ export function AppShell() {
   }, []);
 
   return (
-    <div className="app-backdrop grid min-h-dvh grid-cols-[240px_minmax(0,1fr)] text-[13px] text-foreground">
+    <div className="app-backdrop grid min-h-dvh grid-cols-1 text-[13px] text-foreground md:grid-cols-[240px_minmax(0,1fr)]">
       <Sidebar />
       <div className="min-w-0">
         <TopBar onSearch={() => setSearchOpen(true)} />
