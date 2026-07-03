@@ -9,7 +9,10 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
+	"os/exec"
 	"path"
+	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/nhestrompia/eve"
@@ -50,9 +53,108 @@ type snapshotSummary struct {
 }
 
 type snapshotDetailResponse struct {
-	Snapshot *eve.Snapshot   `json:"snapshot"`
-	Summary  snapshotSummary `json:"summary"`
-	RawJSON  json.RawMessage `json:"rawJson"`
+	Snapshot  *eve.Snapshot     `json:"snapshot"`
+	Summary   snapshotSummary   `json:"summary"`
+	Sessions  []uiSessionRecord `json:"sessions"`
+	Providers []uiProviderInfo  `json:"providers"`
+	Commits   []uiGitCommit     `json:"commits"`
+	RawJSON   json.RawMessage   `json:"rawJson"`
+}
+
+type sessionListResponse struct {
+	EvolutionID string            `json:"evolutionId"`
+	Sessions    []uiSessionRecord `json:"sessions"`
+	Providers   []uiProviderInfo  `json:"providers"`
+}
+
+type sessionTranscriptResponse struct {
+	EvolutionID string `json:"evolutionId"`
+	Provider    string `json:"provider"`
+	ID          string `json:"id"`
+	Key         string `json:"key"`
+	Title       string `json:"title"`
+	Markdown    string `json:"markdown"`
+	Sanitized   bool   `json:"sanitized"`
+}
+
+type uiSessionRecord struct {
+	Provider      string            `json:"provider"`
+	ProviderName  string            `json:"providerName"`
+	ID            string            `json:"id"`
+	Key           string            `json:"key"`
+	URI           string            `json:"uri,omitempty"`
+	Title         string            `json:"title,omitempty"`
+	Transcript    string            `json:"transcript,omitempty"`
+	Raw           string            `json:"raw,omitempty"`
+	Sanitized     bool              `json:"sanitized"`
+	Format        string            `json:"format,omitempty"`
+	AttachedAt    string            `json:"attachedAt,omitempty"`
+	Source        string            `json:"source,omitempty"`
+	Metadata      map[string]string `json:"metadata,omitempty"`
+	HasTranscript bool              `json:"hasTranscript"`
+	Status        string            `json:"status"`
+	CaptureHint   string            `json:"captureHint"`
+	LocalSources  []uiSessionSource `json:"localSources"`
+	RootsChecked  []string          `json:"rootsChecked"`
+	Preview       uiSessionPreview  `json:"preview"`
+}
+
+type uiSessionSource struct {
+	Path       string `json:"path"`
+	Format     string `json:"format"`
+	Size       int64  `json:"size"`
+	ModifiedAt string `json:"modifiedAt"`
+	Title      string `json:"title,omitempty"`
+	Match      string `json:"match,omitempty"`
+}
+
+type uiSessionPreview struct {
+	EventCount     int      `json:"eventCount"`
+	MessageCount   int      `json:"messageCount"`
+	UserMessages   int      `json:"userMessages"`
+	AgentMessages  int      `json:"agentMessages"`
+	ToolCalls      int      `json:"toolCalls"`
+	FirstTimestamp string   `json:"firstTimestamp,omitempty"`
+	LastTimestamp  string   `json:"lastTimestamp,omitempty"`
+	Headings       []string `json:"headings,omitempty"`
+}
+
+type uiProviderInfo struct {
+	Provider      string   `json:"provider"`
+	Name          string   `json:"name"`
+	Roots         []string `json:"roots"`
+	Available     bool     `json:"available"`
+	ImportCommand string   `json:"importCommand"`
+	Displays      []string `json:"displays"`
+}
+
+type uiGitCommit struct {
+	Hash        string `json:"hash"`
+	ShortHash   string `json:"shortHash"`
+	Subject     string `json:"subject"`
+	AuthorName  string `json:"authorName"`
+	AuthoredAt  string `json:"authoredAt"`
+	CommittedAt string `json:"committedAt"`
+}
+
+type legacyEvolution struct {
+	Metadata struct {
+		ID        string `json:"id"`
+		Title     string `json:"title"`
+		UpdatedAt string `json:"updated_at"`
+		CreatedAt string `json:"created_at"`
+	} `json:"metadata"`
+	Sessions       []legacySession `json:"sessions"`
+	Implementation struct {
+		Snapshot string   `json:"snapshot"`
+		Commits  []string `json:"commits"`
+	} `json:"implementation"`
+}
+
+type legacySession struct {
+	Provider string `json:"provider,omitempty"`
+	ID       string `json:"id,omitempty"`
+	URI      string `json:"uri,omitempty"`
 }
 
 func newRuntimeServer(repo repository, addr string) runtimeServer {
@@ -112,18 +214,24 @@ func (server runtimeServer) handleRepoRoutes(w http.ResponseWriter, r *http.Requ
 	}
 	switch {
 	case len(parts) == 1 && r.Method == http.MethodGet:
-		summary, err := server.repo.summary()
+		detail, err := server.repo.detail()
 		if err != nil {
 			writeAPIError(w, http.StatusInternalServerError, err)
 			return
 		}
-		writeJSON(w, http.StatusOK, summary)
+		writeJSON(w, http.StatusOK, detail)
+	case len(parts) == 2 && parts[1] == "open-editor" && r.Method == http.MethodPost:
+		writeJSON(w, http.StatusOK, openRepositoryInEditor(server.repo))
 	case len(parts) == 2 && parts[1] == "snapshots" && r.Method == http.MethodGet:
 		server.handleSnapshots(w, r)
 	case len(parts) == 3 && parts[1] == "snapshots" && r.Method == http.MethodGet:
 		server.handleSnapshotDetail(w, r, parts[2])
 	case len(parts) == 4 && parts[1] == "snapshots" && parts[3] == "checkout" && r.Method == http.MethodPost:
 		server.handleCheckout(w, r, parts[2])
+	case len(parts) == 4 && parts[1] == "snapshots" && parts[3] == "sessions" && r.Method == http.MethodGet:
+		server.handleSessions(w, r, parts[2])
+	case len(parts) == 5 && parts[1] == "snapshots" && parts[3] == "sessions" && r.Method == http.MethodGet:
+		server.handleSessionTranscript(w, r, parts[2], parts[4])
 	default:
 		writeAPIError(w, http.StatusNotFound, fmt.Errorf("repo route not found"))
 	}
@@ -148,11 +256,61 @@ func (server runtimeServer) handleSnapshotDetail(w http.ResponseWriter, r *http.
 		writeAPIError(w, http.StatusNotFound, err)
 		return
 	}
+	commits := server.gitCommits(snapshot.Implementation.GitState, snapshot.Implementation.Commits)
 	writeJSON(w, http.StatusOK, snapshotDetailResponse{
-		Snapshot: snapshot,
-		Summary:  summarizeSnapshot(snapshot),
-		RawJSON:  raw,
+		Snapshot:  snapshot,
+		Summary:   summarizeSnapshot(snapshot),
+		Sessions:  server.snapshotSessionRecords(snapshot),
+		Providers: providerInfos(),
+		Commits:   commits,
+		RawJSON:   raw,
 	})
+}
+
+func (server runtimeServer) handleSessions(w http.ResponseWriter, r *http.Request, id string) {
+	snapshot, err := server.repo.loadSnapshot(id)
+	if err != nil {
+		writeAPIError(w, http.StatusNotFound, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, sessionListResponse{
+		EvolutionID: id,
+		Sessions:    server.snapshotSessionRecords(snapshot),
+		Providers:   providerInfos(),
+	})
+}
+
+func (server runtimeServer) handleSessionTranscript(w http.ResponseWriter, r *http.Request, id string, sessionKey string) {
+	snapshot, err := server.repo.loadSnapshot(id)
+	if err != nil {
+		writeAPIError(w, http.StatusNotFound, err)
+		return
+	}
+	for _, session := range server.snapshotSessionRecords(snapshot) {
+		if session.Key != sessionKey {
+			continue
+		}
+		if strings.TrimSpace(session.Transcript) == "" {
+			writeAPIError(w, http.StatusNotFound, fmt.Errorf("session transcript is not available"))
+			return
+		}
+		data, err := os.ReadFile(filepath.FromSlash(session.Transcript))
+		if err != nil {
+			writeAPIError(w, http.StatusNotFound, fmt.Errorf("read session transcript: %w", err))
+			return
+		}
+		writeJSON(w, http.StatusOK, sessionTranscriptResponse{
+			EvolutionID: id,
+			Provider:    session.Provider,
+			ID:          session.ID,
+			Key:         session.Key,
+			Title:       fallback(session.Title, session.ProviderName+" "+session.ID),
+			Markdown:    string(data),
+			Sanitized:   session.Sanitized,
+		})
+		return
+	}
+	writeAPIError(w, http.StatusNotFound, fmt.Errorf("session %s not found", sessionKey))
 }
 
 func (server runtimeServer) handleCheckout(w http.ResponseWriter, r *http.Request, id string) {
@@ -190,6 +348,291 @@ func summarizeSnapshot(snapshot *eve.Snapshot) snapshotSummary {
 		ValidationState:   validationState(snapshot.Validation),
 		CreatedAt:         snapshot.CreatedAt,
 	}
+}
+
+func (server runtimeServer) snapshotSessionRecords(snapshot *eve.Snapshot) []uiSessionRecord {
+	seen := map[string]bool{}
+	var records []uiSessionRecord
+	add := func(record uiSessionRecord) {
+		if strings.TrimSpace(record.Provider) == "" {
+			record.Provider = "codex"
+		}
+		if strings.TrimSpace(record.ID) == "" {
+			record.ID = "current"
+		}
+		record.ProviderName = providerDisplayName(record.Provider)
+		record.Key = sessionRecordKey(record.Provider, record.ID)
+		record.CaptureHint = sessionCaptureHint(record.Provider, record.ID)
+		record.RootsChecked = providerRoots(record.Provider)
+		if record.Status == "" {
+			record.Status = "reference-only"
+		}
+		if record.LocalSources == nil {
+			record.LocalSources = []uiSessionSource{}
+		}
+		if record.Key == "" || seen[record.Key] {
+			return
+		}
+		seen[record.Key] = true
+		records = append(records, record)
+	}
+
+	for _, artifact := range snapshot.Artifacts {
+		if artifact.Type != "conversation" {
+			continue
+		}
+		provider, id := conversationArtifactSession(artifact)
+		transcript := artifact.Path
+		hasTranscript := transcript != "" && fileExists(filepath.FromSlash(transcript))
+		add(uiSessionRecord{
+			Provider:      provider,
+			ID:            id,
+			Title:         artifact.Description,
+			Transcript:    transcript,
+			URI:           fallback(artifact.URI, artifact.URL),
+			Source:        fallback(artifact.Path, fallback(artifact.URL, artifact.URI)),
+			Sanitized:     true,
+			Format:        strings.TrimPrefix(strings.ToLower(filepath.Ext(transcript)), "."),
+			HasTranscript: hasTranscript,
+			Status:        mapBool(hasTranscript, "transcript", "reference-only"),
+			Preview:       previewSessionFile(filepath.FromSlash(transcript)),
+		})
+	}
+
+	for _, session := range server.legacySessionsForSnapshot(snapshot) {
+		add(uiSessionRecord{
+			Provider: session.Provider,
+			ID:       session.ID,
+			URI:      session.URI,
+			Status:   "reference-only",
+		})
+	}
+
+	sort.Slice(records, func(i, j int) bool {
+		return records[i].Key < records[j].Key
+	})
+	return records
+}
+
+func (server runtimeServer) legacySessionsForSnapshot(snapshot *eve.Snapshot) []legacySession {
+	entries, err := os.ReadDir(filepath.Join(server.repo.eveDir, "evolutions"))
+	if err != nil {
+		return nil
+	}
+	commits := map[string]bool{}
+	if snapshot.Implementation.GitState != "" {
+		commits[snapshot.Implementation.GitState] = true
+	}
+	for _, commit := range snapshot.Implementation.Commits {
+		if strings.TrimSpace(commit) != "" {
+			commits[commit] = true
+		}
+	}
+	var sessions []legacySession
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(server.repo.eveDir, "evolutions", entry.Name()))
+		if err != nil {
+			continue
+		}
+		var evolution legacyEvolution
+		if err := json.Unmarshal(data, &evolution); err != nil {
+			continue
+		}
+		if !legacyEvolutionMatchesSnapshot(evolution, commits) {
+			continue
+		}
+		sessions = append(sessions, evolution.Sessions...)
+	}
+	return sessions
+}
+
+func legacyEvolutionMatchesSnapshot(evolution legacyEvolution, commits map[string]bool) bool {
+	if commits[evolution.Implementation.Snapshot] {
+		return true
+	}
+	for _, commit := range evolution.Implementation.Commits {
+		if commits[commit] {
+			return true
+		}
+	}
+	return false
+}
+
+func conversationArtifactSession(artifact eve.Artifact) (string, string) {
+	text := strings.ToLower(strings.Join([]string{artifact.Description, artifact.Path, artifact.URI, artifact.URL}, " "))
+	provider := "codex"
+	switch {
+	case strings.Contains(text, "claude"):
+		provider = "claude"
+	case strings.Contains(text, "opencode"):
+		provider = "opencode"
+	}
+	id := strings.TrimSuffix(filepath.Base(firstNonEmpty(artifact.Path, artifact.URI, artifact.URL)), filepath.Ext(firstNonEmpty(artifact.Path, artifact.URI, artifact.URL)))
+	if id == "" {
+		id = "conversation"
+	}
+	return provider, id
+}
+
+func (server runtimeServer) gitCommits(snapshot string, commits []string) []uiGitCommit {
+	seen := map[string]bool{}
+	ordered := make([]string, 0, len(commits)+1)
+	add := func(commit string) {
+		commit = strings.TrimSpace(commit)
+		if commit == "" || seen[commit] {
+			return
+		}
+		seen[commit] = true
+		ordered = append(ordered, commit)
+	}
+	add(snapshot)
+	for _, commit := range commits {
+		add(commit)
+	}
+
+	out := make([]uiGitCommit, 0, len(ordered))
+	for _, commit := range ordered {
+		if info, err := server.gitCommit(commit); err == nil {
+			out = append(out, info)
+			continue
+		}
+		out = append(out, uiGitCommit{
+			Hash:      commit,
+			ShortHash: shortHash(commit),
+			Subject:   "Commit metadata unavailable",
+		})
+	}
+	return out
+}
+
+func (server runtimeServer) gitCommit(commit string) (uiGitCommit, error) {
+	format := "%H%x00%h%x00%s%x00%an%x00%aI%x00%cI"
+	cmd := exec.Command("git", "show", "-s", "--format="+format, commit)
+	cmd.Dir = server.repo.Root
+	output, err := cmd.Output()
+	if err != nil {
+		return uiGitCommit{}, err
+	}
+	parts := strings.Split(strings.TrimSpace(string(output)), "\x00")
+	if len(parts) < 6 {
+		return uiGitCommit{}, fmt.Errorf("unexpected git show output")
+	}
+	return uiGitCommit{
+		Hash:        parts[0],
+		ShortHash:   parts[1],
+		Subject:     parts[2],
+		AuthorName:  parts[3],
+		AuthoredAt:  parts[4],
+		CommittedAt: parts[5],
+	}, nil
+}
+
+func providerInfos() []uiProviderInfo {
+	providers := []string{"codex", "claude", "opencode"}
+	infos := make([]uiProviderInfo, 0, len(providers))
+	for _, provider := range providers {
+		infos = append(infos, uiProviderInfo{
+			Provider:      provider,
+			Name:          providerDisplayName(provider),
+			Roots:         providerRoots(provider),
+			Available:     false,
+			ImportCommand: sessionCaptureHint(provider, "<session-id>"),
+			Displays:      []string{"session provider and id", "conversation artifacts"},
+		})
+	}
+	return infos
+}
+
+func sessionCaptureHint(provider string, id string) string {
+	return fmt.Sprintf("Attach a %s conversation artifact for %s.", fallback(provider, "provider"), fallback(id, "session-id"))
+}
+
+func providerDisplayName(provider string) string {
+	switch strings.ToLower(strings.TrimSpace(provider)) {
+	case "codex":
+		return "Codex"
+	case "claude":
+		return "Claude"
+	case "opencode":
+		return "OpenCode"
+	default:
+		return fallback(provider, "Other")
+	}
+}
+
+func providerRoots(provider string) []string {
+	return []string{}
+}
+
+func sessionRecordKey(provider string, id string) string {
+	key := strings.ToLower(strings.TrimSpace(provider)) + "-" + strings.TrimSpace(id)
+	key = strings.Map(func(r rune) rune {
+		if r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || r == '-' || r == '_' {
+			return r
+		}
+		return '-'
+	}, key)
+	return strings.Trim(key, "-")
+}
+
+func previewSessionFile(path string) uiSessionPreview {
+	if strings.TrimSpace(path) == "" {
+		return uiSessionPreview{}
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return uiSessionPreview{}
+	}
+	text := strings.TrimSpace(string(data))
+	if text == "" {
+		return uiSessionPreview{}
+	}
+	lines := strings.Split(text, "\n")
+	return uiSessionPreview{
+		EventCount:   len(lines),
+		MessageCount: len(lines),
+	}
+}
+
+func shortHash(commit string) string {
+	if len(commit) <= 12 {
+		return commit
+	}
+	return commit[:12]
+}
+
+func fileExists(path string) bool {
+	if strings.TrimSpace(path) == "" {
+		return false
+	}
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+func fallback(value string, fallbackValue string) string {
+	if strings.TrimSpace(value) != "" {
+		return strings.TrimSpace(value)
+	}
+	return fallbackValue
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
+}
+
+func mapBool(condition bool, truthy string, falsy string) string {
+	if condition {
+		return truthy
+	}
+	return falsy
 }
 
 func validationState(values []eve.Validation) string {

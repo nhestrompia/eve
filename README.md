@@ -76,6 +76,7 @@ URIs:
 ```text
 GET  /api/repos
 GET  /api/repos/{repoId}
+POST /api/repos/{repoId}/open-editor
 GET  /api/repos/{repoId}/snapshots
 GET  /api/repos/{repoId}/snapshots/{snapshotId}
 POST /api/repos/{repoId}/snapshots/{snapshotId}/checkout

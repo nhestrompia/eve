@@ -4,7 +4,15 @@ import type { Verification } from '../types';
 import { SectionHeading } from './section-heading';
 import { Card, CardContent, CardHeader } from './ui/card';
 
-export function VerificationCard({ values, evolutionId }: { values: Verification[]; evolutionId: string }) {
+export function VerificationCard({
+  values,
+  evolutionId,
+  showLink = true
+}: {
+  values: Verification[];
+  evolutionId: string;
+  showLink?: boolean;
+}) {
   return (
     <Card>
       <CardHeader>
@@ -27,13 +35,15 @@ export function VerificationCard({ values, evolutionId }: { values: Verification
             );
           })}
         </ul>
-        <Link
-          className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-blue-700"
-          to="/snapshots/$id/verification"
-          params={{ id: evolutionId }}
-        >
-          View all results <ArrowRight className="size-4" />
-        </Link>
+        {showLink ? (
+          <Link
+            className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-blue-700"
+            to="/snapshots/$id/verification"
+            params={{ id: evolutionId }}
+          >
+            View all results <ArrowRight className="size-4" />
+          </Link>
+        ) : null}
       </CardContent>
     </Card>
   );

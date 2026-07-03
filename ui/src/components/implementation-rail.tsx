@@ -28,7 +28,7 @@ export function ImplementationRail({
   };
 
   return (
-    <aside className="border-t bg-white px-5 py-6 sm:px-7 sm:py-8 xl:fixed xl:right-0 xl:top-0 xl:z-30 xl:h-dvh xl:w-[460px] xl:overflow-y-auto xl:border-l xl:border-t-0">
+    <aside className="scrollbar-none border-t bg-white px-5 py-6 sm:px-7 sm:py-8 xl:fixed xl:right-0 xl:top-0 xl:z-30 xl:h-dvh xl:w-[460px] xl:overflow-y-auto xl:border-l xl:border-t-0">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <FileText className="size-4" />

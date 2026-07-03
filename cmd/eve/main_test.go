@@ -74,6 +74,7 @@ func TestRuntimeAPIAndMCP(t *testing.T) {
 	t.Chdir(repo)
 	mustRun(t, []string{"init"})
 	head := gitOutputForTest(t, repo, "rev-parse", "HEAD")
+	gitRun(t, repo, "remote", "add", "origin", "git@github.com:nhestrompia/eve.git")
 	writeSnapshot(t, repo, sampleSnapshot("snap_api", "API Snapshot", head))
 
 	handler := newRuntimeServer(repoFromRoot(repo), "localhost:0").routes()
@@ -81,6 +82,9 @@ func TestRuntimeAPIAndMCP(t *testing.T) {
 	requestJSON(t, handler, http.MethodGet, "/api/repos", nil, &repos)
 	if len(repos) != 1 || repos[0].SnapshotCount != 1 {
 		t.Fatalf("repos = %#v, want one repo with one snapshot", repos)
+	}
+	if repos[0].Head != head || repos[0].RemoteURL != "https://github.com/nhestrompia/eve" {
+		t.Fatalf("repo metadata = %#v, want head and normalized GitHub remote", repos[0])
 	}
 
 	var detail snapshotDetailResponse
@@ -135,6 +139,19 @@ func TestCompleteSnapshotDerivesGitFacts(t *testing.T) {
 	}
 	if facts.GitState == "" || len(facts.Commits) == 0 {
 		t.Fatalf("facts = %#v, want git state and commits", facts)
+	}
+}
+
+func TestNormalizeRemoteURL(t *testing.T) {
+	cases := map[string]string{
+		"git@github.com:owner/repo.git":       "https://github.com/owner/repo",
+		"ssh://git@github.com/owner/repo.git": "https://github.com/owner/repo",
+		"https://github.com/owner/repo.git":   "https://github.com/owner/repo",
+	}
+	for input, want := range cases {
+		if got := normalizeRemoteURL(input); got != want {
+			t.Fatalf("normalizeRemoteURL(%q) = %q, want %q", input, got, want)
+		}
 	}
 }
 

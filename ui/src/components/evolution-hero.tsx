@@ -20,19 +20,16 @@ import { StatusBadge } from './status-badge';
 
 export function EvolutionHero({ detail, snapshot }: { detail: DetailResponse; snapshot?: SnapshotResponse }) {
   const checkout = useMutation({ mutationFn: () => api.checkout(detail.summary.id) });
-  const providers = detail.summary.sessionProviders.join(' & ') || 'EVE';
+  const author = detailAuthor(detail);
 
   return (
     <section className="grid grid-cols-1 gap-6 py-8 sm:py-10 lg:grid-cols-[minmax(0,1fr)_260px] lg:gap-8 lg:py-14">
       <div className="min-w-0">
         <StatusBadge status={detail.summary.status} />
-        <div className="mt-6 flex flex-wrap items-center gap-3">
+        <div className="mt-6">
           <h1 className="text-2xl font-semibold leading-tight tracking-[-0.01em] text-balance sm:text-[34px]">
             {detail.summary.title || 'Untitled Evolution'}
           </h1>
-          <span className="rounded-lg bg-secondary px-3 py-1 font-mono text-lg font-semibold tabular-nums text-muted-foreground">
-            #{detail.summary.id.replace('EV-', '')}
-          </span>
         </div>
         <p className="mt-4 max-w-[68ch] text-[15px] leading-6 text-pretty">
           {detail.summary.outcome || detail.evolution.intent || 'No outcome recorded.'}
@@ -44,7 +41,7 @@ export function EvolutionHero({ detail, snapshot }: { detail: DetailResponse; sn
           </span>
           <span className="inline-flex items-center gap-2">
             <Users className="size-4" />
-            by {providers}
+            by {author}
           </span>
           {detail.summary.snapshot ? (
             <span className="inline-flex items-center gap-2">
@@ -96,4 +93,17 @@ export function EvolutionHero({ detail, snapshot }: { detail: DetailResponse; sn
       </div>
     </section>
   );
+}
+
+function detailAuthor(detail: DetailResponse) {
+  const providers = Array.from(
+    new Set(
+      [
+        ...detail.sessions.map((session) => session.providerName || session.provider),
+        ...detail.summary.sessionProviders
+      ].filter(Boolean)
+    )
+  );
+  if (providers.length > 0) return providers.join(' & ');
+  return detail.commits.find((commit) => commit.authorName)?.authorName || 'Unknown author';
 }

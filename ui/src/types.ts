@@ -238,6 +238,13 @@ export type RepositorySummary = {
   root?: string;
   name: string;
   remoteUrl?: string;
+  branch?: string;
+  head?: string;
+  dirty?: boolean;
+  readme?: string;
+  primaryLanguage?: string;
+  sizeBytes?: number;
+  createdAt?: string;
   evolutionCount: number;
   snapshotCount: number;
   commitCount: number;
@@ -246,6 +253,15 @@ export type RepositorySummary = {
   latestSnapshot?: string;
   latestTitle: string;
   sessionProviders: string[];
+};
+
+export type OpenEditorResponse = {
+  repository: string;
+  root: string;
+  command: string;
+  exitCode: number;
+  stdout: string;
+  stderr: string;
 };
 
 export type SearchResponse = {

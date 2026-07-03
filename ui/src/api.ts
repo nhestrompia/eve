@@ -4,8 +4,10 @@ import type {
   DetailResponse,
   Evolution,
   EvolutionSummary,
+  OpenEditorResponse,
   RepositorySummary,
   SearchResponse,
+  SessionRecord,
   SessionListResponse,
   SessionTranscriptResponse,
   Snapshot,
@@ -21,11 +23,22 @@ type RepoAPI = {
   latestAt: string;
   latestSnapshot: string;
   latestTitle: string;
+  branch?: string;
+  head?: string;
+  dirty?: boolean;
+  remoteUrl?: string;
+  readme?: string;
+  primaryLanguage?: string;
+  sizeBytes?: number;
+  createdAt?: string;
 };
 
 type SnapshotDetailAPI = {
   snapshot: Snapshot;
   summary: SnapshotSummary;
+  sessions?: SessionRecord[];
+  providers?: DetailResponse['providers'];
+  commits?: DetailResponse['commits'];
   rawJson: unknown;
 };
 
@@ -56,6 +69,14 @@ function adaptRepo(repo: RepoAPI): RepositorySummary {
     id: repo.id,
     root: repo.root,
     name: repo.id,
+    remoteUrl: repo.remoteUrl,
+    branch: repo.branch,
+    head: repo.head,
+    dirty: repo.dirty,
+    readme: repo.readme,
+    primaryLanguage: repo.primaryLanguage,
+    sizeBytes: repo.sizeBytes,
+    createdAt: repo.createdAt,
     evolutionCount: repo.snapshotCount,
     snapshotCount: repo.snapshotCount,
     commitCount: 0,
@@ -75,7 +96,7 @@ function validationToVerification(values: Snapshot['validation']): Verification[
   }));
 }
 
-function snapshotToEvolution(snapshot: Snapshot): Evolution {
+function snapshotToEvolution(snapshot: Snapshot, sessions: SessionRecord[] = []): Evolution {
   return {
     eve: { version: 0 },
     metadata: {
@@ -92,7 +113,11 @@ function snapshotToEvolution(snapshot: Snapshot): Evolution {
     decisions: snapshot.decisions,
     risks: snapshot.risks,
     verification: validationToVerification(snapshot.validation),
-    sessions: [],
+    sessions: sessions.map((session) => ({
+      provider: session.provider,
+      id: session.id,
+      uri: session.uri
+    })),
     timeline: snapshot.timeline.map((entry) => ({
       timestamp: entry.occurredAt,
       event: entry.phase,
@@ -108,7 +133,7 @@ function snapshotToEvolution(snapshot: Snapshot): Evolution {
   };
 }
 
-function snapshotToSummary(summary: SnapshotSummary): EvolutionSummary {
+function snapshotToSummary(summary: SnapshotSummary, sessionProviders: string[] = []): EvolutionSummary {
   return {
     id: summary.id,
     title: summary.title,
@@ -119,7 +144,7 @@ function snapshotToSummary(summary: SnapshotSummary): EvolutionSummary {
     commitCount: summary.gitState ? 1 : 0,
     verificationState: summary.validationState,
     verificationSummary: summary.validationState,
-    sessionProviders: [],
+    sessionProviders,
     createdAt: summary.createdAt,
     updatedAt: summary.createdAt
   };
@@ -129,27 +154,35 @@ async function snapshots(repo?: unknown): Promise<EvolutionSummary[]> {
   const repoId = typeof repo === 'string' && repo ? repo : await defaultRepoId();
   if (!repoId) return [];
   const rows = await request<SnapshotSummary[]>(`/api/repos/${encodeURIComponent(repoId)}/snapshots`);
-  return rows.map(snapshotToSummary);
+  return rows.map((row) => snapshotToSummary(row));
+}
+
+async function repository(repo: string): Promise<RepositorySummary> {
+  return adaptRepo(await request<RepoAPI>(`/api/repos/${encodeURIComponent(repo)}`));
 }
 
 async function snapshotDetail(id: string): Promise<DetailResponse> {
   const repoId = await defaultRepoId();
   const detail = await request<SnapshotDetailAPI>(`/api/repos/${encodeURIComponent(repoId)}/snapshots/${encodeURIComponent(id)}`);
-  const summary = snapshotToSummary(detail.summary);
+  const sessions = detail.sessions ?? [];
+  const sessionProviders = Array.from(new Set(sessions.map((session) => session.provider).filter(Boolean)));
+  const summary = snapshotToSummary(detail.summary, sessionProviders);
   return {
     snapshot: detail.snapshot,
-    evolution: snapshotToEvolution(detail.snapshot),
+    evolution: snapshotToEvolution(detail.snapshot, sessions),
     summary,
-    sessions: [],
-    providers: [],
-    commits: detail.snapshot.implementation.commits.map((hash) => ({
-      hash,
-      shortHash: hash.slice(0, 8),
-      subject: hash === detail.snapshot.implementation.gitState ? 'Snapshot commit' : 'Implementation commit',
-      authorName: '',
-      authoredAt: '',
-      committedAt: ''
-    })),
+    sessions,
+    providers: detail.providers ?? [],
+    commits:
+      detail.commits ??
+      detail.snapshot.implementation.commits.map((hash) => ({
+        hash,
+        shortHash: hash.slice(0, 8),
+        subject: hash === detail.snapshot.implementation.gitState ? 'Snapshot commit' : 'Implementation commit',
+        authorName: '',
+        authoredAt: '',
+        committedAt: ''
+      })),
     rawJson: detail.rawJson
   };
 }
@@ -179,10 +212,14 @@ async function snapshot(id: string): Promise<SnapshotResponse> {
 export const api = {
   config: () => request<ConfigResponse>('/api/config'),
   repositories: async () => (await repositoriesRaw()).map(adaptRepo),
+  repository,
   snapshots,
   snapshotDetail,
   snapshot,
-  sessions: async (id: string): Promise<SessionListResponse> => ({ evolutionId: id, sessions: [], providers: [] }),
+  sessions: async (id: string): Promise<SessionListResponse> => {
+    const detail = await snapshotDetail(id);
+    return { evolutionId: id, sessions: detail.sessions, providers: detail.providers };
+  },
   search: async (query: string): Promise<SearchResponse> => {
     const rows = await snapshots();
     const normalized = query.trim().toLowerCase();
@@ -193,17 +230,16 @@ export const api = {
         .map((row) => ({ evolution: row, matches: [row.title, row.outcome].filter(Boolean) }))
     };
   },
-  transcript: async (id: string, key: string): Promise<SessionTranscriptResponse> => ({
-    evolutionId: id,
-    provider: '',
-    id: key,
-    key,
-    title: 'No transcript',
-    markdown: 'Snapshots store conversations as artifacts, not first-class sessions.',
-    sanitized: true
-  }),
+  transcript: async (id: string, key: string): Promise<SessionTranscriptResponse> => {
+    const repoId = await defaultRepoId();
+    return request<SessionTranscriptResponse>(
+      `/api/repos/${encodeURIComponent(repoId)}/snapshots/${encodeURIComponent(id)}/sessions/${encodeURIComponent(key)}`
+    );
+  },
   checkout: async (id: string) => {
     const repoId = await defaultRepoId();
     return request<CheckoutResponse>(`/api/repos/${encodeURIComponent(repoId)}/snapshots/${encodeURIComponent(id)}/checkout`, { method: 'POST' });
-  }
+  },
+  openRepositoryInEditor: (repo: string) =>
+    request<OpenEditorResponse>(`/api/repos/${encodeURIComponent(repo)}/open-editor`, { method: 'POST' })
 };

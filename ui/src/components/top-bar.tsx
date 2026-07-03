@@ -1,14 +1,27 @@
 import { Link, useRouterState } from '@tanstack/react-router';
-import { Link as LinkIcon, MoreHorizontal, Search } from 'lucide-react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { Code2, ExternalLink, Link as LinkIcon, MoreHorizontal, Search } from 'lucide-react';
 import { useState } from 'react';
+import { api } from '../api';
 import { Button } from './ui/button';
 
 export function TopBar({ onSearch }: { onSearch: () => void }) {
   const state = useRouterState();
   const [copied, setCopied] = useState(false);
-  const match = state.location.pathname.match(/EV-\d+/);
-  const id = match?.[0];
-  const hasDetailRail = /^\/evolutions\/EV-\d+$/.test(state.location.pathname);
+  const match = state.location.pathname.match(/^\/snapshots\/([^/]+)/);
+  const id = match ? decodeURIComponent(match[1]) : undefined;
+  const repoMatch = state.location.pathname.match(/^\/repositories\/([^/]+)/);
+  const repo = repoMatch ? decodeURIComponent(repoMatch[1]) : undefined;
+  const hasDetailRail = /^\/snapshots\/[^/]+$/.test(state.location.pathname);
+  const repository = useQuery({
+    queryKey: ['repository', repo],
+    queryFn: () => api.repository(repo ?? ''),
+    enabled: !!repo
+  });
+  const openEditor = useMutation({
+    mutationFn: () => api.openRepositoryInEditor(repo ?? '')
+  });
+  const remoteUrl = repository.data?.remoteUrl;
 
   const copyURL = async () => {
     await navigator.clipboard.writeText(window.location.href);
@@ -21,11 +34,19 @@ export function TopBar({ onSearch }: { onSearch: () => void }) {
       className={`sticky top-0 z-20 flex min-h-16 items-center justify-between gap-3 border-b bg-white/88 px-4 backdrop-blur md:h-[76px] md:px-8 ${hasDetailRail ? 'xl:pr-[488px]' : ''}`}
     >
       <div className="flex min-w-0 items-center gap-3 text-sm text-muted-foreground">
-        <span>Activity</span>
-        {id ? (
+        {repo ? (
+          <>
+            <span>Repositories</span>
+            <span>›</span>
+            <span className="truncate font-semibold text-foreground">{repo}</span>
+          </>
+        ) : (
+          <span>Activity</span>
+        )}
+        {!repo && id ? (
           <>
             <span>›</span>
-            <span className="font-semibold text-foreground">#{id.replace('EV-', '')}</span>
+            <span className="truncate font-semibold text-foreground">{id}</span>
           </>
         ) : null}
       </div>
@@ -40,6 +61,40 @@ export function TopBar({ onSearch }: { onSearch: () => void }) {
         >
           <Search className="size-4" />
         </Button>
+        {repo ? (
+          <>
+            <Button
+              variant="outline"
+              className="h-10 gap-2 rounded-lg px-3 md:px-4"
+              aria-label="Open repository in editor"
+              title={openEditor.data?.stderr || 'Open repository in editor'}
+              disabled={openEditor.isPending}
+              onClick={() => openEditor.mutate()}
+            >
+              <Code2 className="size-4" />
+              <span className="hidden sm:inline">{openEditor.isPending ? 'Opening...' : 'Open in editor'}</span>
+            </Button>
+            {remoteUrl ? (
+              <Button asChild variant="outline" className="h-10 gap-2 rounded-lg px-3 md:px-4">
+                <a href={remoteUrl} target="_blank" rel="noreferrer" aria-label="View repository on GitHub" title="View repository on GitHub">
+                  <ExternalLink className="size-4" />
+                  <span className="hidden sm:inline">View on GitHub</span>
+                </a>
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                className="h-10 gap-2 rounded-lg px-3 md:px-4"
+                aria-label="No GitHub remote configured"
+                title="No GitHub remote configured"
+                disabled
+              >
+                <ExternalLink className="size-4" />
+                <span className="hidden sm:inline">View on GitHub</span>
+              </Button>
+            )}
+          </>
+        ) : null}
         <Button
           variant="outline"
           className="h-10 gap-2 rounded-lg px-3 md:px-4"

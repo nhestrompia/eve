@@ -47,7 +47,7 @@ export function SnapshotPage() {
             {snapshot.data.snapshotImages.length > 0 ? <SnapshotImagesSection images={snapshot.data.snapshotImages} /> : null}
             <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <BehaviorCard behavior={snapshot.data.behavior} />
-              <VerificationCard values={snapshot.data.verification} evolutionId={snapshot.data.id} />
+              <VerificationCard values={snapshot.data.verification} evolutionId={snapshot.data.id} showLink={false} />
             </section>
           </div>
           <aside className="rounded-lg border bg-white p-5">

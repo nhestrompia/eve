@@ -134,6 +134,11 @@ body {
 
 html {
   overflow-x: clip;
+  scrollbar-gutter: stable;
+}
+
+body {
+  overflow-y: scroll;
 }
 
 button,
@@ -147,4 +152,13 @@ input {
 
 .app-backdrop {
   background: var(--background);
+}
+
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }

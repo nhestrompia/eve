@@ -311,6 +311,18 @@ type repoSummary struct {
 	LatestAt       string `json:"latestAt"`
 	LatestSnapshot string `json:"latestSnapshot"`
 	LatestTitle    string `json:"latestTitle"`
+	Branch         string `json:"branch,omitempty"`
+	Head           string `json:"head,omitempty"`
+	Dirty          bool   `json:"dirty"`
+	RemoteURL      string `json:"remoteUrl,omitempty"`
+}
+
+type repoDetail struct {
+	repoSummary
+	Readme          string `json:"readme,omitempty"`
+	PrimaryLanguage string `json:"primaryLanguage,omitempty"`
+	SizeBytes       int64  `json:"sizeBytes,omitempty"`
+	CreatedAt       string `json:"createdAt,omitempty"`
 }
 
 func resolveRepo(req repoRequest) (repository, error) {
@@ -443,12 +455,105 @@ func (repo repository) summary() (repoSummary, error) {
 		return repoSummary{}, err
 	}
 	summary := repoSummary{ID: repo.ID, Root: repo.Root, SnapshotCount: len(snapshots)}
+	if facts, err := deriveGitFacts(repo); err == nil {
+		summary.Branch = facts.Branch
+		summary.Head = facts.GitState
+		summary.Dirty = facts.Dirty
+	}
+	if remote, err := gitOutput(repo.Root, "remote", "get-url", "origin"); err == nil {
+		summary.RemoteURL = normalizeRemoteURL(remote)
+	}
 	if len(snapshots) > 0 {
 		summary.LatestAt = snapshots[0].CreatedAt
 		summary.LatestSnapshot = snapshots[0].ID
 		summary.LatestTitle = snapshots[0].Title
 	}
 	return summary, nil
+}
+
+func (repo repository) detail() (repoDetail, error) {
+	summary, err := repo.summary()
+	if err != nil {
+		return repoDetail{}, err
+	}
+	detail := repoDetail{repoSummary: summary}
+	for _, name := range []string{"README.md", "README"} {
+		data, err := os.ReadFile(filepath.Join(repo.Root, name))
+		if err == nil {
+			detail.Readme = string(data)
+			break
+		}
+	}
+	detail.PrimaryLanguage = detectPrimaryLanguage(repo.Root)
+	detail.SizeBytes = repositorySize(repo.Root)
+	if createdAt, err := gitOutput(repo.Root, "log", "--reverse", "--format=%cI"); err == nil {
+		detail.CreatedAt = firstNonEmptyLine(createdAt)
+	}
+	return detail, nil
+}
+
+func detectPrimaryLanguage(root string) string {
+	checks := []struct {
+		Path     string
+		Language string
+	}{
+		{"go.mod", "Go"},
+		{"package.json", "TypeScript"},
+		{"Cargo.toml", "Rust"},
+		{"pyproject.toml", "Python"},
+		{"Gemfile", "Ruby"},
+	}
+	for _, check := range checks {
+		if _, err := os.Stat(filepath.Join(root, check.Path)); err == nil {
+			return check.Language
+		}
+	}
+	return "Unknown"
+}
+
+func repositorySize(root string) int64 {
+	var total int64
+	_ = filepath.WalkDir(root, func(current string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if entry.IsDir() {
+			switch entry.Name() {
+			case ".git", "node_modules", "ui_dist", "cache":
+				return filepath.SkipDir
+			}
+			if current == filepath.Join(root, ".eve", "cache") {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if info, err := entry.Info(); err == nil {
+			total += info.Size()
+		}
+		return nil
+	})
+	return total
+}
+
+func firstNonEmptyLine(value string) string {
+	for _, line := range strings.Split(value, "\n") {
+		if trimmed := strings.TrimSpace(line); trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
+}
+
+func normalizeRemoteURL(remote string) string {
+	value := strings.TrimSpace(remote)
+	value = strings.TrimSuffix(value, ".git")
+	if strings.HasPrefix(value, "git@github.com:") {
+		return "https://github.com/" + strings.TrimPrefix(value, "git@github.com:")
+	}
+	if strings.HasPrefix(value, "ssh://git@github.com/") {
+		return "https://github.com/" + strings.TrimPrefix(value, "ssh://git@github.com/")
+	}
+	return value
 }
 
 func (repo repository) rebuildCache() error {
@@ -513,6 +618,51 @@ func gitOutput(root string, args ...string) (string, error) {
 		return "", fmt.Errorf("git %s: %w", strings.Join(args, " "), err)
 	}
 	return strings.TrimSpace(string(output)), nil
+}
+
+type openEditorResponse struct {
+	Repository string `json:"repository"`
+	Root       string `json:"root"`
+	Command    string `json:"command"`
+	ExitCode   int    `json:"exitCode"`
+	Stdout     string `json:"stdout"`
+	Stderr     string `json:"stderr"`
+}
+
+func openRepositoryInEditor(repo repository) openEditorResponse {
+	response := openEditorResponse{Repository: repo.ID, Root: repo.Root}
+	for _, candidate := range editorOpenCandidates(repo.Root) {
+		cmd := exec.Command(candidate[0], candidate[1:]...)
+		output, err := cmd.CombinedOutput()
+		response.Command = strings.Join(candidate, " ")
+		if err == nil {
+			response.ExitCode = 0
+			response.Stdout = strings.TrimSpace(string(output))
+			return response
+		}
+		response.ExitCode = 1
+		response.Stderr = strings.TrimSpace(fmt.Sprintf("%v\n%s", err, output))
+	}
+	if response.Command == "" {
+		response.ExitCode = 1
+		response.Stderr = "No supported editor launcher was found. Install a CLI such as code, cursor, or zed."
+	}
+	return response
+}
+
+func editorOpenCandidates(root string) [][]string {
+	var candidates [][]string
+	for _, name := range []string{"code", "cursor", "zed", "subl"} {
+		if path, err := exec.LookPath(name); err == nil {
+			candidates = append(candidates, []string{path, root})
+		}
+	}
+	if path, err := exec.LookPath("open"); err == nil {
+		for _, app := range []string{"Visual Studio Code", "Cursor", "Zed", "Sublime Text", "Xcode"} {
+			candidates = append(candidates, []string{path, "-a", app, root})
+		}
+	}
+	return candidates
 }
 
 func printSnapshot(w io.Writer, snapshot *eve.Snapshot, repo repository) {

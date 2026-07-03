@@ -1,9 +1,8 @@
-import { Link } from '@tanstack/react-router';
-import { ArrowRight, CheckCircle2, Circle, ShieldCheck, XCircle } from 'lucide-react';
+import { CheckCircle2, Circle, ShieldCheck, XCircle } from 'lucide-react';
 import type { Verification } from '../types';
 import { titleCase } from '../lib/evolution-display';
 
-export function VerificationSummarySection({ values, evolutionId }: { values: Verification[]; evolutionId: string }) {
+export function VerificationSummarySection({ values }: { values: Verification[]; evolutionId: string }) {
   const visible = values.slice(0, 3);
 
   return (
@@ -30,13 +29,6 @@ export function VerificationSummarySection({ values, evolutionId }: { values: Ve
               );
             })}
           </div>
-          <Link
-            className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-md px-2 text-sm font-medium text-blue-700 hover:bg-blue-50"
-            to="/snapshots/$id/verification"
-            params={{ id: evolutionId }}
-          >
-            View all results <ArrowRight className="size-4" />
-          </Link>
         </div>
       </div>
     </section>
