@@ -1,8 +1,8 @@
-# EVE
+# eveEVE
 
-EVE records completed product snapshots alongside Git implementation history.
+eve records completed product snapshots alongside Git implementation history.
 
-Git records implementation checkpoints. EVE records the completed product unit:
+Git records implementation checkpoints. eve records the completed product unit:
 one feature, bug fix, experiment, refactor, or release.
 
 ## Library
