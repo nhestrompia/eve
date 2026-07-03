@@ -1,0 +1,75 @@
+{
+  "id": "snap_92b2e0d_modal_inline_records",
+  "schemaVersion": "0.1.0",
+  "title": "Scrollable detail modal and inline rail records",
+  "type": "feature",
+  "summary": "Detail dialogs now keep long content scrollable within the modal, and the implementation rail displays Decisions and Risks inline instead of navigating to separate pages.",
+  "userVisibleChange": "Users can scroll long implementation modal content and read decisions and risks directly in the side rail.",
+  "relationships": {
+    "corrects": [],
+    "supersedes": [],
+    "reverts": [],
+    "dependsOn": [],
+    "related": []
+  },
+  "risks": [],
+  "timeline": [
+    {
+      "phase": "implementation",
+      "title": "Constrained dialog content to a scrollable row"
+    },
+    {
+      "phase": "implementation",
+      "title": "Rendered Decisions and Risks inline in the implementation rail"
+    },
+    {
+      "phase": "validation",
+      "title": "Verified Go tests and UI build"
+    }
+  ],
+  "decisions": [
+    {
+      "title": "Keep Decisions and Risks in the rail",
+      "rationale": "The user asked to remove page navigation for these sections and show their content directly where the summary already appears."
+    }
+  ],
+  "validation": [
+    {
+      "command": "npm run build",
+      "status": "passed",
+      "output": "tsc --noEmit && vite build && node scripts/copy-dist.mjs"
+    },
+    {
+      "command": "go test ./...",
+      "status": "passed",
+      "output": "ok github.com/nhestrompia/eve; ok github.com/nhestrompia/eve/cmd/eve"
+    },
+    {
+      "command": "git diff --check",
+      "status": "passed"
+    }
+  ],
+  "artifacts": [
+    {
+      "type": "screenshot",
+      "path": ".eve/artifacts/snap_92b2e0d_modal_inline_records/detail-modal-overflow.png",
+      "mimeType": "image/png",
+      "description": "Implementation modal with overflowing commit list before scroll behavior."
+    },
+    {
+      "type": "screenshot",
+      "path": ".eve/artifacts/snap_92b2e0d_modal_inline_records/decisions-risks-links.png",
+      "mimeType": "image/png",
+      "description": "Decisions and Risks rail rows that previously linked to separate pages."
+    }
+  ],
+  "implementation": {
+    "branch": "main",
+    "gitState": "92b2e0df196ffa4d3000a47af7efd5ce49537fd0",
+    "commits": [
+      "92b2e0df196ffa4d3000a47af7efd5ce49537fd0"
+    ],
+    "dirty": false
+  },
+  "createdAt": "2026-07-03T19:02:15Z"
+}
