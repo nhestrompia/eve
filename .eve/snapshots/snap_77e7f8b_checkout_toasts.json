@@ -1,0 +1,85 @@
+{
+  "id": "snap_77e7f8b_checkout_toasts",
+  "schemaVersion": "0.1.0",
+  "title": "Checkout toasts and earlier-version notice",
+  "type": "feature",
+  "summary": "Snapshot checkout feedback now uses Sonner success and error toasts, and the top bar shows a subtle notice when the checked-out product state is behind the latest recorded snapshot.",
+  "userVisibleChange": "Users get toast feedback after checkout attempts and can see when they are viewing an earlier product version.",
+  "relationships": {
+    "corrects": [],
+    "supersedes": [],
+    "reverts": [],
+    "dependsOn": [],
+    "related": [
+      "snap_92b2e0d_modal_inline_records"
+    ]
+  },
+  "risks": [
+    {
+      "title": "Config freshness depends on polling",
+      "severity": "low",
+      "mitigation": "The earlier-version notice refetches config periodically and checkout actions invalidate the config query immediately."
+    }
+  ],
+  "timeline": [
+    {
+      "phase": "implementation",
+      "title": "Added Sonner toaster support to the app shell"
+    },
+    {
+      "phase": "implementation",
+      "title": "Moved checkout results from inline terminal blocks into success and error toasts"
+    },
+    {
+      "phase": "implementation",
+      "title": "Exposed current and latest Git state through the UI config API"
+    },
+    {
+      "phase": "implementation",
+      "title": "Added a subtle top-bar notice for earlier product versions"
+    },
+    {
+      "phase": "validation",
+      "title": "Verified UI build, Go tests, and diff checks"
+    }
+  ],
+  "decisions": [
+    {
+      "title": "Use config polling for product-version awareness",
+      "rationale": "The top bar already has global app context, and periodic config refresh keeps the notice simple without introducing a push channel."
+    }
+  ],
+  "validation": [
+    {
+      "command": "npm run build",
+      "status": "passed",
+      "output": "tsc --noEmit && vite build && node scripts/copy-dist.mjs"
+    },
+    {
+      "command": "go test ./...",
+      "status": "passed",
+      "output": "ok github.com/nhestrompia/eve; ok github.com/nhestrompia/eve/cmd/eve"
+    },
+    {
+      "command": "git diff --check",
+      "status": "passed"
+    }
+  ],
+  "artifacts": [
+    {
+      "type": "screenshot",
+      "path": ".eve/artifacts/snap_77e7f8b_checkout_toasts/checkout-result-before-toast.png",
+      "mimeType": "image/png",
+      "description": "Checkout result area that is replaced by toast feedback."
+    }
+  ],
+  "implementation": {
+    "branch": "main",
+    "gitState": "77e7f8b93142fcea581c635636e2def60b8d9097",
+    "commits": [
+      "77e7f8b93142fcea581c635636e2def60b8d9097"
+    ],
+    "dirty": false
+  },
+  "createdAt": "2026-07-03T22:30:21Z"
+}
