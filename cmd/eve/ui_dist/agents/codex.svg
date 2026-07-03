@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" role="img" aria-label="Codex">
+  <rect width="40" height="40" rx="12" fill="#eff6ff"/>
+  <path d="M13 14.5h14a2.5 2.5 0 0 1 2.5 2.5v8a2.5 2.5 0 0 1-2.5 2.5H13a2.5 2.5 0 0 1-2.5-2.5v-8a2.5 2.5 0 0 1 2.5-2.5Z" fill="none" stroke="#2563eb" stroke-width="2"/>
+  <path d="M20 10v4.5M15.5 20.5h.01M24.5 20.5h.01M16 27.5v3M24 27.5v3" stroke="#2563eb" stroke-width="2" stroke-linecap="round"/>
+  <path d="M17 24h6" stroke="#2563eb" stroke-width="2" stroke-linecap="round"/>
+</svg>

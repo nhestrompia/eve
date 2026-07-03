@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import {
   AlertTriangle,
   ArrowRight,
-  Bot,
   BookOpen,
   ChevronDown,
   CircleHelp,
@@ -424,17 +423,15 @@ function AgentContributionPanel({ evolutions, details }: { evolutions: Evolution
     <RailCard title="Agent contribution" eyebrow="Last 30 days">
       <div className="space-y-4">
         {rows.map((row) => (
-          <div key={row.label} className="grid grid-cols-[82px_minmax(0,1fr)_62px] items-center gap-3">
+          <div key={row.label} className="grid grid-cols-[108px_minmax(0,1fr)_74px] items-center gap-3">
             <span className="flex min-w-0 items-center gap-2 text-sm font-semibold">
-              <span className={`flex size-5 items-center justify-center rounded-full ${row.tone.soft} ${row.tone.text}`}>
-                <Bot className="size-3.5" />
-              </span>
-              <span className="truncate">{row.label}</span>
+              <img src={agentAvatarPath(row.label)} alt="" className="size-6 shrink-0 rounded-lg" />
+              <span className="min-w-0">{row.label}</span>
             </span>
             <span className="h-1.5 overflow-hidden rounded-full bg-slate-100">
               <span className={`block h-full rounded-full ${row.tone.bg}`} style={{ width: `${Math.max(7, (row.count / max) * 100)}%` }} />
             </span>
-            <span className="text-right text-sm text-muted-foreground tabular-nums">
+            <span className="whitespace-nowrap text-right text-sm text-muted-foreground tabular-nums">
               {row.count} ({row.percent}%)
             </span>
           </div>
@@ -442,6 +439,13 @@ function AgentContributionPanel({ evolutions, details }: { evolutions: Evolution
       </div>
     </RailCard>
   );
+}
+
+function agentAvatarPath(label: string) {
+  if (label === 'Codex') return '/agents/codex.svg';
+  if (label === 'Claude') return '/agents/claude.svg';
+  if (label === 'OpenCode') return '/agents/opencode.svg';
+  return '/agents/other.svg';
 }
 
 function NeedsAttentionPanel({ stats }: { stats: PlatformStats }) {

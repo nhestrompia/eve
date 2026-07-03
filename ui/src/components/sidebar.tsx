@@ -9,9 +9,17 @@ import {
   Settings,
   Sun,
 } from "lucide-react";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 import { Button } from "./ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "./ui/dialog";
 import { Input } from "./ui/input";
 
 export function Sidebar() {
@@ -27,10 +35,50 @@ export function Sidebar() {
   const firstEvolution = evolutions.data?.[0]?.id;
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
+  const [repositoryName, setRepositoryName] = useState("");
+  const [repositoryDialogOpen, setRepositoryDialogOpen] = useState(false);
+  const [localRepositories, setLocalRepositories] = useState<string[]>([]);
+
+  useEffect(() => {
+    const raw = window.localStorage.getItem(LOCAL_REPOSITORIES_KEY);
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        setLocalRepositories(parsed.filter((value): value is string => typeof value === "string"));
+      }
+    } catch {
+      setLocalRepositories([]);
+    }
+  }, []);
+
+  const repositoryRows = useMemo(
+    () =>
+      mergeSidebarRepositories(
+        repositories.data ?? [],
+        localRepositories,
+        config.data?.repository ?? "eve"
+      ),
+    [repositories.data, localRepositories, config.data?.repository]
+  );
 
   const submitSearch = (event: FormEvent) => {
     event.preventDefault();
     void navigate({ to: "/search", search: { q: query } });
+  };
+
+  const addRepository = (event: FormEvent) => {
+    event.preventDefault();
+    const name = repositoryName.trim();
+    if (!name) return;
+    const next = Array.from(new Set([...localRepositories, name])).sort((left, right) =>
+      left.localeCompare(right)
+    );
+    setLocalRepositories(next);
+    window.localStorage.setItem(LOCAL_REPOSITORIES_KEY, JSON.stringify(next));
+    setRepositoryName("");
+    setRepositoryDialogOpen(false);
+    void navigate({ to: "/repositories/$repo", params: { repo: name } });
   };
 
   return (
@@ -102,10 +150,7 @@ export function Sidebar() {
           Repositories
         </p>
         <div className="flex gap-2 overflow-x-auto md:block md:space-y-1 md:overflow-visible">
-          {(repositories.data?.length
-            ? repositories.data
-            : [{ name: config.data?.repository ?? "eve", evolutionCount: 0 }]
-          ).map((repo) => (
+          {repositoryRows.map((repo) => (
             <Link
               key={repo.name}
               to="/repositories/$repo"
@@ -125,13 +170,50 @@ export function Sidebar() {
             </Link>
           ))}
         </div>
-        <Link
-          to="/config"
-          className="mt-3 flex min-h-10 w-fit items-center gap-3 rounded-lg px-2 text-muted-foreground hover:bg-slate-50 hover:text-foreground md:w-auto"
-        >
-          <Plus className="size-4" />
-          Add repository
-        </Link>
+        <Dialog open={repositoryDialogOpen} onOpenChange={setRepositoryDialogOpen}>
+          <DialogTrigger asChild>
+            <button className="mt-3 flex min-h-10 w-fit items-center gap-3 rounded-lg px-2 text-muted-foreground hover:bg-slate-50 hover:text-foreground md:w-auto">
+              <Plus className="size-4" />
+              Add repository
+            </button>
+          </DialogTrigger>
+          <DialogContent className="max-w-[560px]">
+            <DialogHeader>
+              <DialogTitle>Add repository</DialogTitle>
+              <DialogDescription>
+                Add a repository shortcut to this browser. EVE counts it once an Evolution records it in implementation metadata.
+              </DialogDescription>
+            </DialogHeader>
+            <form className="space-y-4" onSubmit={addRepository}>
+              <div>
+                <label htmlFor="repository-name" className="text-sm font-medium">
+                  Repository name
+                </label>
+                <Input
+                  id="repository-name"
+                  value={repositoryName}
+                  onChange={(event) => setRepositoryName(event.target.value)}
+                  placeholder="docs"
+                  className="mt-2"
+                />
+              </div>
+              <div className="rounded-lg bg-slate-50 p-4">
+                <p className="text-sm font-medium">Record future work with:</p>
+                <code className="mt-2 block break-all font-mono text-xs text-muted-foreground">
+                  eve add implementation --repository {repositoryName.trim() || "<name>"} --status merged
+                </code>
+              </div>
+              <div className="flex justify-end gap-3">
+                <Button type="button" variant="outline" onClick={() => setRepositoryDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={!repositoryName.trim()}>
+                  Add repository
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="mt-auto flex items-center justify-between border-t p-4 md:p-5">
@@ -166,4 +248,34 @@ export function Sidebar() {
       </div>
     </aside>
   );
+}
+
+const LOCAL_REPOSITORIES_KEY = "eve:sidebar-repositories";
+
+type SidebarRepository = {
+  name: string;
+  evolutionCount: number;
+};
+
+function mergeSidebarRepositories(
+  repositories: SidebarRepository[],
+  localRepositories: string[],
+  fallbackRepository: string
+) {
+  const rows = new Map<string, SidebarRepository>();
+  const source = repositories.length > 0 ? repositories : [{ name: fallbackRepository, evolutionCount: 0 }];
+  for (const repo of source) {
+    rows.set(repo.name, repo);
+  }
+  for (const name of localRepositories) {
+    const trimmed = name.trim();
+    if (!trimmed || rows.has(trimmed)) continue;
+    rows.set(trimmed, { name: trimmed, evolutionCount: 0 });
+  }
+  return Array.from(rows.values()).sort((left, right) => {
+    if (left.evolutionCount !== right.evolutionCount) {
+      return right.evolutionCount - left.evolutionCount;
+    }
+    return left.name.localeCompare(right.name);
+  });
 }
