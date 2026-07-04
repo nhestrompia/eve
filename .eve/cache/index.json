@@ -1,13 +1,13 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 11,
-  "latestAt": "2026-07-04T14:23:14Z",
-  "latestSnapshot": "snap_46ef84a9412068a8",
-  "latestTitle": "Update README usage and MCP docs",
+  "snapshotCount": 12,
+  "latestAt": "2026-07-04T14:55:06Z",
+  "latestSnapshot": "snap_463b20cff9136179",
+  "latestTitle": "Repository artifact previews and editable overview",
   "branch": "main",
-  "head": "9b242b6f0ab02b1d82e3a87c744d7534f4788d4f",
+  "head": "2be654c831dcfa5d4d8508166cd96a34d4c2b02d",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "9b242b6f0ab02b1d82e3a87c744d7534f4788d4f"
+  "latestGitState": "2be654c831dcfa5d4d8508166cd96a34d4c2b02d"
 }
