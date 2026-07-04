@@ -5,7 +5,6 @@ import {
   BookOpen,
   Box,
   Calendar,
-  CheckCircle2,
   Code2,
   Copy,
   ExternalLink,
@@ -149,11 +148,6 @@ function RepositoryOverviewPage({
                   />
                   <MetaPill icon={Code2} label={shortCommit(repository.head)} />
                   <MetaPill
-                    icon={CheckCircle2}
-                    label={repository.dirty ? "Dirty" : "Clean"}
-                    tone={repository.dirty ? "warning" : "success"}
-                  />
-                  <MetaPill
                     icon={Calendar}
                     label={
                       repository.latestAt
@@ -177,8 +171,9 @@ function RepositoryOverviewPage({
                   aria-selected={activeTab === tab.id}
                   aria-controls={`repository-tab-${tab.id}`}
                   id={`repository-tab-trigger-${tab.id}`}
+                  data-state={activeTab === tab.id ? "active" : "inactive"}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`inline-flex min-h-12 shrink-0 items-center gap-2 border-b-2 px-0.5 text-left transition-colors hover:text-foreground ${
+                  className={`relative -mb-px inline-flex min-h-12 shrink-0 items-center gap-2 rounded-t-lg border-b-2 px-3 text-left transition-colors hover:bg-slate-50 hover:text-foreground data-[state=active]:bg-white data-[state=active]:shadow-[inset_0_-2px_0_rgb(37,99,235)] ${
                     activeTab === tab.id
                       ? "border-blue-600 text-blue-700"
                       : "border-transparent"
@@ -186,7 +181,13 @@ function RepositoryOverviewPage({
                 >
                   <span>{tab.label}</span>
                   {tab.count !== undefined ? (
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs ${
+                        activeTab === tab.id
+                          ? "bg-blue-50 text-blue-700"
+                          : "bg-slate-100 text-slate-500"
+                      }`}
+                    >
                       {tab.count}
                     </span>
                   ) : null}

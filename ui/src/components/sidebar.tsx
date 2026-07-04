@@ -82,7 +82,7 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="flex flex-col border-b bg-white/78 md:sticky md:top-0 md:h-dvh md:border-b-0 md:border-r">
+    <aside className="flex flex-col border-b bg-white/78 md:fixed md:inset-y-0 md:left-0 md:z-30 md:w-[240px] md:overflow-y-auto md:border-b-0 md:border-r">
       <Link to="/" aria-label="Go to activity" className="flex h-16 items-center gap-3 px-4 transition-opacity hover:opacity-80 md:h-[76px] md:px-7">
         <div className="flex size-9 items-center justify-center rounded-full bg-slate-950 text-white">
           <GitBranch className="size-5" />

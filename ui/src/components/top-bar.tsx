@@ -14,9 +14,10 @@ export function TopBar({ onSearch }: { onSearch: () => void }) {
   const repoMatch = state.location.pathname.match(/^\/repositories\/([^/]+)/);
   const repo = repoMatch ? decodeURIComponent(repoMatch[1]) : undefined;
   const hasDetailRail = /^\/snapshots\/[^/]+$/.test(state.location.pathname);
+  const isSnapshotRoute = /^\/snapshots\/[^/]+/.test(state.location.pathname);
   const currentGitState = config.data?.currentGitState;
   const latestGitState = config.data?.latestGitState;
-  const isBehindLatest = Boolean(currentGitState && latestGitState && currentGitState !== latestGitState);
+  const isBehindLatest = Boolean(isSnapshotRoute && currentGitState && latestGitState && currentGitState !== latestGitState);
   const repository = useQuery({
     queryKey: ['repository', repo],
     queryFn: () => api.repository(repo ?? ''),
