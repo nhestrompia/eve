@@ -74,10 +74,16 @@
     0 2px 4px 0 rgba(0, 0, 0, 0.28);
 }
 
+:root.dark-preview {
+  color-scheme: dark;
+}
+
 :root.dark-preview .bg-white,
+:root.dark-preview .bg-white\/70,
 :root.dark-preview .bg-white\/72,
 :root.dark-preview .bg-white\/78,
-:root.dark-preview .bg-white\/88 {
+:root.dark-preview .bg-white\/88,
+:root.dark-preview .data-\[state\=active\]\:bg-white[data-state="active"] {
   background-color: var(--card);
 }
 
@@ -85,8 +91,13 @@
 :root.dark-preview .bg-slate-50\/70,
 :root.dark-preview .bg-slate-100,
 :root.dark-preview .bg-blue-50,
+:root.dark-preview .bg-emerald-50,
+:root.dark-preview .bg-violet-50,
+:root.dark-preview .bg-amber-50,
 :root.dark-preview .hover\:bg-slate-50:hover,
-:root.dark-preview .hover\:bg-blue-50:hover {
+:root.dark-preview .hover\:bg-blue-50:hover,
+:root.dark-preview .hover\:bg-slate-100:hover,
+:root.dark-preview .data-\[state\=active\]\:bg-slate-100[data-state="active"] {
   background-color: var(--secondary);
 }
 
@@ -98,16 +109,32 @@
   color: var(--foreground);
 }
 
+:root.dark-preview .text-slate-400,
 :root.dark-preview .text-slate-700,
 :root.dark-preview .text-slate-600,
 :root.dark-preview .text-slate-500 {
   color: var(--muted-foreground);
 }
 
-:root.dark-preview .text-blue-700 {
+:root.dark-preview .text-blue-600,
+:root.dark-preview .text-blue-700,
+:root.dark-preview .text-emerald-600,
+:root.dark-preview .text-emerald-700,
+:root.dark-preview .text-violet-700,
+:root.dark-preview .text-amber-700,
+:root.dark-preview .text-orange-700 {
   color: var(--primary);
 }
 
+:root.dark-preview .bg-slate-950 {
+  background-color: oklch(0.16 0.018 264);
+}
+
+:root.dark-preview .text-white {
+  color: var(--foreground);
+}
+
+:root.dark-preview .ring-blue-50,
 :root.dark-preview .ring-blue-100 {
   --tw-ring-color: color-mix(in oklch, var(--primary) 28%, transparent);
 }
@@ -135,6 +162,8 @@ body {
 html {
   overflow-x: clip;
   scrollbar-gutter: stable;
+  scrollbar-color: color-mix(in oklch, var(--muted-foreground) 45%, transparent) color-mix(in oklch, var(--muted) 72%, transparent);
+  scrollbar-width: thin;
 }
 
 body {
@@ -144,6 +173,34 @@ body {
 button,
 input {
   font: inherit;
+}
+
+* {
+  scrollbar-color: color-mix(in oklch, var(--muted-foreground) 45%, transparent) color-mix(in oklch, var(--muted) 72%, transparent);
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+*::-webkit-scrollbar-track {
+  background: color-mix(in oklch, var(--muted) 72%, transparent);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  min-height: 44px;
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--muted-foreground) 45%, transparent);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklch, var(--muted-foreground) 64%, transparent);
+  background-clip: padding-box;
 }
 
 .font-mono {

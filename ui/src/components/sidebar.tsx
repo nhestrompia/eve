@@ -2,14 +2,13 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   BookOpen,
-  GitBranch,
   History,
   Plus,
   Search,
   Settings,
   Sun,
 } from "lucide-react";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 import { Button } from "./ui/button";
 import {
@@ -22,7 +21,7 @@ import {
 } from "./ui/dialog";
 import { Input } from "./ui/input";
 
-export function Sidebar() {
+export function Sidebar({ onSearch }: { onSearch: (query?: string) => void }) {
   const config = useQuery({ queryKey: ["config"], queryFn: api.config });
   const evolutions = useQuery({
     queryKey: ["evolutions"],
@@ -32,9 +31,7 @@ export function Sidebar() {
     queryKey: ["repositories"],
     queryFn: api.repositories,
   });
-  const firstEvolution = evolutions.data?.[0]?.id;
   const navigate = useNavigate();
-  const [query, setQuery] = useState("");
   const [repositoryName, setRepositoryName] = useState("");
   const [repositoryDialogOpen, setRepositoryDialogOpen] = useState(false);
   const [localRepositories, setLocalRepositories] = useState<string[]>([]);
@@ -64,7 +61,11 @@ export function Sidebar() {
 
   const submitSearch = (event: FormEvent) => {
     event.preventDefault();
-    void navigate({ to: "/search", search: { q: query } });
+    onSearch();
+  };
+
+  const openSearchFromInput = (event: ChangeEvent<HTMLInputElement>) => {
+    onSearch(event.target.value);
   };
 
   const addRepository = (event: FormEvent) => {
@@ -84,10 +85,10 @@ export function Sidebar() {
   return (
     <aside className="flex flex-col border-b bg-white/78 md:fixed md:inset-y-0 md:left-0 md:z-30 md:w-[240px] md:overflow-y-auto md:border-b-0 md:border-r">
       <Link to="/" aria-label="Go to activity" className="flex h-16 items-center gap-3 px-4 transition-opacity hover:opacity-80 md:h-[76px] md:px-7">
-        <div className="flex size-9 items-center justify-center rounded-full bg-slate-950 text-white">
-          <GitBranch className="size-5" />
+        <div className="flex size-9 items-center justify-center overflow-hidden rounded-lg bg-white shadow-[0_0_0_1px_rgba(15,23,42,0.12)]">
+          <img src="/eve.svg" alt="" className="h-full w-full object-cover" />
         </div>
-        <span className="text-[26px] font-semibold text-balance">EVE</span>
+        <span className="text-[26px] font-semibold text-balance">eve</span>
       </Link>
 
       <form onSubmit={submitSearch} className="hidden px-5 pb-5 md:block">
@@ -98,8 +99,9 @@ export function Sidebar() {
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             id="sidebar-search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            value=""
+            onFocus={() => onSearch()}
+            onChange={openSearchFromInput}
             placeholder="Search..."
             className="h-11 rounded-lg bg-white pl-10 pr-12 shadow-[0_0_0_1px_rgba(15,23,42,0.08)]"
           />
@@ -118,29 +120,6 @@ export function Sidebar() {
           <History className="size-4 text-blue-600" />
           Activity
         </Link>
-        {/* {firstEvolution ? (
-          <Link
-            to="/snapshots/$id/snapshot"
-            params={{ id: firstEvolution }}
-            className="flex h-11 shrink-0 items-center gap-3 rounded-lg px-4 text-muted-foreground hover:bg-slate-50 hover:text-foreground md:h-12 md:gap-4"
-          >
-            <FileClock className="size-4" />
-            Snapshots
-          </Link>
-        ) : (
-          <span aria-disabled="true" className="flex h-11 shrink-0 items-center gap-3 rounded-lg px-4 text-muted-foreground opacity-60 md:h-12 md:gap-4">
-            <FileClock className="size-4" />
-            Snapshots
-          </span>
-        )}
-        <Link
-          to="/search"
-          search={{ q: '' }}
-          className="flex h-11 shrink-0 items-center gap-3 rounded-lg px-4 text-muted-foreground hover:bg-slate-50 hover:text-foreground md:h-12 md:gap-4"
-        >
-          <Search className="size-4" />
-          Search
-        </Link> */}
       </nav>
 
       <div className="mx-4 border-t md:mx-7 md:my-6" />

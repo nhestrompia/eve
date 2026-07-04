@@ -16,7 +16,7 @@ import {
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
-import { compactDate, shortCommit } from "../format";
+import { compactDate } from "../format";
 import type {
   DetailResponse,
   EvolutionSummary,
@@ -454,12 +454,7 @@ function RecentActivityPanel({
                     <StatusBadge status={evolution.status} />
                   </span>
                   <span className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                    <span className="font-mono">{evolution.id}</span>
-                    {evolution.snapshot ? (
-                      <span className="font-mono">
-                        Snapshot {shortCommit(evolution.snapshot)}
-                      </span>
-                    ) : null}
+                    <span>{evolution.type}</span>
                     <span>by {primaryProvider(evolution, detail)}</span>
                   </span>
                 </span>

@@ -9,7 +9,6 @@ import { RawJsonPage } from './pages/raw-json-page';
 import { RepositoryPage } from './pages/repository-page';
 import { RelationshipsPage } from './pages/relationships-page';
 import { RisksPage } from './pages/risks-page';
-import { SearchPage } from './pages/search-page';
 import { SnapshotPage } from './pages/snapshot-page';
 import { TimelinePage } from './pages/timeline-page';
 import { VerificationPage } from './pages/verification-page';
@@ -76,13 +75,6 @@ const activityRoute = createRoute({
   component: ActivityPage
 });
 
-const searchRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/search',
-  validateSearch: (search: Record<string, unknown>) => ({ q: typeof search.q === 'string' ? search.q : '' }),
-  component: SearchPage
-});
-
 const jsonRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/json/$id',
@@ -106,7 +98,6 @@ const routeTree = rootRoute.addChildren([
   implementationRoute,
   relationshipsRoute,
   activityRoute,
-  searchRoute,
   jsonRoute,
   configRoute
 ]);

@@ -1,6 +1,7 @@
 import { useParams } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import { ExternalLink, GitCommitHorizontal, ImageIcon } from 'lucide-react';
+import { GitCommitHorizontal, ImageIcon, Maximize2 } from 'lucide-react';
+import { useState } from 'react';
 import { api } from '../api';
 import { BehaviorCard } from '../components/behavior-card';
 import { Button } from '../components/ui/button';
@@ -60,6 +61,8 @@ export function SnapshotPage() {
 }
 
 function SnapshotImagesSection({ images }: { images: SnapshotImage[] }) {
+  const [selectedImage, setSelectedImage] = useState<SnapshotImage | null>(null);
+
   return (
     <section className="rounded-lg border bg-white p-5 sm:p-6">
       <div className="mb-5 flex items-center gap-2">
@@ -68,12 +71,11 @@ function SnapshotImagesSection({ images }: { images: SnapshotImage[] }) {
       </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {images.map((image) => (
-          <a
+          <button
+            type="button"
             key={image.id}
-            href={image.url}
-            target="_blank"
-            rel="noreferrer"
-            className="group overflow-hidden rounded-lg border bg-slate-50 transition-colors hover:bg-slate-100"
+            onClick={() => setSelectedImage(image)}
+            className="group overflow-hidden rounded-lg border bg-slate-50 text-left transition-colors hover:bg-slate-100"
           >
             <span className="block aspect-video overflow-hidden bg-white">
               <img src={image.url} alt={image.title || 'Snapshot image'} loading="lazy" className="h-full w-full object-contain" />
@@ -83,11 +85,30 @@ function SnapshotImagesSection({ images }: { images: SnapshotImage[] }) {
                 <span className="block truncate text-sm font-semibold">{image.title || image.id}</span>
                 {image.source ? <span className="mt-1 block truncate text-xs text-muted-foreground">{image.source}</span> : null}
               </span>
-              <ExternalLink className="mt-0.5 size-4 shrink-0 text-slate-500 transition-colors group-hover:text-slate-950" />
+              <Maximize2 className="mt-0.5 size-4 shrink-0 text-slate-500 transition-colors group-hover:text-slate-950" />
             </span>
-          </a>
+          </button>
         ))}
       </div>
+      <Dialog open={Boolean(selectedImage)} onOpenChange={(open) => !open && setSelectedImage(null)}>
+        <DialogContent className="max-w-[min(1080px,calc(100vw-24px))] p-0">
+          {selectedImage ? (
+            <div>
+              <DialogHeader className="border-b px-5 py-4">
+                <DialogTitle className="text-base">{selectedImage.title || selectedImage.id}</DialogTitle>
+                <DialogDescription className="truncate text-xs">{selectedImage.source}</DialogDescription>
+              </DialogHeader>
+              <div className="max-h-[78dvh] overflow-auto bg-slate-950 p-3">
+                <img
+                  src={selectedImage.url}
+                  alt={selectedImage.title || 'Snapshot image'}
+                  className="mx-auto max-h-[72dvh] w-auto max-w-full rounded-md object-contain"
+                />
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

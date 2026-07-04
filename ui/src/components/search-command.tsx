@@ -6,13 +6,25 @@ import { api } from '../api';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 
-export function SearchCommand({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+export function SearchCommand({
+  open,
+  initialQuery = '',
+  onOpenChange
+}: {
+  open: boolean;
+  initialQuery?: string;
+  onOpenChange: (open: boolean) => void;
+}) {
   const [query, setQuery] = useState('');
   const results = useQuery({
     queryKey: ['command-search', query],
     queryFn: () => api.search(query),
-    enabled: open && query.trim().length > 0
+    enabled: open
   });
+
+  useEffect(() => {
+    if (open) setQuery(initialQuery);
+  }, [initialQuery, open]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -25,8 +37,8 @@ export function SearchCommand({ open, onOpenChange }: { open: boolean; onOpenCha
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-40 flex items-start justify-center bg-slate-950/30 px-4 pt-20 sm:pt-28">
-      <div className="w-full max-w-[720px] rounded-lg border bg-white p-4 shadow-lg">
+    <div className="fixed inset-0 z-40 flex items-start justify-center bg-slate-950/35 px-4 pt-20 backdrop-blur-[1px] sm:pt-28" role="dialog" aria-modal="true" aria-label="Search snapshots">
+      <div className="w-full max-w-[760px] rounded-lg border bg-card p-4 text-card-foreground shadow-[0_24px_80px_-36px_rgba(15,23,42,0.65),0_0_0_1px_rgba(15,23,42,0.1)]">
         <div className="flex items-center gap-3">
           <Search className="size-4 text-muted-foreground" />
           <Input
@@ -41,27 +53,39 @@ export function SearchCommand({ open, onOpenChange }: { open: boolean; onOpenCha
           </Button>
         </div>
         <div className="mt-4 max-h-[420px] overflow-auto">
-          {query.trim() === '' ? <p className="p-4 text-muted-foreground">Type to search product history.</p> : null}
+          {results.isLoading ? <p className="p-4 text-muted-foreground">Searching...</p> : null}
           {results.data?.results.length === 0 ? <p className="p-4 text-muted-foreground">No matching Snapshots.</p> : null}
           <div className="space-y-2">
             {results.data?.results.map((result) => (
-              <Link
-                key={result.evolution.id}
-                to="/snapshots/$id"
-                params={{ id: result.evolution.id }}
-                onClick={() => onOpenChange(false)}
-                className="grid grid-cols-1 gap-2 rounded-lg border p-3 hover:bg-slate-50 sm:grid-cols-[80px_minmax(0,1fr)] sm:gap-4"
-              >
-                <span className="font-mono font-semibold text-blue-700">{result.evolution.id}</span>
-                <span className="min-w-0">
-                  <span className="block truncate font-semibold">{result.evolution.title}</span>
-                  <span className="block truncate text-muted-foreground">{result.matches[0]}</span>
-                </span>
-              </Link>
+              <SearchResultLink key={result.evolution.id} result={result} onSelect={() => onOpenChange(false)} />
             ))}
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+function SearchResultLink({
+  result,
+  onSelect
+}: {
+  result: Awaited<ReturnType<typeof api.search>>['results'][number];
+  onSelect: () => void;
+}) {
+  const subtitle = result.matches.find((match) => match !== result.evolution.title) || result.evolution.outcome;
+
+  return (
+    <Link
+      to="/snapshots/$id"
+      params={{ id: result.evolution.id }}
+      onClick={onSelect}
+      className="block rounded-lg border p-3 hover:bg-slate-50"
+    >
+      <span className="min-w-0">
+        <span className="block text-sm font-semibold text-pretty">{result.evolution.title}</span>
+        <span className="block truncate text-muted-foreground">{subtitle}</span>
+      </span>
+    </Link>
   );
 }

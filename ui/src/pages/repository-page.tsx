@@ -40,8 +40,8 @@ import { compactDate, shortCommit } from "../format";
 import type {
   DetailResponse,
   EvolutionSummary,
-  SnapshotArtifact,
   RepositorySummary,
+  SnapshotArtifact,
 } from "../types";
 
 export function RepositoryPage() {
@@ -119,11 +119,6 @@ function RepositoryOverviewPage({
   const latest = evolutions[0];
   const stats = buildRepositoryStats(evolutions, details);
   const contributors = buildContributors(evolutions);
-  const repoIndex = Math.max(
-    0,
-    repositories.findIndex((row) => row.name === repository.name),
-  );
-  const tone = REPOSITORY_TONES[repoIndex % REPOSITORY_TONES.length];
   const [activeTab, setActiveTab] = useState<RepositoryTab>("overview");
   const [description, setDescription] = useRepositoryDescription(repository);
   const tabs = repositoryTabs(evolutions.length);
@@ -134,10 +129,8 @@ function RepositoryOverviewPage({
         <div className="min-w-0">
           <section className="bg-white px-4 pt-7 sm:px-6 lg:px-8">
             <div className="flex min-w-0 flex-col gap-5 sm:flex-row sm:items-start">
-              <div
-                className={`flex size-[70px] shrink-0 items-center justify-center rounded-lg ${tone.soft} ${tone.text} ring-1 ring-inset ring-current/10`}
-              >
-                <BookOpen className="size-9" />
+              <div className="flex size-[70px] shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white ring-1 ring-inset ring-slate-200">
+                <img src="/eve.svg" alt="" className="size-full object-cover" />
               </div>
               <div className="min-w-0 pb-6">
                 <div className="flex min-w-0 flex-wrap items-center gap-3">
@@ -253,7 +246,9 @@ function useRepositoryDescription(repository: RepositorySummary) {
     () => `eve:repository-description:${repository.name}`,
     [repository.name],
   );
-  const [description, setDescription] = useState(DEFAULT_REPOSITORY_DESCRIPTION);
+  const [description, setDescription] = useState(
+    DEFAULT_REPOSITORY_DESCRIPTION,
+  );
 
   useEffect(() => {
     const saved = window.localStorage.getItem(storageKey);
@@ -294,11 +289,12 @@ function RepositoryTabPanel({
     >
       {activeTab === "overview" ? (
         <div className="space-y-5">
+          <LatestSnapshotCard latest={latest} />
+
           <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_300px] 2xl:grid-cols-[minmax(0,1fr)_326px]">
             <ReadmePanel repository={repository} />
             <EvolutionTimelineCard evolutions={evolutions} />
           </div>
-          <LatestSnapshotCard latest={latest} />
         </div>
       ) : null}
 
@@ -458,12 +454,12 @@ function LatestSnapshotCard({ latest }: { latest?: EvolutionSummary }) {
             />
           </div>
         </div>
-        <Button asChild variant="ghost" className="shrink-0 gap-2">
+        {/* <Button asChild variant="ghost" className="shrink-0 gap-2">
           <Link to="/snapshots/$id" params={{ id: latest.id }}>
             View snapshot
             <ArrowRight className="size-4" />
           </Link>
-        </Button>
+        </Button> */}
       </div>
     </section>
   );
@@ -564,7 +560,6 @@ function RecentActivityCard({
                   <StatusBadge status={evolution.status} />
                 </span>
                 <span className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                  <span className="font-mono">{evolution.id}</span>
                   <span>{evolution.type}</span>
                   {evolution.snapshot ? (
                     <span className="font-mono">
@@ -592,7 +587,8 @@ function ArtifactsPanel({
   repository: RepositorySummary;
   details: DetailResponse[];
 }) {
-  const [selectedArtifact, setSelectedArtifact] = useState<ArtifactCardRow | null>(null);
+  const [selectedArtifact, setSelectedArtifact] =
+    useState<ArtifactCardRow | null>(null);
   const artifacts: ArtifactCardRow[] = details.flatMap((detail) =>
     detail.snapshot.artifacts.map((artifact, index) => ({
       id: `${detail.snapshot.id}-${index}`,
@@ -603,7 +599,10 @@ function ArtifactsPanel({
         artifact.url ||
         artifact.uri ||
         "Artifact",
-      href: artifact.url || artifact.uri || localArtifactHref(repository.name, artifact.path),
+      href:
+        artifact.url ||
+        artifact.uri ||
+        localArtifactHref(repository.name, artifact.path),
       imageSrc: artifactImageSrc(repository.name, artifact),
       source: artifact.path || artifact.url || artifact.uri,
       isImage: isImageArtifact(artifact),
@@ -784,9 +783,15 @@ function RepositoryFactsCard({
                 type="button"
                 className="inline-flex size-7 items-center justify-center rounded-md text-slate-500 hover:bg-slate-50 hover:text-slate-950"
                 onClick={() => setEditing((value) => !value)}
-                aria-label={editing ? "Cancel description edit" : "Edit description"}
+                aria-label={
+                  editing ? "Cancel description edit" : "Edit description"
+                }
               >
-                {editing ? <X className="size-3.5" /> : <Edit3 className="size-3.5" />}
+                {editing ? (
+                  <X className="size-3.5" />
+                ) : (
+                  <Edit3 className="size-3.5" />
+                )}
               </button>
             </div>
             {editing ? (

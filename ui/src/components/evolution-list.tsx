@@ -35,7 +35,7 @@ export function EvolutionList({ evolutions, selectedId }: { evolutions: Evolutio
               key={evolution.id}
               to="/snapshots/$id"
               params={{ id: evolution.id }}
-              className={`grid grid-cols-[24px_minmax(0,1fr)_auto] items-center gap-3 rounded-lg px-3 py-4 ${
+              className={`grid grid-cols-[24px_minmax(0,1fr)] items-center gap-3 rounded-lg px-3 py-4 ${
                 selectedId === evolution.id ? 'bg-blue-50 shadow-sm ring-1 ring-blue-100' : 'hover:bg-slate-50'
               }`}
             >
@@ -44,7 +44,6 @@ export function EvolutionList({ evolutions, selectedId }: { evolutions: Evolutio
                 <span className="block truncate font-semibold">{evolution.title || 'Untitled Snapshot'}</span>
                 <span className="block text-sm text-muted-foreground">{compactDate(evolution.updatedAt || evolution.createdAt)}</span>
               </span>
-              <span className="font-mono text-sm text-muted-foreground">#{evolution.id.replace('EV-', '')}</span>
             </Link>
           ))}
         </div>

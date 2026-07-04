@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Box, CheckCircle2, GitCommitHorizontal } from "lucide-react";
-import { compactDate, shortCommit } from "../format";
+import { compactDate } from "../format";
 import { cn } from "../lib/utils";
 import type { EvolutionSummary } from "../types";
 
@@ -134,23 +134,15 @@ function SnapshotTimelineContent({
         ) : null}
       </div>
       <div className="min-w-0">
-        <div className="flex items-center justify-between gap-3">
-          <p className="truncate font-medium">
+        <div>
+          <p className="font-medium leading-5 text-pretty">
             {evolution.title || "Untitled Snapshot"}
           </p>
-          <code
-            className={cn(
-              "shrink-0 font-mono text-xs tabular-nums text-muted-foreground",
-              isSelected && "text-blue-700",
-            )}
-          >
-            {evolution.id}
-          </code>
         </div>
         <div className="mt-1 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-          <code className="truncate rounded-md bg-secondary px-1.5 py-0.5 font-mono tabular-nums">
+          {/* <code className="truncate rounded-md bg-secondary px-1.5 py-0.5 font-mono tabular-nums">
             {shortCommit(evolution.snapshot)}
-          </code>
+          </code> */}
           <span className="shrink-0">
             {compactDate(evolution.updatedAt || evolution.createdAt)}
           </span>

@@ -7,12 +7,18 @@ import { TopBar } from './top-bar';
 
 export function AppShell() {
   const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const openSearch = (query = '') => {
+    setSearchQuery(query);
+    setSearchOpen(true);
+  };
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
-        setSearchOpen(true);
+        openSearch();
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -21,12 +27,12 @@ export function AppShell() {
 
   return (
     <div className="app-backdrop min-h-dvh text-[13px] text-foreground md:pl-[240px]">
-      <Sidebar />
+      <Sidebar onSearch={openSearch} />
       <div className="min-w-0">
-        <TopBar onSearch={() => setSearchOpen(true)} />
+        <TopBar onSearch={() => openSearch()} />
         <Outlet />
       </div>
-      <SearchCommand open={searchOpen} onOpenChange={setSearchOpen} />
+      <SearchCommand open={searchOpen} initialQuery={searchQuery} onOpenChange={setSearchOpen} />
       <Toaster position="bottom-right" richColors closeButton />
     </div>
   );

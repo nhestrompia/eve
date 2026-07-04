@@ -191,24 +191,50 @@ async function snapshotDetail(id: string): Promise<DetailResponse> {
 
 async function snapshot(id: string): Promise<SnapshotResponse> {
   const detail = await snapshotDetail(id);
-  const imageArtifacts = detail.snapshot.artifacts.filter((artifact) => artifact.type === 'screenshot' && (artifact.url || artifact.path));
+  const repoId = await defaultRepoId();
+  const imageArtifacts = detail.snapshot.artifacts.filter(isImageArtifact);
   return {
     id: detail.snapshot.id,
     title: detail.snapshot.title,
     outcome: detail.snapshot.summary,
     behavior: detail.evolution.behavior,
     verification: detail.evolution.verification,
-    repository: '',
+    repository: repoId,
     commit: detail.snapshot.implementation.gitState,
     checkoutCommand: `eve checkout ${detail.snapshot.id}`,
-    snapshotImages: imageArtifacts.map((artifact, index) => ({
-      id: artifact.path || artifact.url || `artifact-${index}`,
-      title: artifact.description || artifact.path || artifact.url || `Artifact ${index + 1}`,
-      url: artifact.url || `/${artifact.path}`,
-      mimeType: artifact.mimeType || 'image/png',
-      source: artifact.path || artifact.url
-    }))
+    snapshotImages: imageArtifacts
+      .map((artifact, index) => ({
+        id: artifact.path || artifact.url || artifact.uri || `artifact-${index}`,
+        title: artifact.description || artifact.path || artifact.url || artifact.uri || `Artifact ${index + 1}`,
+        url: artifact.url || artifact.uri || localArtifactHref(repoId, artifact.path) || '',
+        mimeType: artifact.mimeType || 'image/png',
+        source: artifact.path || artifact.url || artifact.uri
+      }))
+      .filter((image) => image.url)
   };
+}
+
+function isImageArtifact(artifact: { type: string; path?: string; url?: string; uri?: string; mimeType?: string }) {
+  const source = artifact.path || artifact.url || artifact.uri || '';
+  return (
+    artifact.mimeType?.startsWith('image/') ||
+    artifact.type.toLowerCase().includes('screenshot') ||
+    artifact.type.toLowerCase().includes('image') ||
+    /\.(png|jpe?g|gif|webp|avif|svg)$/i.test(source)
+  );
+}
+
+function localArtifactHref(repo: string, artifactPath?: string) {
+  if (!artifactPath) return undefined;
+  if (/^https?:\/\//i.test(artifactPath)) return artifactPath;
+  const normalized = artifactPath.replace(/^\/+/, '');
+  const prefix = '.eve/artifacts/';
+  if (!normalized.startsWith(prefix)) return undefined;
+  const relative = normalized.slice(prefix.length);
+  return `/api/repos/${encodeURIComponent(repo)}/artifacts/${relative
+    .split('/')
+    .map(encodeURIComponent)
+    .join('/')}`;
 }
 
 export const api = {
