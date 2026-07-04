@@ -293,12 +293,12 @@ function RepositoryTabPanel({
       className="px-4 py-6 sm:px-6 lg:px-8"
     >
       {activeTab === "overview" ? (
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_300px] 2xl:grid-cols-[minmax(0,1fr)_326px]">
-          <div className="min-w-0 space-y-5">
+        <div className="space-y-5">
+          <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_300px] 2xl:grid-cols-[minmax(0,1fr)_326px]">
             <ReadmePanel repository={repository} />
-            <LatestSnapshotCard latest={latest} />
+            <EvolutionTimelineCard evolutions={evolutions} />
           </div>
-          <EvolutionTimelineCard evolutions={evolutions} />
+          <LatestSnapshotCard latest={latest} />
         </div>
       ) : null}
 
@@ -362,7 +362,7 @@ function ReadmePanel({ repository }: { repository: RepositorySummary }) {
   };
 
   return (
-    <section className="overflow-hidden rounded-lg bg-white shadow-[0_0_0_1px_rgba(15,23,42,0.1)]">
+    <section className="overflow-hidden rounded-lg bg-white shadow-[0_0_0_1px_rgba(15,23,42,0.1)] xl:flex xl:h-[576px] xl:flex-col">
       <div className="flex min-h-14 items-center justify-between gap-3 border-b px-5">
         <h2 className="flex min-w-0 items-center gap-2 text-sm font-semibold">
           <FileText className="size-4 text-slate-500" />
@@ -390,7 +390,7 @@ function ReadmePanel({ repository }: { repository: RepositorySummary }) {
       </div>
       <div
         id="readme-raw"
-        className="max-h-[430px] overflow-y-auto px-5 py-5 sm:px-6 sm:py-6"
+        className="max-h-[520px] overflow-y-auto px-5 py-5 sm:px-6 sm:py-6 xl:min-h-0 xl:flex-1"
       >
         {repository.readme ? (
           <MarkdownViewer
@@ -477,7 +477,11 @@ function EvolutionTimelineCard({
   spacious?: boolean;
 }) {
   return (
-    <section className="rounded-lg bg-white p-5 shadow-[0_0_0_1px_rgba(15,23,42,0.1)]">
+    <section
+      className={`rounded-lg bg-white p-5 shadow-[0_0_0_1px_rgba(15,23,42,0.1)] ${
+        spacious ? "" : "xl:flex xl:h-[576px] xl:flex-col"
+      }`}
+    >
       <div className="mb-5 flex items-center gap-2">
         <h2 className="text-base font-semibold">Snapshot timeline</h2>
       </div>
@@ -488,7 +492,7 @@ function EvolutionTimelineCard({
       ) : (
         <div
           className={`relative space-y-0 overflow-y-auto overscroll-contain pl-8 pr-1 ${
-            spacious ? "max-h-[680px]" : "max-h-[430px]"
+            spacious ? "max-h-[680px]" : "max-h-[520px] xl:min-h-0 xl:flex-1"
           }`}
         >
           {evolutions.map((evolution, index) => (
@@ -592,8 +596,6 @@ function ArtifactsPanel({
   const artifacts: ArtifactCardRow[] = details.flatMap((detail) =>
     detail.snapshot.artifacts.map((artifact, index) => ({
       id: `${detail.snapshot.id}-${index}`,
-      snapshotId: detail.snapshot.id,
-      snapshotTitle: detail.snapshot.title,
       type: artifact.type,
       description:
         artifact.description ||
@@ -676,18 +678,6 @@ function ArtifactsPanel({
                   </a>
                 ) : null}
               </div>
-              <div className="flex min-w-0 flex-wrap gap-x-3 gap-y-1 px-4 pb-4 text-xs text-muted-foreground">
-                <Link
-                  to="/snapshots/$id"
-                  params={{ id: artifact.snapshotId }}
-                  className="font-medium text-blue-700 hover:underline"
-                >
-                  {artifact.snapshotTitle}
-                </Link>
-                {artifact.source ? (
-                  <span className="truncate font-mono">{artifact.source}</span>
-                ) : null}
-              </div>
             </article>
           ))}
         </div>
@@ -726,8 +716,6 @@ function ArtifactsPanel({
 
 type ArtifactCardRow = {
   id: string;
-  snapshotId: string;
-  snapshotTitle: string;
   type: string;
   description: string;
   href?: string;
