@@ -240,6 +240,8 @@ func (server runtimeServer) handleRepoRoutes(w http.ResponseWriter, r *http.Requ
 		writeJSON(w, http.StatusOK, detail)
 	case len(parts) == 2 && parts[1] == "open-editor" && r.Method == http.MethodPost:
 		writeJSON(w, http.StatusOK, openRepositoryInEditor(server.repo))
+	case len(parts) >= 3 && parts[1] == "artifacts" && r.Method == http.MethodGet:
+		server.handleArtifactFile(w, r, strings.Join(parts[2:], "/"))
 	case len(parts) == 2 && parts[1] == "snapshots" && r.Method == http.MethodGet:
 		server.handleSnapshots(w, r)
 	case len(parts) == 3 && parts[1] == "snapshots" && r.Method == http.MethodGet:
@@ -253,6 +255,33 @@ func (server runtimeServer) handleRepoRoutes(w http.ResponseWriter, r *http.Requ
 	default:
 		writeAPIError(w, http.StatusNotFound, fmt.Errorf("repo route not found"))
 	}
+}
+
+func (server runtimeServer) handleArtifactFile(w http.ResponseWriter, r *http.Request, artifactPath string) {
+	if artifactPath == "" {
+		writeAPIError(w, http.StatusNotFound, fmt.Errorf("artifact not found"))
+		return
+	}
+	artifactRoot, err := filepath.Abs(server.repo.artifactsDir())
+	if err != nil {
+		writeAPIError(w, http.StatusInternalServerError, err)
+		return
+	}
+	cleanPath := strings.TrimPrefix(path.Clean("/"+artifactPath), "/")
+	target, err := filepath.Abs(filepath.Join(artifactRoot, filepath.FromSlash(cleanPath)))
+	if err != nil {
+		writeAPIError(w, http.StatusBadRequest, err)
+		return
+	}
+	if target != artifactRoot && !strings.HasPrefix(target, artifactRoot+string(os.PathSeparator)) {
+		writeAPIError(w, http.StatusBadRequest, fmt.Errorf("artifact path escapes repository artifacts directory"))
+		return
+	}
+	if info, err := os.Stat(target); err != nil || info.IsDir() {
+		writeAPIError(w, http.StatusNotFound, fmt.Errorf("artifact not found"))
+		return
+	}
+	http.ServeFile(w, r, target)
 }
 
 func (server runtimeServer) handleSnapshots(w http.ResponseWriter, r *http.Request) {

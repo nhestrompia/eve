@@ -7,16 +7,20 @@ import {
   Calendar,
   Code2,
   Copy,
+  Edit3,
   ExternalLink,
   FileText,
   GitBranch,
   HardDrive,
   History,
+  Image as ImageIcon,
   Package,
+  Save,
   Sparkles,
+  X,
   type LucideIcon,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 import { ErrorState } from "../components/error-state";
 import { EvolutionShell } from "../components/evolution-shell";
@@ -25,10 +29,18 @@ import { MarkdownViewer } from "../components/markdown-viewer";
 import { StatusBadge } from "../components/status-badge";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
 import { compactDate, shortCommit } from "../format";
 import type {
   DetailResponse,
   EvolutionSummary,
+  SnapshotArtifact,
   RepositorySummary,
 } from "../types";
 
@@ -113,13 +125,14 @@ function RepositoryOverviewPage({
   );
   const tone = REPOSITORY_TONES[repoIndex % REPOSITORY_TONES.length];
   const [activeTab, setActiveTab] = useState<RepositoryTab>("overview");
+  const [description, setDescription] = useRepositoryDescription(repository);
   const tabs = repositoryTabs(evolutions.length);
 
   return (
     <main className="min-h-[calc(100dvh-76px)] min-w-0 bg-slate-50/45">
       <div className="grid min-h-[calc(100dvh-76px)] grid-cols-1 xl:grid-cols-[minmax(0,1fr)_350px]">
         <div className="min-w-0">
-          <section className="border-b bg-white px-4 pt-7 sm:px-6 lg:px-8">
+          <section className="bg-white px-4 pt-7 sm:px-6 lg:px-8">
             <div className="flex min-w-0 flex-col gap-5 sm:flex-row sm:items-start">
               <div
                 className={`flex size-[70px] shrink-0 items-center justify-center rounded-lg ${tone.soft} ${tone.text} ring-1 ring-inset ring-current/10`}
@@ -138,8 +151,7 @@ function RepositoryOverviewPage({
                   </Badge>
                 </div>
                 <p className="mt-2 max-w-[62ch] text-sm leading-6 text-muted-foreground">
-                  Track product states, snapshots, sessions, and verification
-                  recorded for this repository.
+                  {description}
                 </p>
                 <div className="mt-5 flex flex-wrap gap-2">
                   <MetaPill
@@ -173,10 +185,10 @@ function RepositoryOverviewPage({
                   id={`repository-tab-trigger-${tab.id}`}
                   data-state={activeTab === tab.id ? "active" : "inactive"}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`relative -mb-px inline-flex min-h-12 shrink-0 items-center gap-2 rounded-t-lg border-b-2 px-3 text-left transition-colors hover:bg-slate-50 hover:text-foreground data-[state=active]:bg-white data-[state=active]:shadow-[inset_0_-2px_0_rgb(37,99,235)] ${
+                  className={`relative inline-flex min-h-12 shrink-0 items-center gap-2 rounded-t-lg px-3 text-left transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:rounded-full hover:bg-slate-50 hover:text-foreground data-[state=active]:bg-white data-[state=active]:after:bg-blue-600 ${
                     activeTab === tab.id
-                      ? "border-blue-600 text-blue-700"
-                      : "border-transparent"
+                      ? "text-blue-700"
+                      : "text-muted-foreground after:bg-transparent"
                   }`}
                 >
                   <span>{tab.label}</span>
@@ -207,6 +219,8 @@ function RepositoryOverviewPage({
 
         <RepositoryRightRail
           repository={repository}
+          description={description}
+          onDescriptionChange={setDescription}
           stats={stats}
           contributors={contributors}
         />
@@ -233,6 +247,30 @@ function repositoryTabs(
     { id: "settings", label: "Settings" },
   ];
 }
+
+function useRepositoryDescription(repository: RepositorySummary) {
+  const storageKey = useMemo(
+    () => `eve:repository-description:${repository.name}`,
+    [repository.name],
+  );
+  const [description, setDescription] = useState(DEFAULT_REPOSITORY_DESCRIPTION);
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem(storageKey);
+    setDescription(saved?.trim() || DEFAULT_REPOSITORY_DESCRIPTION);
+  }, [storageKey]);
+
+  const saveDescription = (value: string) => {
+    const next = value.trim() || DEFAULT_REPOSITORY_DESCRIPTION;
+    window.localStorage.setItem(storageKey, next);
+    setDescription(next);
+  };
+
+  return [description, saveDescription] as const;
+}
+
+const DEFAULT_REPOSITORY_DESCRIPTION =
+  "Track product states, snapshots, sessions, and verification recorded for this repository.";
 
 function RepositoryTabPanel({
   activeTab,
@@ -275,7 +313,9 @@ function RepositoryTabPanel({
         </div>
       ) : null}
 
-      {activeTab === "artifacts" ? <ArtifactsPanel details={details} /> : null}
+      {activeTab === "artifacts" ? (
+        <ArtifactsPanel repository={repository} details={details} />
+      ) : null}
 
       {activeTab === "settings" ? (
         <div className="grid grid-cols-1 gap-5">
@@ -288,16 +328,24 @@ function RepositoryTabPanel({
 
 function RepositoryRightRail({
   repository,
+  description,
+  onDescriptionChange,
   stats,
   contributors,
 }: {
   repository: RepositorySummary;
+  description: string;
+  onDescriptionChange: (value: string) => void;
   stats: RepositoryStats;
   contributors: ContributorRow[];
 }) {
   return (
     <aside className="space-y-4 border-t px-4 py-6 sm:px-6 lg:px-8 xl:border-l xl:border-t-0 xl:px-6 xl:py-7">
-      <RepositoryFactsCard repository={repository} />
+      <RepositoryFactsCard
+        repository={repository}
+        description={description}
+        onDescriptionChange={onDescriptionChange}
+      />
       <SnapshotSummaryCard stats={stats} />
       <ContributorCard rows={contributors} />
       <RepositoryLinksCard repository={repository} />
@@ -306,6 +354,13 @@ function RepositoryRightRail({
 }
 
 function ReadmePanel({ repository }: { repository: RepositorySummary }) {
+  const [copied, setCopied] = useState(false);
+  const copyReadme = async () => {
+    await navigator.clipboard.writeText(repository.readme || "");
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1200);
+  };
+
   return (
     <section className="overflow-hidden rounded-lg bg-white shadow-[0_0_0_1px_rgba(15,23,42,0.1)]">
       <div className="flex min-h-14 items-center justify-between gap-3 border-b px-5">
@@ -313,12 +368,25 @@ function ReadmePanel({ repository }: { repository: RepositorySummary }) {
           <FileText className="size-4 text-slate-500" />
           README.md
         </h2>
-        <Button asChild variant="outline" size="sm" className="gap-2">
-          <a href="#readme-raw">
-            View raw
-            <ExternalLink className="size-3.5" />
-          </a>
-        </Button>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            disabled={!repository.readme}
+            onClick={copyReadme}
+          >
+            <Copy className="size-3.5" />
+            {copied ? "Copied" : "Copy"}
+          </Button>
+          <Button asChild variant="outline" size="sm" className="gap-2">
+            <a href="#readme-raw">
+              View raw
+              <ExternalLink className="size-3.5" />
+            </a>
+          </Button>
+        </div>
       </div>
       <div
         id="readme-raw"
@@ -423,14 +491,16 @@ function EvolutionTimelineCard({
             spacious ? "max-h-[680px]" : "max-h-[430px]"
           }`}
         >
-          <span className="absolute bottom-4 left-[14px] top-2 w-px bg-blue-600" />
-          {evolutions.map((evolution) => (
+          {evolutions.map((evolution, index) => (
             <Link
               key={evolution.id}
               to="/snapshots/$id"
               params={{ id: evolution.id }}
               className="group relative block pb-7 last:pb-0"
             >
+              {index < evolutions.length - 1 ? (
+                <span className="absolute -left-[20px] top-5 h-full w-px bg-blue-600" />
+              ) : null}
               <span className="absolute -left-[26px] top-1 flex size-3.5 rounded-full border-2 border-blue-600 bg-white ring-4 ring-blue-50" />
               <span className="flex min-w-0 flex-wrap items-start justify-between gap-3">
                 <strong className="max-w-[26ch] text-sm font-semibold leading-5 text-balance group-hover:text-blue-700">
@@ -511,8 +581,15 @@ function RecentActivityCard({
   );
 }
 
-function ArtifactsPanel({ details }: { details: DetailResponse[] }) {
-  const artifacts = details.flatMap((detail) =>
+function ArtifactsPanel({
+  repository,
+  details,
+}: {
+  repository: RepositorySummary;
+  details: DetailResponse[];
+}) {
+  const [selectedArtifact, setSelectedArtifact] = useState<ArtifactCardRow | null>(null);
+  const artifacts: ArtifactCardRow[] = details.flatMap((detail) =>
     detail.snapshot.artifacts.map((artifact, index) => ({
       id: `${detail.snapshot.id}-${index}`,
       snapshotId: detail.snapshot.id,
@@ -524,11 +601,10 @@ function ArtifactsPanel({ details }: { details: DetailResponse[] }) {
         artifact.url ||
         artifact.uri ||
         "Artifact",
-      href:
-        artifact.url ||
-        artifact.uri ||
-        (artifact.path ? `/${artifact.path}` : undefined),
+      href: artifact.url || artifact.uri || localArtifactHref(repository.name, artifact.path),
+      imageSrc: artifactImageSrc(repository.name, artifact),
       source: artifact.path || artifact.url || artifact.uri,
+      isImage: isImageArtifact(artifact),
     })),
   );
 
@@ -549,9 +625,28 @@ function ArtifactsPanel({ details }: { details: DetailResponse[] }) {
           {artifacts.map((artifact) => (
             <article
               key={artifact.id}
-              className="rounded-lg border bg-slate-50/70 p-4"
+              className="overflow-hidden rounded-lg border bg-slate-50/70"
             >
-              <div className="flex items-start justify-between gap-4">
+              {artifact.isImage && artifact.imageSrc ? (
+                <button
+                  type="button"
+                  className="block aspect-video w-full overflow-hidden bg-white text-left"
+                  onClick={() => setSelectedArtifact(artifact)}
+                  aria-label={`Open ${artifact.description}`}
+                >
+                  <img
+                    src={artifact.imageSrc}
+                    alt={artifact.description}
+                    className="size-full object-cover transition-transform duration-150 hover:scale-[1.02]"
+                    loading="lazy"
+                  />
+                </button>
+              ) : (
+                <div className="flex aspect-video items-center justify-center bg-white text-slate-400">
+                  <ImageIcon className="size-8" />
+                </div>
+              )}
+              <div className="flex items-start justify-between gap-4 p-4">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold capitalize">
                     {artifact.type}
@@ -560,7 +655,16 @@ function ArtifactsPanel({ details }: { details: DetailResponse[] }) {
                     {artifact.description}
                   </p>
                 </div>
-                {artifact.href ? (
+                {artifact.isImage ? (
+                  <button
+                    type="button"
+                    className="inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-white text-slate-600 shadow-[0_0_0_1px_rgba(15,23,42,0.1)] hover:text-slate-950"
+                    aria-label="Preview artifact"
+                    onClick={() => setSelectedArtifact(artifact)}
+                  >
+                    <ExternalLink className="size-4" />
+                  </button>
+                ) : artifact.href ? (
                   <a
                     href={artifact.href}
                     target="_blank"
@@ -572,7 +676,7 @@ function ArtifactsPanel({ details }: { details: DetailResponse[] }) {
                   </a>
                 ) : null}
               </div>
-              <div className="mt-4 flex min-w-0 flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              <div className="flex min-w-0 flex-wrap gap-x-3 gap-y-1 px-4 pb-4 text-xs text-muted-foreground">
                 <Link
                   to="/snapshots/$id"
                   params={{ id: artifact.snapshotId }}
@@ -588,28 +692,155 @@ function ArtifactsPanel({ details }: { details: DetailResponse[] }) {
           ))}
         </div>
       )}
+      <Dialog
+        open={Boolean(selectedArtifact)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedArtifact(null);
+        }}
+      >
+        <DialogContent className="max-w-[min(980px,calc(100vw-24px))] p-0">
+          {selectedArtifact ? (
+            <div>
+              <DialogHeader className="border-b px-5 py-4">
+                <DialogTitle className="text-base">
+                  {selectedArtifact.description}
+                </DialogTitle>
+                <DialogDescription className="truncate text-xs">
+                  {selectedArtifact.source}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="max-h-[78dvh] overflow-auto bg-slate-950 p-3">
+                <img
+                  src={selectedArtifact.imageSrc ?? ""}
+                  alt={selectedArtifact.description}
+                  className="mx-auto max-h-[72dvh] w-auto max-w-full rounded-md object-contain"
+                />
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
 
+type ArtifactCardRow = {
+  id: string;
+  snapshotId: string;
+  snapshotTitle: string;
+  type: string;
+  description: string;
+  href?: string;
+  imageSrc?: string;
+  source?: string;
+  isImage: boolean;
+};
+
+function isImageArtifact(artifact: SnapshotArtifact) {
+  const source = artifact.path || artifact.url || artifact.uri || "";
+  const lower = source.toLowerCase();
+  return (
+    artifact.mimeType?.startsWith("image/") ||
+    artifact.type.toLowerCase().includes("screenshot") ||
+    artifact.type.toLowerCase().includes("image") ||
+    /\.(png|jpe?g|gif|webp|avif|svg)$/i.test(lower)
+  );
+}
+
+function artifactImageSrc(repo: string, artifact: SnapshotArtifact) {
+  if (!isImageArtifact(artifact)) return undefined;
+  return artifact.url || artifact.uri || localArtifactHref(repo, artifact.path);
+}
+
+function localArtifactHref(repo: string, artifactPath?: string) {
+  if (!artifactPath) return undefined;
+  if (/^https?:\/\//i.test(artifactPath)) return artifactPath;
+  const normalized = artifactPath.replace(/^\/+/, "");
+  const prefix = ".eve/artifacts/";
+  if (!normalized.startsWith(prefix)) return undefined;
+  const relative = normalized.slice(prefix.length);
+  return `/api/repos/${encodeURIComponent(repo)}/artifacts/${relative
+    .split("/")
+    .map(encodeURIComponent)
+    .join("/")}`;
+}
+
 function RepositoryFactsCard({
   repository,
+  description,
+  onDescriptionChange,
 }: {
   repository: RepositorySummary;
+  description: string;
+  onDescriptionChange: (value: string) => void;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(description);
+  useEffect(() => setDraft(description), [description]);
   const rows = [
-    [
-      "Description",
-      "Track product states, snapshots, sessions, and verification recorded for this repository.",
-      Box,
-    ],
     ["Language", repository.primaryLanguage || "Unknown", Code2],
     ["Size", formatBytes(repository.sizeBytes), HardDrive],
     ["Created", compactDate(repository.createdAt), Calendar],
   ] as const;
   return (
     <RailCard title="Repository overview">
-      <div className="space-y-4">
+      <div className="space-y-5">
+        <div className="grid grid-cols-[18px_minmax(0,1fr)] gap-3">
+          <Box className="mt-0.5 size-4 text-slate-500" />
+          <div className="min-w-0">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-medium text-muted-foreground">
+                Description
+              </p>
+              <button
+                type="button"
+                className="inline-flex size-7 items-center justify-center rounded-md text-slate-500 hover:bg-slate-50 hover:text-slate-950"
+                onClick={() => setEditing((value) => !value)}
+                aria-label={editing ? "Cancel description edit" : "Edit description"}
+              >
+                {editing ? <X className="size-3.5" /> : <Edit3 className="size-3.5" />}
+              </button>
+            </div>
+            {editing ? (
+              <form
+                className="mt-2 space-y-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const value = draft.trim() || DEFAULT_REPOSITORY_DESCRIPTION;
+                  onDescriptionChange(value);
+                  setEditing(false);
+                }}
+              >
+                <textarea
+                  value={draft}
+                  onChange={(event) => setDraft(event.target.value)}
+                  className="min-h-24 w-full resize-y rounded-md border bg-white px-3 py-2 text-sm leading-5 text-slate-700 outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setDraft(description);
+                      setEditing(false);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" size="sm" className="gap-2">
+                    <Save className="size-3.5" />
+                    Save
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <p className="mt-1 text-sm leading-5 text-slate-700 text-pretty">
+                {description}
+              </p>
+            )}
+          </div>
+        </div>
         {rows.map(([label, value, Icon]) => (
           <div
             key={label}
@@ -643,7 +874,7 @@ function SnapshotSummaryCard({ stats }: { stats: RepositoryStats }) {
     ["Risks", stats.risks],
   ] as const;
   return (
-    <RailCard title="Snapshot summary" eyebrow="Last 12 months">
+    <RailCard title="Snapshot summary">
       <div className="grid grid-cols-2 gap-2.5">
         {tiles.map(([label, value]) => (
           <div
