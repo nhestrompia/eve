@@ -159,7 +159,7 @@ function RepositoryOverviewPage({
               </div>
             </div>
             <div
-              className="flex gap-7 overflow-x-auto text-sm font-medium text-muted-foreground"
+              className="flex gap-7 overflow-x-auto overflow-y-hidden text-sm font-medium text-muted-foreground"
               role="tablist"
               aria-label="Repository sections"
             >
@@ -255,26 +255,17 @@ function RepositoryTabPanel({
       className="px-4 py-6 sm:px-6 lg:px-8"
     >
       {activeTab === "overview" ? (
-        <div className="grid grid-cols-1 gap-5 2xl:grid-cols-[minmax(0,1fr)_326px]">
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_300px] 2xl:grid-cols-[minmax(0,1fr)_326px]">
           <div className="min-w-0 space-y-5">
             <ReadmePanel repository={repository} />
             <LatestSnapshotCard latest={latest} />
           </div>
           <EvolutionTimelineCard evolutions={evolutions} />
-          <div className="2xl:col-span-2">
-            <RecentActivityCard evolutions={evolutions} />
-          </div>
         </div>
       ) : null}
 
       {activeTab === "snapshots" ? (
-        <div className="grid grid-cols-1 gap-5 2xl:grid-cols-[minmax(0,1fr)_326px]">
-          <div className="min-w-0 space-y-5">
-            <LatestSnapshotCard latest={latest} />
-            <RecentActivityCard evolutions={evolutions} title="All snapshots" />
-          </div>
-          <EvolutionTimelineCard evolutions={evolutions} />
-        </div>
+        <EvolutionTimelineCard evolutions={evolutions} spacious />
       ) : null}
 
       {activeTab === "activity" ? (
@@ -412,8 +403,10 @@ function LatestSnapshotCard({ latest }: { latest?: EvolutionSummary }) {
 
 function EvolutionTimelineCard({
   evolutions,
+  spacious = false,
 }: {
   evolutions: EvolutionSummary[];
+  spacious?: boolean;
 }) {
   return (
     <section className="rounded-lg bg-white p-5 shadow-[0_0_0_1px_rgba(15,23,42,0.1)]">
@@ -425,9 +418,13 @@ function EvolutionTimelineCard({
           No timeline entries yet.
         </p>
       ) : (
-        <div className="relative space-y-0 pl-8">
+        <div
+          className={`relative space-y-0 overflow-y-auto overscroll-contain pl-8 pr-1 ${
+            spacious ? "max-h-[680px]" : "max-h-[430px]"
+          }`}
+        >
           <span className="absolute bottom-4 left-[14px] top-2 w-px bg-blue-600" />
-          {evolutions.slice(0, 5).map((evolution) => (
+          {evolutions.map((evolution) => (
             <Link
               key={evolution.id}
               to="/snapshots/$id"

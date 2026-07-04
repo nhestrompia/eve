@@ -1,3 +1,5 @@
+import { Check, Copy } from 'lucide-react';
+import { useState } from 'react';
 import { cn } from '../lib/utils';
 
 export function MarkdownViewer({
@@ -18,9 +20,7 @@ export function MarkdownViewer({
     if (line.startsWith('```')) {
       if (inCode) {
         blocks.push(
-          <pre key={`code-${index}`} className="overflow-auto rounded-lg bg-slate-950 p-4 font-mono text-xs text-white">
-            {code.join('\n')}
-          </pre>
+          <CopyableCodeBlock key={`code-${index}`} value={code.join('\n')} />
         );
         code = [];
       }
@@ -41,6 +41,33 @@ export function MarkdownViewer({
   return (
     <div className={cn('space-y-4', surface === 'card' ? 'rounded-lg border bg-white p-8' : '', className)}>
       {blocks}
+    </div>
+  );
+}
+
+function CopyableCodeBlock({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const copyCode = async () => {
+    await navigator.clipboard.writeText(value);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1200);
+  };
+
+  return (
+    <div className="group relative rounded-lg bg-slate-950">
+      <button
+        type="button"
+        className="absolute right-2 top-2 inline-flex h-8 items-center gap-1.5 rounded-md bg-white/10 px-2 text-xs font-medium text-white/80 opacity-100 transition hover:bg-white/15 hover:text-white sm:opacity-0 sm:group-hover:opacity-100"
+        onClick={copyCode}
+        aria-label={copied ? 'Code copied' : 'Copy code'}
+      >
+        {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+        {copied ? 'Copied' : 'Copy'}
+      </button>
+      <pre className="overflow-auto rounded-lg p-4 pr-20 font-mono text-xs text-white">
+        {value}
+      </pre>
     </div>
   );
 }
