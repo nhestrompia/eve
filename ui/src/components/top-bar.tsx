@@ -17,7 +17,14 @@ export function TopBar({ onSearch }: { onSearch: () => void }) {
   const isSnapshotRoute = /^\/snapshots\/[^/]+/.test(state.location.pathname);
   const currentGitState = config.data?.currentGitState;
   const latestGitState = config.data?.latestGitState;
-  const isBehindLatest = Boolean(isSnapshotRoute && currentGitState && latestGitState && currentGitState !== latestGitState);
+  const isLatestSnapshot = Boolean(id && config.data?.latestSnapshot === id);
+  const isBehindLatest = Boolean(
+    isSnapshotRoute &&
+      !isLatestSnapshot &&
+      currentGitState &&
+      latestGitState &&
+      currentGitState !== latestGitState,
+  );
   const repository = useQuery({
     queryKey: ['repository', repo],
     queryFn: () => api.repository(repo ?? ''),

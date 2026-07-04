@@ -59,7 +59,7 @@ export function RepositoryActivityView({
   const stats = buildPlatformStats(evolutions, detailRows);
 
   return (
-    <main className="min-h-[calc(100dvh-76px)] min-w-0 bg-slate-50/35 px-4 py-5 sm:px-6 sm:py-7 lg:px-8 lg:py-8">
+    <main className="min-h-[calc(100dvh-76px)] min-w-0 bg-background px-4 py-5 sm:px-6 sm:py-7 lg:px-8 lg:py-8">
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_350px] xl:gap-7">
         <section className="min-w-0 space-y-7">
           <header className="grid grid-cols-1 items-end gap-7 xl:grid-cols-[minmax(400px,0.8fr)_minmax(0,1.2fr)]">

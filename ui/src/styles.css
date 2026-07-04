@@ -88,8 +88,11 @@
 }
 
 :root.dark-preview .bg-slate-50,
+:root.dark-preview .bg-slate-50\/35,
+:root.dark-preview .bg-slate-50\/45,
 :root.dark-preview .bg-slate-50\/70,
 :root.dark-preview .bg-slate-100,
+:root.dark-preview .bg-slate-200,
 :root.dark-preview .bg-blue-50,
 :root.dark-preview .bg-emerald-50,
 :root.dark-preview .bg-violet-50,
@@ -101,6 +104,11 @@
   background-color: var(--secondary);
 }
 
+:root.dark-preview .bg-white\/10,
+:root.dark-preview .bg-white\/15 {
+  background-color: color-mix(in oklch, var(--foreground) 8%, transparent);
+}
+
 :root.dark-preview .hover\:bg-blue-50:hover {
   color: var(--accent-foreground);
 }
@@ -109,6 +117,8 @@
   color: var(--foreground);
 }
 
+:root.dark-preview .text-slate-200,
+:root.dark-preview .text-slate-300,
 :root.dark-preview .text-slate-400,
 :root.dark-preview .text-slate-700,
 :root.dark-preview .text-slate-600,
@@ -128,6 +138,15 @@
 
 :root.dark-preview .bg-slate-950 {
   background-color: oklch(0.16 0.018 264);
+}
+
+:root.dark-preview .bg-slate-900,
+:root.dark-preview .hover\:bg-slate-900:hover {
+  background-color: oklch(0.19 0.018 264);
+}
+
+:root.dark-preview .bg-slate-800 {
+  background-color: var(--card);
 }
 
 :root.dark-preview .text-white {

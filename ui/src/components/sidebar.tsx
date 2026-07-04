@@ -84,11 +84,8 @@ export function Sidebar({ onSearch }: { onSearch: (query?: string) => void }) {
 
   return (
     <aside className="flex flex-col border-b bg-white/78 md:fixed md:inset-y-0 md:left-0 md:z-30 md:w-[240px] md:overflow-y-auto md:border-b-0 md:border-r">
-      <Link to="/" aria-label="Go to activity" className="flex h-16 items-center gap-3 px-4 transition-opacity hover:opacity-80 md:h-[76px] md:px-7">
-        <div className="flex size-9 items-center justify-center overflow-hidden rounded-lg bg-white shadow-[0_0_0_1px_rgba(15,23,42,0.12)]">
-          <img src="/eve.svg" alt="" className="h-full w-full object-cover" />
-        </div>
-        <span className="text-[26px] font-semibold text-balance">eve</span>
+      <Link to="/" aria-label="Go to activity" className="flex h-16 items-center px-4 transition-opacity hover:opacity-80 md:h-[76px] md:px-7">
+        <img src="/eve.svg" alt="eve" className="h-10 w-[108px] object-contain object-left" />
       </Link>
 
       <form onSubmit={submitSearch} className="hidden px-5 pb-5 md:block">
