@@ -1,13 +1,13 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 6,
-  "latestAt": "2026-07-03T23:22:29Z",
-  "latestSnapshot": "snap_9f27c6b09c394521",
-  "latestTitle": "Dedicated repository overview page",
+  "snapshotCount": 7,
+  "latestAt": "2026-07-04T09:47:50Z",
+  "latestSnapshot": "snap_6089d05d13d79763",
+  "latestTitle": "Tabbed repository sections",
   "branch": "main",
-  "head": "4f8ad76a3b06d372e8d92b0d0b3721b57a40bee6",
+  "head": "ff68fa2b6d9a94bcc07dcc0f0b19aff7bca4bba9",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "4f8ad76a3b06d372e8d92b0d0b3721b57a40bee6"
+  "latestGitState": "ff68fa2b6d9a94bcc07dcc0f0b19aff7bca4bba9"
 }
