@@ -1,4 +1,14 @@
-export function MarkdownViewer({ content }: { content: string }) {
+import { cn } from '../lib/utils';
+
+export function MarkdownViewer({
+  content,
+  className,
+  surface = 'card'
+}: {
+  content: string;
+  className?: string;
+  surface?: 'card' | 'bare';
+}) {
   const lines = content.split(/\r?\n/);
   const blocks: React.ReactNode[] = [];
   let code: string[] = [];
@@ -28,5 +38,9 @@ export function MarkdownViewer({ content }: { content: string }) {
     else if (line.trim() !== '') blocks.push(<p key={index} className="max-w-[76ch] text-pretty">{line}</p>);
   });
 
-  return <div className="space-y-4 rounded-lg border bg-white p-8">{blocks}</div>;
+  return (
+    <div className={cn('space-y-4', surface === 'card' ? 'rounded-lg border bg-white p-8' : '', className)}>
+      {blocks}
+    </div>
+  );
 }

@@ -25,6 +25,7 @@ import type { DetailResponse, EvolutionSummary, RepositorySummary } from '../typ
 import { ErrorState } from '../components/error-state';
 import { EvolutionShell } from '../components/evolution-shell';
 import { LoadingState } from '../components/loading-state';
+import { MarkdownViewer } from '../components/markdown-viewer';
 import { StatusBadge } from '../components/status-badge';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -76,6 +77,8 @@ function RepositoryOverviewPage({
   const contributors = buildContributors(evolutions);
   const repoIndex = Math.max(0, repositories.findIndex((row) => row.name === repository.name));
   const tone = REPOSITORY_TONES[repoIndex % REPOSITORY_TONES.length];
+  const [activeTab, setActiveTab] = useState<RepositoryTab>('overview');
+  const tabs = repositoryTabs(evolutions.length);
 
   return (
     <main className="min-h-[calc(100dvh-76px)] min-w-0 bg-slate-50/45">
@@ -102,43 +105,121 @@ function RepositoryOverviewPage({
             </div>
           </div>
         </div>
-        <nav className="mt-7 flex gap-7 overflow-x-auto text-sm font-medium text-muted-foreground">
-          {[
-            ['Overview', '#overview'],
-            [`Snapshots ${evolutions.length}`, '#snapshots'],
-            ['Activity', '#activity'],
-            ['Artifacts', '#artifacts'],
-            ['Settings', '#links']
-          ].map(([label, href], index) => (
-            <a
-              key={label}
-              href={href}
-              className={`border-b-2 px-0.5 pb-4 transition-colors hover:text-foreground ${index === 0 ? 'border-blue-600 text-blue-700' : 'border-transparent'}`}
+        <div className="mt-7 flex gap-7 overflow-x-auto text-sm font-medium text-muted-foreground" role="tablist" aria-label="Repository sections">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              aria-controls={`repository-tab-${tab.id}`}
+              id={`repository-tab-trigger-${tab.id}`}
+              onClick={() => setActiveTab(tab.id)}
+              className={`border-b-2 px-0.5 pb-4 text-left transition-colors hover:text-foreground ${activeTab === tab.id ? 'border-blue-600 text-blue-700' : 'border-transparent'}`}
             >
-              {label}
-            </a>
+              {tab.label}
+            </button>
           ))}
-        </nav>
+        </div>
       </section>
 
-      <div className="grid grid-cols-1 gap-6 px-4 py-6 sm:px-6 lg:px-8 xl:grid-cols-[minmax(0,1fr)_330px]">
-        <div id="overview" className="grid min-w-0 grid-cols-1 gap-6 2xl:grid-cols-[minmax(0,1.2fr)_minmax(330px,0.8fr)]">
+      <RepositoryTabPanel
+        activeTab={activeTab}
+        repository={repository}
+        latest={latest}
+        evolutions={evolutions}
+        details={details}
+        stats={stats}
+        contributors={contributors}
+      />
+    </main>
+  );
+}
+
+type RepositoryTab = 'overview' | 'snapshots' | 'activity' | 'artifacts' | 'settings';
+
+function repositoryTabs(snapshotCount: number): Array<{ id: RepositoryTab; label: string }> {
+  return [
+    { id: 'overview', label: 'Overview' },
+    { id: 'snapshots', label: `Snapshots ${snapshotCount}` },
+    { id: 'activity', label: 'Activity' },
+    { id: 'artifacts', label: 'Artifacts' },
+    { id: 'settings', label: 'Settings' }
+  ];
+}
+
+function RepositoryTabPanel({
+  activeTab,
+  repository,
+  latest,
+  evolutions,
+  details,
+  stats,
+  contributors
+}: {
+  activeTab: RepositoryTab;
+  repository: RepositorySummary;
+  latest?: EvolutionSummary;
+  evolutions: EvolutionSummary[];
+  details: DetailResponse[];
+  stats: RepositoryStats;
+  contributors: ContributorRow[];
+}) {
+  return (
+    <div
+      id={`repository-tab-${activeTab}`}
+      role="tabpanel"
+      aria-labelledby={`repository-tab-trigger-${activeTab}`}
+      className="px-4 py-6 sm:px-6 lg:px-8"
+    >
+      {activeTab === 'overview' ? (
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_330px]">
           <div className="min-w-0 space-y-5">
             <ReadmePanel repository={repository} />
             <LatestSnapshotCard latest={latest} />
-            <RecentActivityCard evolutions={evolutions} />
           </div>
-          <EvolutionTimelineCard evolutions={evolutions} />
+          <aside className="space-y-5">
+            <RepositoryFactsCard repository={repository} />
+            <SnapshotSummaryCard stats={stats} />
+            <ContributorCard rows={contributors} />
+          </aside>
         </div>
+      ) : null}
 
-        <aside className="space-y-5">
-          <RepositoryFactsCard repository={repository} />
-          <SnapshotSummaryCard stats={stats} />
-          <ContributorCard rows={contributors} />
+      {activeTab === 'snapshots' ? (
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_330px]">
+          <div className="min-w-0 space-y-5">
+            <LatestSnapshotCard latest={latest} />
+            <RecentActivityCard evolutions={evolutions} title="All snapshots" />
+          </div>
+          <aside className="space-y-5">
+            <SnapshotSummaryCard stats={stats} />
+            <EvolutionTimelineCard evolutions={evolutions} />
+          </aside>
+        </div>
+      ) : null}
+
+      {activeTab === 'activity' ? (
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_330px]">
+          <RecentActivityCard evolutions={evolutions} />
+          <aside className="space-y-5">
+            <EvolutionTimelineCard evolutions={evolutions} />
+            <ContributorCard rows={contributors} />
+          </aside>
+        </div>
+      ) : null}
+
+      {activeTab === 'artifacts' ? <ArtifactsPanel details={details} /> : null}
+
+      {activeTab === 'settings' ? (
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_330px]">
           <RepositoryLinksCard repository={repository} />
-        </aside>
-      </div>
-    </main>
+          <aside className="space-y-5">
+            <RepositoryFactsCard repository={repository} />
+          </aside>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -157,52 +238,14 @@ function ReadmePanel({ repository }: { repository: RepositorySummary }) {
           </a>
         </Button>
       </div>
-      <div id="readme-raw" className="px-5 py-5 sm:px-6 sm:py-6">
+      <div id="readme-raw" className="max-h-[560px] overflow-y-auto px-5 py-5 sm:px-6 sm:py-6">
         {repository.readme ? (
-          <MarkdownPreview content={repository.readme} />
+          <MarkdownViewer content={repository.readme} surface="bare" className="pr-2" />
         ) : (
           <p className="text-sm text-muted-foreground">No README found in this repository.</p>
         )}
       </div>
     </section>
-  );
-}
-
-function MarkdownPreview({ content }: { content: string }) {
-  const lines = content.split(/\r?\n/).slice(0, 80);
-  return (
-    <div className="space-y-4 text-sm leading-6 text-slate-800">
-      {lines.map((line, index) => {
-        if (line.startsWith('# ')) {
-          return (
-            <h3 key={index} className="text-2xl font-semibold leading-tight text-slate-950">
-              {line.slice(2)}
-            </h3>
-          );
-        }
-        if (line.startsWith('## ')) {
-          return (
-            <h4 key={index} className="pt-4 text-lg font-semibold leading-tight text-slate-950">
-              {line.slice(3)}
-            </h4>
-          );
-        }
-        if (line.startsWith('- ')) {
-          return (
-            <p key={index} className="pl-3 font-mono text-xs text-muted-foreground">
-              {line}
-            </p>
-          );
-        }
-        if (line.startsWith('```')) return null;
-        if (!line.trim()) return null;
-        return (
-          <p key={index} className="max-w-[76ch] text-pretty">
-            {line}
-          </p>
-        );
-      })}
-    </div>
   );
 }
 
@@ -280,23 +323,15 @@ function EvolutionTimelineCard({ evolutions }: { evolutions: EvolutionSummary[] 
           ))}
         </div>
       )}
-      {evolutions.length > 5 ? (
-        <Button asChild variant="outline" className="mt-6 w-full gap-2">
-          <a href="#activity">
-            View all snapshots
-            <ArrowRight className="size-4" />
-          </a>
-        </Button>
-      ) : null}
     </section>
   );
 }
 
-function RecentActivityCard({ evolutions }: { evolutions: EvolutionSummary[] }) {
+function RecentActivityCard({ evolutions, title = 'Recent activity' }: { evolutions: EvolutionSummary[]; title?: string }) {
   return (
     <section id="activity" className="space-y-3">
       <div className="flex items-center justify-between gap-4">
-        <h2 className="text-base font-semibold">Recent activity</h2>
+        <h2 className="text-base font-semibold">{title}</h2>
         <Button variant="outline" size="sm" className="gap-2">
           All activity types
           <History className="size-3.5" />
@@ -333,6 +368,64 @@ function RecentActivityCard({ evolutions }: { evolutions: EvolutionSummary[] }) 
           ))
         )}
       </div>
+    </section>
+  );
+}
+
+function ArtifactsPanel({ details }: { details: DetailResponse[] }) {
+  const artifacts = details.flatMap((detail) =>
+    detail.snapshot.artifacts.map((artifact, index) => ({
+      id: `${detail.snapshot.id}-${index}`,
+      snapshotId: detail.snapshot.id,
+      snapshotTitle: detail.snapshot.title,
+      type: artifact.type,
+      description: artifact.description || artifact.path || artifact.url || artifact.uri || 'Artifact',
+      href: artifact.url || artifact.uri || (artifact.path ? `/${artifact.path}` : undefined),
+      source: artifact.path || artifact.url || artifact.uri
+    }))
+  );
+
+  return (
+    <section className="rounded-lg bg-white p-5 shadow-[0_0_0_1px_rgba(15,23,42,0.1)]">
+      <div className="mb-5 flex items-center justify-between gap-3">
+        <h2 className="text-base font-semibold">Artifacts</h2>
+        <span className="rounded-md bg-secondary px-2 py-1 text-xs font-medium text-muted-foreground">
+          {artifacts.length} {artifacts.length === 1 ? 'file' : 'files'}
+        </span>
+      </div>
+      {artifacts.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No artifacts have been recorded for this repository.</p>
+      ) : (
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          {artifacts.map((artifact) => (
+            <article key={artifact.id} className="rounded-lg border bg-slate-50/70 p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold capitalize">{artifact.type}</p>
+                  <p className="mt-1 text-sm text-muted-foreground text-pretty">{artifact.description}</p>
+                </div>
+                {artifact.href ? (
+                  <a
+                    href={artifact.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-white text-slate-600 shadow-[0_0_0_1px_rgba(15,23,42,0.1)] hover:text-slate-950"
+                    aria-label="Open artifact"
+                  >
+                    <ExternalLink className="size-4" />
+                  </a>
+                ) : null}
+              </div>
+              <div className="mt-4 flex min-w-0 flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                <Link to="/snapshots/$id" params={{ id: artifact.snapshotId }} className="font-medium text-blue-700 hover:underline">
+                  {artifact.snapshotTitle}
+                </Link>
+                {artifact.source ? <span className="truncate font-mono">{artifact.source}</span> : null}
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
