@@ -1,13 +1,13 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 14,
-  "latestAt": "2026-07-04T15:13:39Z",
-  "latestSnapshot": "snap_be4722a9358dd6af",
-  "latestTitle": "Repository overview layout refinement",
+  "snapshotCount": 15,
+  "latestAt": "2026-07-04T19:33:21Z",
+  "latestSnapshot": "snap_ff2733fffde9f538",
+  "latestTitle": "UI-wide search, snapshot media, and README rendering",
   "branch": "main",
-  "head": "f2cef44f64625be6a50ba3bf61f5f126da87d5ca",
+  "head": "fc8b647974715b5db9cef87250c0267136c2f3e9",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "f2cef44f64625be6a50ba3bf61f5f126da87d5ca"
+  "latestGitState": "fc8b647974715b5db9cef87250c0267136c2f3e9"
 }
