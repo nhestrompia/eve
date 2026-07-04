@@ -1,13 +1,13 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 16,
-  "latestAt": "2026-07-04T19:51:51Z",
-  "latestSnapshot": "snap_566de4f5a0bed386",
-  "latestTitle": "Activity dark mode and commit accordion refinement",
+  "snapshotCount": 17,
+  "latestAt": "2026-07-04T20:06:35Z",
+  "latestSnapshot": "snap_90cadff39dc103de",
+  "latestTitle": "Document robust MCP binary setup",
   "branch": "main",
-  "head": "74c4347054df87501c5f81b2d31b0bc6b0badbfc",
+  "head": "f2902dd17cc8d3acd4341fbb5b86dd83efa30297",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "74c4347054df87501c5f81b2d31b0bc6b0badbfc"
+  "latestGitState": "f2902dd17cc8d3acd4341fbb5b86dd83efa30297"
 }
