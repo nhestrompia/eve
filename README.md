@@ -53,9 +53,16 @@ Install the CLI if you want to call `eve` from other repositories:
 
 ```sh
 go install ./cmd/eve
+EVE_BIN="${GOBIN:-$(go env GOPATH)/bin}/eve"
+"$EVE_BIN" version
 cd /path/to/repo
-eve dev
+"$EVE_BIN" dev
 ```
+
+If `GOBIN` is set, the installed binary is `$GOBIN/eve` instead. Use an
+absolute path to the installed binary in editor and agent MCP config. GUI apps
+and agent hosts often do not inherit the same `PATH` as your interactive shell,
+so `command = "eve"` can fail even after a successful install.
 
 ## Verify
 
@@ -146,8 +153,14 @@ And MCP tools:
 - `skip_snapshot`
 - `checkout_snapshot`
 
-Install `eve` once, then add it to each agent as a global/user MCP server. The
-recommended stdio setup has no hard-coded repository path: the agent starts
+Install `eve` once, then add it to each agent as a global/user MCP server. Set
+`EVE_BIN` to the absolute installed binary before using the examples:
+
+```sh
+EVE_BIN="${GOBIN:-$(go env GOPATH)/bin}/eve"
+```
+
+The recommended stdio setup has no hard-coded repository path: the agent starts
 `eve mcp-stdio` from the active workspace, and eve finds the nearest Git root.
 
 Use HTTP only when `eve dev` is already running for a repository.
@@ -155,6 +168,15 @@ Use HTTP only when `eve dev` is already running for a repository.
 If an agent starts MCP servers from somewhere other than the active workspace,
 set that client's MCP working directory to the workspace, set `EVE_CWD`, or pass
 `--cwd`.
+
+Quick local check:
+
+```sh
+printf '%s\n' \
+  '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' \
+  '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' |
+  "$EVE_BIN" mcp-stdio
+```
 
 ### Codex
 
@@ -166,7 +188,7 @@ Stdio:
 
 ```toml
 [mcp_servers.eve]
-command = "eve"
+command = "/absolute/path/to/eve"
 args = ["mcp-stdio"]
 startup_timeout_sec = 20
 tool_timeout_sec = 120
@@ -175,7 +197,18 @@ tool_timeout_sec = 120
 Or add it with the Codex CLI:
 
 ```sh
-codex mcp add eve -- eve mcp-stdio
+codex mcp add eve -- "$EVE_BIN" mcp-stdio
+```
+
+If your Codex host does not start MCP servers from the active workspace, pin the
+workspace explicitly:
+
+```toml
+[mcp_servers.eve]
+command = "/absolute/path/to/eve"
+args = ["mcp-stdio", "--cwd", "/path/to/repo"]
+startup_timeout_sec = 20
+tool_timeout_sec = 120
 ```
 
 HTTP, after running `eve dev` in the repository:
@@ -194,16 +227,18 @@ Use `/mcp` in Codex to confirm the server is connected.
 User-wide stdio setup:
 
 ```sh
-claude mcp add --scope user --transport stdio eve -- eve mcp-stdio --cwd '${CLAUDE_PROJECT_DIR:-.}'
+claude mcp add --scope user --transport stdio eve -- "$EVE_BIN" mcp-stdio --cwd '${CLAUDE_PROJECT_DIR:-.}'
 ```
 
-Team-shared project setup in `.mcp.json` uses Claude's project directory:
+Team-shared project setup in `.mcp.json` uses Claude's project directory. Use a
+portable command only if every teammate has `eve` on their agent host `PATH`;
+otherwise prefer user scope with an absolute command path:
 
 ```json
 {
   "mcpServers": {
     "eve": {
-      "command": "eve",
+      "command": "/absolute/path/to/eve",
       "args": ["mcp-stdio", "--cwd", "${CLAUDE_PROJECT_DIR:-.}"]
     }
   }
@@ -229,7 +264,7 @@ Add a local server to your global `opencode.json`:
   "mcp": {
     "eve": {
       "type": "local",
-      "command": ["eve", "mcp-stdio"],
+      "command": ["/absolute/path/to/eve", "mcp-stdio"],
       "cwd": ".",
       "enabled": true
     }
@@ -263,7 +298,7 @@ opencode mcp list
 Use whichever MCP transport the client supports:
 
 - Stdio: run `eve mcp-stdio` with the server process working directory set to
-  the active repository.
+  the active repository. Prefer an absolute binary path in client config.
 - Streamable HTTP: run `eve dev` in the repository, then connect to
   `http://localhost:4317/mcp`.
 
