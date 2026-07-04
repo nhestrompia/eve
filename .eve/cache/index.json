@@ -1,13 +1,13 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 10,
-  "latestAt": "2026-07-04T14:21:47Z",
-  "latestSnapshot": "snap_30fb32b64736f4ca",
-  "latestTitle": "Repository README and timeline refinement",
+  "snapshotCount": 11,
+  "latestAt": "2026-07-04T14:23:14Z",
+  "latestSnapshot": "snap_46ef84a9412068a8",
+  "latestTitle": "Update README usage and MCP docs",
   "branch": "main",
-  "head": "8ebae819428aae3a085f10d6dd76b3bcb35e95fa",
+  "head": "9b242b6f0ab02b1d82e3a87c744d7534f4788d4f",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "8ebae819428aae3a085f10d6dd76b3bcb35e95fa"
+  "latestGitState": "9b242b6f0ab02b1d82e3a87c744d7534f4788d4f"
 }
