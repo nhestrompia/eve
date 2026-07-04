@@ -1,13 +1,13 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 12,
-  "latestAt": "2026-07-04T14:55:06Z",
-  "latestSnapshot": "snap_463b20cff9136179",
-  "latestTitle": "Repository artifact previews and editable overview",
+  "snapshotCount": 13,
+  "latestAt": "2026-07-04T15:11:35Z",
+  "latestSnapshot": "snap_7c73c02ffd66cf43",
+  "latestTitle": "Simplify global MCP setup docs",
   "branch": "main",
-  "head": "2be654c831dcfa5d4d8508166cd96a34d4c2b02d",
+  "head": "676f5ee69458a2f9e22b6f3c2bcfb46d1ed8ac17",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "2be654c831dcfa5d4d8508166cd96a34d4c2b02d"
+  "latestGitState": "676f5ee69458a2f9e22b6f3c2bcfb46d1ed8ac17"
 }
