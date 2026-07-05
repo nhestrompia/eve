@@ -158,6 +158,10 @@
   --tw-ring-color: color-mix(in oklch, var(--primary) 28%, transparent);
 }
 
+:root.dark-preview .eve-logo {
+  filter: brightness(0) invert(1);
+}
+
 * {
   border-color: var(--border);
 }

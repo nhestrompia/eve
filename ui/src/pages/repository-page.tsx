@@ -132,7 +132,7 @@ function RepositoryOverviewPage({
           <section className="bg-white px-4 pt-7 sm:px-6 lg:px-8">
             <div className="flex min-w-0 flex-col gap-5 sm:flex-row sm:items-start">
               <div className="flex h-[70px] w-[170px] shrink-0 items-center rounded-lg bg-white px-3 ring-1 ring-inset ring-slate-200">
-                <img src="/eve.svg" alt="eve" className="h-full w-full object-contain object-left" />
+                <img src="/eve.svg" alt="eve" className="eve-logo h-full w-full object-contain object-left" />
               </div>
               <div className="min-w-0 pb-6">
                 <div className="flex min-w-0 flex-wrap items-center gap-3">
