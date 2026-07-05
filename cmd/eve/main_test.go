@@ -14,6 +14,18 @@ import (
 	"github.com/nhestrompia/eve"
 )
 
+func TestMain(m *testing.M) {
+	registryDir, err := os.MkdirTemp("", "eve-test-registry-*")
+	if err == nil {
+		_ = os.Setenv("EVE_REPOSITORY_REGISTRY", filepath.Join(registryDir, "repositories.json"))
+	}
+	code := m.Run()
+	if registryDir != "" {
+		_ = os.RemoveAll(registryDir)
+	}
+	os.Exit(code)
+}
+
 func TestRunVersion(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	code := run([]string{"version"}, &stdout, &stderr)
@@ -254,6 +266,29 @@ func TestRuntimeListsRegisteredRepositories(t *testing.T) {
 	}
 }
 
+func TestRuntimeDiscoversUnregisteredSiblingRepositories(t *testing.T) {
+	parent := t.TempDir()
+	primary := initTempGitRepoAt(t, filepath.Join(parent, "primary"))
+	secondary := initTempGitRepoAt(t, filepath.Join(parent, "secondary"))
+	head := gitOutputForTest(t, secondary, "rev-parse", "HEAD")
+
+	mustRunInRepo(t, primary, []string{"init"})
+	writeSnapshotFileWithoutRegistry(t, secondary, sampleSnapshot("snap_sibling", "Sibling Snapshot", head))
+
+	handler := newRuntimeServer(repoFromRoot(primary), "localhost:0").routes()
+	var repos []repoSummary
+	requestJSON(t, handler, http.MethodGet, "/api/repos", nil, &repos)
+	if len(repos) != 2 {
+		t.Fatalf("repos = %#v, want primary and discovered sibling", repos)
+	}
+
+	var rows []snapshotSummary
+	requestJSON(t, handler, http.MethodGet, "/api/repos/secondary/snapshots", nil, &rows)
+	if len(rows) != 1 || rows[0].ID != "snap_sibling" {
+		t.Fatalf("secondary snapshots = %#v, want snap_sibling", rows)
+	}
+}
+
 func TestCheckoutRefusesDirtyTreeUnlessForced(t *testing.T) {
 	repo := initTempGitRepo(t)
 	t.Chdir(repo)
@@ -403,10 +438,14 @@ func mcpCall(t *testing.T, handler http.Handler, body string) string {
 
 func initTempGitRepo(t *testing.T) string {
 	t.Helper()
-	if os.Getenv("EVE_REPOSITORY_REGISTRY") == "" {
-		t.Setenv("EVE_REPOSITORY_REGISTRY", filepath.Join(t.TempDir(), "repositories.json"))
+	return initTempGitRepoAt(t, t.TempDir())
+}
+
+func initTempGitRepoAt(t *testing.T, repo string) string {
+	t.Helper()
+	if err := os.MkdirAll(repo, 0o755); err != nil {
+		t.Fatalf("mkdir repo: %v", err)
 	}
-	repo := t.TempDir()
 	gitRun(t, repo, "init")
 	gitRun(t, repo, "config", "user.email", "test@example.com")
 	gitRun(t, repo, "config", "user.name", "Test User")
@@ -512,6 +551,21 @@ func writeSnapshot(t *testing.T, repo string, snapshot *eve.Snapshot) {
 	store := repoFromRoot(repo)
 	if err := store.saveSnapshot(snapshot); err != nil {
 		t.Fatalf("save snapshot: %v", err)
+	}
+}
+
+func writeSnapshotFileWithoutRegistry(t *testing.T, repo string, snapshot *eve.Snapshot) {
+	t.Helper()
+	store := repoFromRoot(repo)
+	if err := os.MkdirAll(store.snapshotsDir(), 0o755); err != nil {
+		t.Fatalf("mkdir snapshots: %v", err)
+	}
+	canonical, err := eve.CanonicalSnapshotJSON(snapshot)
+	if err != nil {
+		t.Fatalf("canonicalize snapshot: %v", err)
+	}
+	if err := os.WriteFile(store.snapshotPath(snapshot.ID), append(canonical, '\n'), 0o644); err != nil {
+		t.Fatalf("write snapshot: %v", err)
 	}
 }
 
