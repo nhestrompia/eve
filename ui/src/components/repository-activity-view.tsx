@@ -39,6 +39,9 @@ export function RepositoryActivityView({
       evolutions
         .map((evolution) => `${evolution.repository ?? ""}:${evolution.id}`)
         .join(","),
+      evolutions
+        .map((evolution) => `${evolution.repository ?? ""}:${evolution.id}`)
+        .join(","),
     ],
     queryFn: () =>
       Promise.all(
@@ -544,10 +547,10 @@ type PlatformStats = {
 
 function PlatformOverview({ stats }: { stats: PlatformStats }) {
   const tiles = [
-    ["Repositories", stats.repositories],
+    ["Total snapshots", stats.evolutions],
     ["Snapshots", stats.snapshots],
     ["Commits", stats.commits],
-    ["Artifacts", stats.artifacts],
+    ["Artifacts", stats.sessions],
     ["Decisions", stats.decisions],
     ["Risks", stats.risks],
   ] as const;

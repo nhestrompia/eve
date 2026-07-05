@@ -45,6 +45,10 @@ func runWithIO(args []string, stdin io.Reader, stdout io.Writer, stderr io.Write
 		return runAdd(args[1:], stdin, stdout, stderr)
 	case "commit":
 		return runCommit(args[1:], stdout, stderr)
+	case "add":
+		return runAdd(args[1:], stdin, stdout, stderr)
+	case "commit":
+		return runCommit(args[1:], stdout, stderr)
 	case "dev":
 		return runDev(args[1:], stdout, stderr)
 	case "mcp-stdio":
@@ -951,6 +955,80 @@ func implementationCommits(repo repository, baseCommit string, head string) ([]s
 		}
 	}
 	return commits, nil
+}
+
+func hasRelevantGitStatus(status string, ignoredPaths []string) bool {
+	for _, line := range strings.Split(status, "\n") {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		if !gitStatusLineIgnored(line, ignoredPaths) {
+			return true
+		}
+	}
+	return false
+}
+
+func gitStatusLineIgnored(line string, ignoredPaths []string) bool {
+	if len(ignoredPaths) == 0 {
+		return false
+	}
+	pathPart := ""
+	if len(line) > 3 {
+		pathPart = strings.TrimSpace(line[3:])
+	}
+	if strings.Contains(pathPart, " -> ") {
+		parts := strings.Split(pathPart, " -> ")
+		pathPart = strings.TrimSpace(parts[len(parts)-1])
+	}
+	pathPart = strings.Trim(pathPart, `"`)
+	pathPart = filepath.ToSlash(pathPart)
+	for _, ignored := range ignoredPaths {
+		normalized := strings.TrimSuffix(filepath.ToSlash(strings.TrimSpace(ignored)), "/")
+		if normalized == "" {
+			continue
+		}
+		if pathPart == normalized || strings.HasPrefix(pathPart, normalized+"/") {
+			return true
+		}
+	}
+	return false
+}
+
+func completeSnapshot(repo repository, input completeSnapshotInput, ignoredStatusPaths []string) (*eve.Snapshot, error) {
+	facts, err := deriveGitFactsIgnoring(repo, ignoredStatusPaths)
+	if err != nil {
+		return nil, err
+	}
+	if facts.Dirty && !input.AllowDirty {
+		return nil, errors.New("working tree has uncommitted changes; commit implementation changes before completing an EVE snapshot. Pass --allow-dirty only for an intentionally dirty record")
+	}
+	snapshot := &eve.Snapshot{
+		ID:                newSnapshotID(),
+		SchemaVersion:     eve.SnapshotSchemaVersion,
+		Title:             strings.TrimSpace(input.Title),
+		Type:              strings.TrimSpace(input.Type),
+		Summary:           strings.TrimSpace(input.Summary),
+		UserVisibleChange: strings.TrimSpace(input.UserVisibleChange),
+		Relationships:     input.Relationships,
+		Risks:             input.Risks,
+		Timeline:          input.Timeline,
+		Decisions:         input.Decisions,
+		Validation:        input.Validation,
+		Artifacts:         input.Artifacts,
+		Implementation: eve.Implementation{
+			Branch:     facts.Branch,
+			GitState:   facts.GitState,
+			BaseCommit: facts.BaseCommit,
+			Commits:    facts.Commits,
+			Dirty:      facts.Dirty,
+		},
+		CreatedAt: nowUTC(),
+	}
+	if err := repo.saveSnapshot(snapshot); err != nil {
+		return nil, err
+	}
+	return snapshot, nil
 }
 
 func hasRelevantGitStatus(status string, ignoredPaths []string) bool {
