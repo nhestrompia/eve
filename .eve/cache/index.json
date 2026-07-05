@@ -1,13 +1,13 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 22,
-  "latestAt": "2026-07-05T01:47:26Z",
-  "latestSnapshot": "snap_4bb9265b462376d0",
-  "latestTitle": "Refine activity repository carousel",
+  "snapshotCount": 23,
+  "latestAt": "2026-07-05T01:50:11Z",
+  "latestSnapshot": "snap_468b6cd3c2f9955a",
+  "latestTitle": "Discover local Eve repositories",
   "branch": "main",
-  "head": "421a4b3fa6036fd4c80c79a8b7d8958bb4de0689",
+  "head": "d611a01ca98b8a787cee0ad9e59bd9a547ec6fb7",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "421a4b3fa6036fd4c80c79a8b7d8958bb4de0689"
+  "latestGitState": "d611a01ca98b8a787cee0ad9e59bd9a547ec6fb7"
 }
