@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 27,
-  "commitCount": 29,
-  "decisionCount": 54,
+  "snapshotCount": 28,
+  "commitCount": 30,
+  "decisionCount": 56,
   "riskCount": 18,
-  "artifactCount": 26,
-  "latestAt": "2026-07-05T10:49:36Z",
-  "latestSnapshot": "snap_2a51af4c8e91a45c",
-  "latestTitle": "Fix merge duplicate declarations",
+  "artifactCount": 28,
+  "latestAt": "2026-07-05T10:57:32Z",
+  "latestSnapshot": "snap_569dc3503e0c8590",
+  "latestTitle": "Fix snapshot detail hero layout",
   "branch": "main",
-  "head": "fe65571b159a769451093037903e0583d51143cf",
+  "head": "48be6573e6cd925a5342df168284835744e5e610",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "fe65571b159a769451093037903e0583d51143cf"
+  "latestGitState": "48be6573e6cd925a5342df168284835744e5e610"
 }
