@@ -202,7 +202,7 @@ func TestRuntimeAPIAndMCP(t *testing.T) {
 	if !strings.Contains(response, "API Snapshot") {
 		t.Fatalf("resources/read response = %s, want snapshot", response)
 	}
-	response = mcpCall(t, handler, `{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"complete_snapshot","arguments":{"title":"Completed by MCP","type":"feature","summary":"MCP writes snapshots.","validation":[{"command":"go test ./...","status":"passed"}]}}}`)
+	response = mcpCall(t, handler, `{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"complete_snapshot","arguments":{"title":"Completed by MCP","type":"feature","summary":"MCP writes snapshots.","validation":[{"command":"go test ./...","status":"passed"}],"allowDirty":true}}}`)
 	if !strings.Contains(response, "Completed by MCP") {
 		t.Fatalf("complete_snapshot response = %s, want created snapshot", response)
 	}
@@ -212,6 +212,45 @@ func TestRuntimeAPIAndMCP(t *testing.T) {
 	}
 	if len(snapshots) != 2 {
 		t.Fatalf("snapshot count = %d, want 2", len(snapshots))
+	}
+}
+
+func TestCompleteSnapshotRejectsDirtyTreeByDefault(t *testing.T) {
+	repo := initTempGitRepo(t)
+	t.Chdir(repo)
+	mustRun(t, []string{"init"})
+	if err := os.WriteFile(filepath.Join(repo, "product.txt"), []byte("changed\n"), 0o644); err != nil {
+		t.Fatalf("write product: %v", err)
+	}
+
+	handler := newRuntimeServer(repoFromRoot(repo), "localhost:0").routes()
+	response := mcpCall(t, handler, `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"complete_snapshot","arguments":{"title":"Dirty Snapshot","type":"feature","summary":"Should be rejected."}}}`)
+	for _, want := range []string{"isError", "working tree has uncommitted changes"} {
+		if !strings.Contains(response, want) {
+			t.Fatalf("complete_snapshot response = %s, want %q", response, want)
+		}
+	}
+}
+
+func TestRuntimeListsRegisteredRepositories(t *testing.T) {
+	primary := initTempGitRepo(t)
+	secondary := initTempGitRepo(t)
+	head := gitOutputForTest(t, secondary, "rev-parse", "HEAD")
+	mustRunInRepo(t, primary, []string{"init"})
+	mustRunInRepo(t, secondary, []string{"init"})
+	writeSnapshot(t, secondary, sampleSnapshot("snap_other", "Other Repository Snapshot", head))
+
+	handler := newRuntimeServer(repoFromRoot(primary), "localhost:0").routes()
+	var repos []repoSummary
+	requestJSON(t, handler, http.MethodGet, "/api/repos", nil, &repos)
+	if len(repos) != 2 {
+		t.Fatalf("repos = %#v, want primary and registered secondary", repos)
+	}
+
+	var rows []snapshotSummary
+	requestJSON(t, handler, http.MethodGet, "/api/repos/"+filepath.Base(secondary)+"/snapshots", nil, &rows)
+	if len(rows) != 1 || rows[0].ID != "snap_other" {
+		t.Fatalf("secondary snapshots = %#v, want snap_other", rows)
 	}
 }
 
@@ -304,6 +343,23 @@ func mustRun(t *testing.T, args []string) {
 	}
 }
 
+func mustRunInRepo(t *testing.T, repo string, args []string) {
+	t.Helper()
+	previous, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+	if err := os.Chdir(repo); err != nil {
+		t.Fatalf("chdir %s: %v", repo, err)
+	}
+	defer func() {
+		if err := os.Chdir(previous); err != nil {
+			t.Fatalf("restore cwd: %v", err)
+		}
+	}()
+	mustRun(t, args)
+}
+
 func assertCommandContains(t *testing.T, args []string, wants []string) {
 	t.Helper()
 	var stdout, stderr bytes.Buffer
@@ -347,6 +403,9 @@ func mcpCall(t *testing.T, handler http.Handler, body string) string {
 
 func initTempGitRepo(t *testing.T) string {
 	t.Helper()
+	if os.Getenv("EVE_REPOSITORY_REGISTRY") == "" {
+		t.Setenv("EVE_REPOSITORY_REGISTRY", filepath.Join(t.TempDir(), "repositories.json"))
+	}
 	repo := t.TempDir()
 	gitRun(t, repo, "init")
 	gitRun(t, repo, "config", "user.email", "test@example.com")

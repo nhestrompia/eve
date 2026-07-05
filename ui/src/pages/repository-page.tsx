@@ -73,7 +73,7 @@ export function RepositoryPage() {
     queryFn: () =>
       Promise.all(
         (evolutions.data ?? []).map((evolution) =>
-          api.snapshotDetail(evolution.id),
+          api.snapshotDetail(evolution.id, repo),
         ),
       ),
     enabled: (evolutions.data?.length ?? 0) > 0,

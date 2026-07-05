@@ -153,18 +153,26 @@ function snapshotToSummary(summary: SnapshotSummary, sessionProviders: string[] 
 }
 
 async function snapshots(repo?: unknown): Promise<EvolutionSummary[]> {
-  const repoId = typeof repo === 'string' && repo ? repo : await defaultRepoId();
-  if (!repoId) return [];
-  const rows = await request<SnapshotSummary[]>(`/api/repos/${encodeURIComponent(repoId)}/snapshots`);
-  return rows.map((row) => snapshotToSummary(row));
+  if (typeof repo === 'string' && repo) {
+    const rows = await request<SnapshotSummary[]>(`/api/repos/${encodeURIComponent(repo)}/snapshots`);
+    return rows.map((row) => snapshotToSummary(row));
+  }
+  const repos = await repositoriesRaw();
+  const rows = await Promise.all(
+    repos.map(async (row) => request<SnapshotSummary[]>(`/api/repos/${encodeURIComponent(row.id)}/snapshots`))
+  );
+  return rows
+    .flat()
+    .map((row) => snapshotToSummary(row))
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
 }
 
 async function repository(repo: string): Promise<RepositorySummary> {
   return adaptRepo(await request<RepoAPI>(`/api/repos/${encodeURIComponent(repo)}`));
 }
 
-async function snapshotDetail(id: string): Promise<DetailResponse> {
-  const repoId = await defaultRepoId();
+async function snapshotDetail(id: string, repo?: string): Promise<DetailResponse> {
+  const repoId = repo || (await defaultRepoId());
   const detail = await request<SnapshotDetailAPI>(`/api/repos/${encodeURIComponent(repoId)}/snapshots/${encodeURIComponent(id)}`);
   const sessions = detail.sessions ?? [];
   const sessionProviders = Array.from(new Set(sessions.map((session) => session.provider).filter(Boolean)));

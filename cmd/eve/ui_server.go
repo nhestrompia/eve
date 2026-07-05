@@ -210,12 +210,20 @@ func (server runtimeServer) handleRepos(w http.ResponseWriter, r *http.Request) 
 		writeMethodNotAllowed(w)
 		return
 	}
-	summary, err := server.repo.summary()
-	if err != nil {
-		writeAPIError(w, http.StatusInternalServerError, err)
-		return
+	repos := server.repositories()
+	summaries := make([]repoSummary, 0, len(repos))
+	for _, repo := range repos {
+		summary, err := repo.summary()
+		if err != nil {
+			if repo.Root == server.repo.Root {
+				writeAPIError(w, http.StatusInternalServerError, err)
+				return
+			}
+			continue
+		}
+		summaries = append(summaries, summary)
 	}
-	writeJSON(w, http.StatusOK, []repoSummary{summary})
+	writeJSON(w, http.StatusOK, summaries)
 }
 
 func (server runtimeServer) handleRepoRoutes(w http.ResponseWriter, r *http.Request) {
@@ -226,43 +234,57 @@ func (server runtimeServer) handleRepoRoutes(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	repoID := parts[0]
-	if repoID != server.repo.ID {
+	repo, ok := server.repoByID(repoID)
+	if !ok {
 		writeAPIError(w, http.StatusNotFound, fmt.Errorf("repository %s not found", repoID))
 		return
 	}
 	switch {
 	case len(parts) == 1 && r.Method == http.MethodGet:
-		detail, err := server.repo.detail()
+		detail, err := repo.detail()
 		if err != nil {
 			writeAPIError(w, http.StatusInternalServerError, err)
 			return
 		}
 		writeJSON(w, http.StatusOK, detail)
 	case len(parts) == 2 && parts[1] == "open-editor" && r.Method == http.MethodPost:
-		writeJSON(w, http.StatusOK, openRepositoryInEditor(server.repo))
+		writeJSON(w, http.StatusOK, openRepositoryInEditor(repo))
 	case len(parts) >= 3 && parts[1] == "artifacts" && r.Method == http.MethodGet:
-		server.handleArtifactFile(w, r, strings.Join(parts[2:], "/"))
+		server.handleArtifactFile(w, r, repo, strings.Join(parts[2:], "/"))
 	case len(parts) == 2 && parts[1] == "snapshots" && r.Method == http.MethodGet:
-		server.handleSnapshots(w, r)
+		server.handleSnapshots(w, r, repo)
 	case len(parts) == 3 && parts[1] == "snapshots" && r.Method == http.MethodGet:
-		server.handleSnapshotDetail(w, r, parts[2])
+		server.handleSnapshotDetail(w, r, repo, parts[2])
 	case len(parts) == 4 && parts[1] == "snapshots" && parts[3] == "checkout" && r.Method == http.MethodPost:
-		server.handleCheckout(w, r, parts[2])
+		server.handleCheckout(w, r, repo, parts[2])
 	case len(parts) == 4 && parts[1] == "snapshots" && parts[3] == "sessions" && r.Method == http.MethodGet:
-		server.handleSessions(w, r, parts[2])
+		server.handleSessions(w, r, repo, parts[2])
 	case len(parts) == 5 && parts[1] == "snapshots" && parts[3] == "sessions" && r.Method == http.MethodGet:
-		server.handleSessionTranscript(w, r, parts[2], parts[4])
+		server.handleSessionTranscript(w, r, repo, parts[2], parts[4])
 	default:
 		writeAPIError(w, http.StatusNotFound, fmt.Errorf("repo route not found"))
 	}
 }
 
-func (server runtimeServer) handleArtifactFile(w http.ResponseWriter, r *http.Request, artifactPath string) {
+func (server runtimeServer) repositories() []repository {
+	return knownRepositories(server.repo)
+}
+
+func (server runtimeServer) repoByID(repoID string) (repository, bool) {
+	for _, repo := range server.repositories() {
+		if repo.ID == repoID {
+			return repo, true
+		}
+	}
+	return repository{}, false
+}
+
+func (server runtimeServer) handleArtifactFile(w http.ResponseWriter, r *http.Request, repo repository, artifactPath string) {
 	if artifactPath == "" {
 		writeAPIError(w, http.StatusNotFound, fmt.Errorf("artifact not found"))
 		return
 	}
-	artifactRoot, err := filepath.Abs(server.repo.artifactsDir())
+	artifactRoot, err := filepath.Abs(repo.artifactsDir())
 	if err != nil {
 		writeAPIError(w, http.StatusInternalServerError, err)
 		return
@@ -284,8 +306,8 @@ func (server runtimeServer) handleArtifactFile(w http.ResponseWriter, r *http.Re
 	http.ServeFile(w, r, target)
 }
 
-func (server runtimeServer) handleSnapshots(w http.ResponseWriter, r *http.Request) {
-	snapshots, err := server.repo.listSnapshots(r.URL.Query().Get("type"))
+func (server runtimeServer) handleSnapshots(w http.ResponseWriter, r *http.Request, repo repository) {
+	snapshots, err := repo.listSnapshots(r.URL.Query().Get("type"))
 	if err != nil {
 		writeAPIError(w, http.StatusInternalServerError, err)
 		return
@@ -297,43 +319,43 @@ func (server runtimeServer) handleSnapshots(w http.ResponseWriter, r *http.Reque
 	writeJSON(w, http.StatusOK, rows)
 }
 
-func (server runtimeServer) handleSnapshotDetail(w http.ResponseWriter, r *http.Request, id string) {
-	snapshot, raw, err := server.loadSnapshotWithRaw(id)
+func (server runtimeServer) handleSnapshotDetail(w http.ResponseWriter, r *http.Request, repo repository, id string) {
+	snapshot, raw, err := server.loadSnapshotWithRaw(repo, id)
 	if err != nil {
 		writeAPIError(w, http.StatusNotFound, err)
 		return
 	}
-	commits := server.gitCommits(snapshot.Implementation.GitState, snapshot.Implementation.Commits)
+	commits := server.gitCommits(repo, snapshot.Implementation.GitState, snapshot.Implementation.Commits)
 	writeJSON(w, http.StatusOK, snapshotDetailResponse{
 		Snapshot:  snapshot,
 		Summary:   summarizeSnapshot(snapshot),
-		Sessions:  server.snapshotSessionRecords(snapshot),
+		Sessions:  server.snapshotSessionRecords(repo, snapshot),
 		Providers: providerInfos(),
 		Commits:   commits,
 		RawJSON:   raw,
 	})
 }
 
-func (server runtimeServer) handleSessions(w http.ResponseWriter, r *http.Request, id string) {
-	snapshot, err := server.repo.loadSnapshot(id)
+func (server runtimeServer) handleSessions(w http.ResponseWriter, r *http.Request, repo repository, id string) {
+	snapshot, err := repo.loadSnapshot(id)
 	if err != nil {
 		writeAPIError(w, http.StatusNotFound, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, sessionListResponse{
 		EvolutionID: id,
-		Sessions:    server.snapshotSessionRecords(snapshot),
+		Sessions:    server.snapshotSessionRecords(repo, snapshot),
 		Providers:   providerInfos(),
 	})
 }
 
-func (server runtimeServer) handleSessionTranscript(w http.ResponseWriter, r *http.Request, id string, sessionKey string) {
-	snapshot, err := server.repo.loadSnapshot(id)
+func (server runtimeServer) handleSessionTranscript(w http.ResponseWriter, r *http.Request, repo repository, id string, sessionKey string) {
+	snapshot, err := repo.loadSnapshot(id)
 	if err != nil {
 		writeAPIError(w, http.StatusNotFound, err)
 		return
 	}
-	for _, session := range server.snapshotSessionRecords(snapshot) {
+	for _, session := range server.snapshotSessionRecords(repo, snapshot) {
 		if session.Key != sessionKey {
 			continue
 		}
@@ -360,18 +382,18 @@ func (server runtimeServer) handleSessionTranscript(w http.ResponseWriter, r *ht
 	writeAPIError(w, http.StatusNotFound, fmt.Errorf("session %s not found", sessionKey))
 }
 
-func (server runtimeServer) handleCheckout(w http.ResponseWriter, r *http.Request, id string) {
-	snapshot, err := server.repo.loadSnapshot(id)
+func (server runtimeServer) handleCheckout(w http.ResponseWriter, r *http.Request, repo repository, id string) {
+	snapshot, err := repo.loadSnapshot(id)
 	if err != nil {
 		writeAPIError(w, http.StatusNotFound, err)
 		return
 	}
 	force := r.URL.Query().Get("force") == "true"
-	writeJSON(w, http.StatusOK, checkoutSnapshot(server.repo, snapshot, force))
+	writeJSON(w, http.StatusOK, checkoutSnapshot(repo, snapshot, force))
 }
 
-func (server runtimeServer) loadSnapshotWithRaw(id string) (*eve.Snapshot, json.RawMessage, error) {
-	data, err := os.ReadFile(server.repo.snapshotPath(id))
+func (server runtimeServer) loadSnapshotWithRaw(repo repository, id string) (*eve.Snapshot, json.RawMessage, error) {
+	data, err := os.ReadFile(repo.snapshotPath(id))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -397,7 +419,7 @@ func summarizeSnapshot(snapshot *eve.Snapshot) snapshotSummary {
 	}
 }
 
-func (server runtimeServer) snapshotSessionRecords(snapshot *eve.Snapshot) []uiSessionRecord {
+func (server runtimeServer) snapshotSessionRecords(repo repository, snapshot *eve.Snapshot) []uiSessionRecord {
 	seen := map[string]bool{}
 	var records []uiSessionRecord
 	add := func(record uiSessionRecord) {
@@ -446,7 +468,7 @@ func (server runtimeServer) snapshotSessionRecords(snapshot *eve.Snapshot) []uiS
 		})
 	}
 
-	for _, session := range server.legacySessionsForSnapshot(snapshot) {
+	for _, session := range server.legacySessionsForSnapshot(repo, snapshot) {
 		add(uiSessionRecord{
 			Provider: session.Provider,
 			ID:       session.ID,
@@ -461,8 +483,8 @@ func (server runtimeServer) snapshotSessionRecords(snapshot *eve.Snapshot) []uiS
 	return records
 }
 
-func (server runtimeServer) legacySessionsForSnapshot(snapshot *eve.Snapshot) []legacySession {
-	entries, err := os.ReadDir(filepath.Join(server.repo.eveDir, "evolutions"))
+func (server runtimeServer) legacySessionsForSnapshot(repo repository, snapshot *eve.Snapshot) []legacySession {
+	entries, err := os.ReadDir(filepath.Join(repo.eveDir, "evolutions"))
 	if err != nil {
 		return nil
 	}
@@ -480,7 +502,7 @@ func (server runtimeServer) legacySessionsForSnapshot(snapshot *eve.Snapshot) []
 		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
 			continue
 		}
-		data, err := os.ReadFile(filepath.Join(server.repo.eveDir, "evolutions", entry.Name()))
+		data, err := os.ReadFile(filepath.Join(repo.eveDir, "evolutions", entry.Name()))
 		if err != nil {
 			continue
 		}
@@ -524,7 +546,7 @@ func conversationArtifactSession(artifact eve.Artifact) (string, string) {
 	return provider, id
 }
 
-func (server runtimeServer) gitCommits(snapshot string, commits []string) []uiGitCommit {
+func (server runtimeServer) gitCommits(repo repository, snapshot string, commits []string) []uiGitCommit {
 	seen := map[string]bool{}
 	ordered := make([]string, 0, len(commits)+1)
 	add := func(commit string) {
@@ -542,7 +564,7 @@ func (server runtimeServer) gitCommits(snapshot string, commits []string) []uiGi
 
 	out := make([]uiGitCommit, 0, len(ordered))
 	for _, commit := range ordered {
-		if info, err := server.gitCommit(commit); err == nil {
+		if info, err := server.gitCommit(repo, commit); err == nil {
 			out = append(out, info)
 			continue
 		}
@@ -555,10 +577,10 @@ func (server runtimeServer) gitCommits(snapshot string, commits []string) []uiGi
 	return out
 }
 
-func (server runtimeServer) gitCommit(commit string) (uiGitCommit, error) {
+func (server runtimeServer) gitCommit(repo repository, commit string) (uiGitCommit, error) {
 	format := "%H%x00%h%x00%s%x00%an%x00%aI%x00%cI"
 	cmd := exec.Command("git", "show", "-s", "--format="+format, commit)
-	cmd.Dir = server.repo.Root
+	cmd.Dir = repo.Root
 	output, err := cmd.Output()
 	if err != nil {
 		return uiGitCommit{}, err
@@ -813,7 +835,7 @@ func mcpTools() []map[string]any {
 		{"name": "list_repos", "description": "List repositories known to the local EVE runtime.", "inputSchema": objectSchema(nil, nil)},
 		{"name": "list_snapshots", "description": "List snapshots for a repository.", "inputSchema": objectSchema(map[string]any{"cwd": stringSchema(), "repoId": stringSchema(), "type": enumSchema("feature", "bugfix", "experiment", "refactor", "release")}, nil)},
 		{"name": "get_snapshot", "description": "Get one snapshot by id.", "inputSchema": objectSchema(map[string]any{"cwd": stringSchema(), "repoId": stringSchema(), "snapshotId": stringSchema()}, []string{"snapshotId"})},
-		{"name": "complete_snapshot", "description": "Create a completed product Snapshot and derive Git implementation facts.", "inputSchema": completeSnapshotSchema()},
+		{"name": "complete_snapshot", "description": "Create a completed product Snapshot after implementation changes are committed. This writes .eve files only; after it succeeds, stage and Git commit the generated .eve record separately.", "inputSchema": completeSnapshotSchema()},
 		{"name": "skip_snapshot", "description": "Record that the current task does not deserve product history.", "inputSchema": objectSchema(map[string]any{"cwd": stringSchema(), "repoId": stringSchema(), "reason": stringSchema()}, []string{"reason"})},
 		{"name": "checkout_snapshot", "description": "Checkout the Git state for a Snapshot.", "inputSchema": objectSchema(map[string]any{"cwd": stringSchema(), "repoId": stringSchema(), "snapshotId": stringSchema(), "force": map[string]string{"type": "boolean"}}, []string{"snapshotId"})},
 	}
@@ -827,12 +849,42 @@ func completeSnapshotSchema() map[string]any {
 		"type":              enumSchema("feature", "bugfix", "experiment", "refactor", "release"),
 		"summary":           stringSchema(),
 		"userVisibleChange": stringSchema(),
-		"relationships":     map[string]string{"type": "object"},
-		"risks":             map[string]string{"type": "array"},
-		"timeline":          map[string]string{"type": "array"},
-		"decisions":         map[string]string{"type": "array"},
-		"validation":        map[string]string{"type": "array"},
-		"artifacts":         map[string]string{"type": "array"},
+		"relationships": objectSchema(map[string]any{
+			"corrects":   stringArraySchema(),
+			"supersedes": stringArraySchema(),
+			"reverts":    stringArraySchema(),
+			"dependsOn":  stringArraySchema(),
+			"related":    stringArraySchema(),
+		}, nil),
+		"risks": arraySchema(objectSchema(map[string]any{
+			"title":      stringSchema(),
+			"severity":   enumSchema("low", "medium", "high"),
+			"mitigation": stringSchema(),
+		}, []string{"title", "severity"})),
+		"timeline": arraySchema(objectSchema(map[string]any{
+			"phase":      enumSchema("planning", "implementation", "validation", "review", "release"),
+			"title":      stringSchema(),
+			"summary":    stringSchema(),
+			"occurredAt": stringSchema(),
+		}, []string{"phase", "title"})),
+		"decisions": arraySchema(objectSchema(map[string]any{
+			"title":     stringSchema(),
+			"rationale": stringSchema(),
+		}, []string{"title"})),
+		"validation": arraySchema(objectSchema(map[string]any{
+			"command": stringSchema(),
+			"status":  enumSchema("passed", "failed", "skipped"),
+			"output":  stringSchema(),
+		}, []string{"command", "status"})),
+		"artifacts": arraySchema(objectSchema(map[string]any{
+			"type":        enumSchema("screenshot", "video", "preview", "url", "note", "log", "conversation"),
+			"uri":         stringSchema(),
+			"path":        stringSchema(),
+			"url":         stringSchema(),
+			"mimeType":    stringSchema(),
+			"description": stringSchema(),
+		}, []string{"type"})),
+		"allowDirty": boolSchema(),
 	}, []string{"title", "type", "summary"})
 }
 
@@ -849,6 +901,16 @@ func objectSchema(properties map[string]any, required []string) map[string]any {
 
 func stringSchema() map[string]string { return map[string]string{"type": "string"} }
 
+func boolSchema() map[string]string { return map[string]string{"type": "boolean"} }
+
+func arraySchema(items any) map[string]any {
+	return map[string]any{"type": "array", "items": items}
+}
+
+func stringArraySchema() map[string]any {
+	return arraySchema(stringSchema())
+}
+
 func enumSchema(values ...string) map[string]any {
 	return map[string]any{"type": "string", "enum": values}
 }
@@ -863,11 +925,18 @@ func (server runtimeServer) callMCPTool(ctx context.Context, params json.RawMess
 	}
 	switch call.Name {
 	case "list_repos":
-		summary, err := server.repo.summary()
-		if err != nil {
-			return toolError(err.Error()), nil
+		var rows []repoSummary
+		for _, repo := range server.repositories() {
+			summary, err := repo.summary()
+			if err != nil {
+				if repo.Root == server.repo.Root {
+					return toolError(err.Error()), nil
+				}
+				continue
+			}
+			rows = append(rows, summary)
 		}
-		return toolResult([]repoSummary{summary}), nil
+		return toolResult(rows), nil
 	case "list_snapshots":
 		var input struct {
 			CWD    string `json:"cwd"`
@@ -939,22 +1008,13 @@ func (server runtimeServer) callMCPTool(ctx context.Context, params json.RawMess
 }
 
 func (server runtimeServer) completeSnapshotTool(ctx context.Context, args json.RawMessage) (any, *mcpError) {
-	var input struct {
-		CWD               string              `json:"cwd"`
-		RepoID            string              `json:"repoId"`
-		Title             string              `json:"title"`
-		Type              string              `json:"type"`
-		Summary           string              `json:"summary"`
-		UserVisibleChange string              `json:"userVisibleChange"`
-		Relationships     eve.Relationships   `json:"relationships"`
-		Risks             []eve.Risk          `json:"risks"`
-		Timeline          []eve.TimelineEntry `json:"timeline"`
-		Decisions         []eve.Decision      `json:"decisions"`
-		Validation        []eve.Validation    `json:"validation"`
-		Artifacts         []eve.Artifact      `json:"artifacts"`
-	}
-	if err := json.Unmarshal(args, &input); err != nil {
+	var raw completeSnapshotInputRaw
+	if err := json.Unmarshal(args, &raw); err != nil {
 		return nil, &mcpError{Code: -32602, Message: err.Error()}
+	}
+	input, err := normalizeCompleteSnapshotInput(raw)
+	if err != nil {
+		return toolError(err.Error()), nil
 	}
 	repo, err := server.resolveToolRepo(input.CWD, input.RepoID)
 	if err != nil {
@@ -963,6 +1023,9 @@ func (server runtimeServer) completeSnapshotTool(ctx context.Context, args json.
 	facts, err := deriveGitFacts(repo)
 	if err != nil {
 		return toolError(err.Error()), nil
+	}
+	if facts.Dirty && !input.AllowDirty {
+		return toolError("working tree has uncommitted changes; commit implementation changes before completing an EVE snapshot, then call complete_snapshot again. Pass allowDirty=true only for an intentionally dirty record."), nil
 	}
 	snapshot := &eve.Snapshot{
 		ID:                newSnapshotID(),
@@ -992,12 +1055,201 @@ func (server runtimeServer) completeSnapshotTool(ctx context.Context, args json.
 	return toolResult(snapshot), nil
 }
 
+type completeSnapshotInputRaw struct {
+	CWD               string          `json:"cwd"`
+	RepoID            string          `json:"repoId"`
+	Title             string          `json:"title"`
+	Type              string          `json:"type"`
+	Summary           string          `json:"summary"`
+	UserVisibleChange string          `json:"userVisibleChange"`
+	Relationships     json.RawMessage `json:"relationships"`
+	Risks             json.RawMessage `json:"risks"`
+	Timeline          json.RawMessage `json:"timeline"`
+	Decisions         json.RawMessage `json:"decisions"`
+	Validation        json.RawMessage `json:"validation"`
+	Artifacts         json.RawMessage `json:"artifacts"`
+	AllowDirty        bool            `json:"allowDirty"`
+}
+
+type completeSnapshotInput struct {
+	CWD               string
+	RepoID            string
+	Title             string
+	Type              string
+	Summary           string
+	UserVisibleChange string
+	Relationships     eve.Relationships
+	Risks             []eve.Risk
+	Timeline          []eve.TimelineEntry
+	Decisions         []eve.Decision
+	Validation        []eve.Validation
+	Artifacts         []eve.Artifact
+	AllowDirty        bool
+}
+
+func normalizeCompleteSnapshotInput(raw completeSnapshotInputRaw) (completeSnapshotInput, error) {
+	relationships, err := decodeOptionalObject[eve.Relationships](raw.Relationships)
+	if err != nil {
+		return completeSnapshotInput{}, fmt.Errorf("relationships: %w", err)
+	}
+	risks, err := decodeFlexibleArray(raw.Risks, riskFromString, normalizeRisk)
+	if err != nil {
+		return completeSnapshotInput{}, fmt.Errorf("risks: %w", err)
+	}
+	timeline, err := decodeFlexibleArray(raw.Timeline, timelineFromString, normalizeTimelineEntry)
+	if err != nil {
+		return completeSnapshotInput{}, fmt.Errorf("timeline: %w", err)
+	}
+	decisions, err := decodeFlexibleArray(raw.Decisions, decisionFromString, normalizeDecision)
+	if err != nil {
+		return completeSnapshotInput{}, fmt.Errorf("decisions: %w", err)
+	}
+	validation, err := decodeFlexibleArray(raw.Validation, validationFromString, normalizeValidation)
+	if err != nil {
+		return completeSnapshotInput{}, fmt.Errorf("validation: %w", err)
+	}
+	artifacts, err := decodeFlexibleArray(raw.Artifacts, artifactFromString, normalizeArtifact)
+	if err != nil {
+		return completeSnapshotInput{}, fmt.Errorf("artifacts: %w", err)
+	}
+
+	return completeSnapshotInput{
+		CWD:               raw.CWD,
+		RepoID:            raw.RepoID,
+		Title:             raw.Title,
+		Type:              raw.Type,
+		Summary:           raw.Summary,
+		UserVisibleChange: raw.UserVisibleChange,
+		Relationships:     relationships,
+		Risks:             risks,
+		Timeline:          timeline,
+		Decisions:         decisions,
+		Validation:        validation,
+		Artifacts:         artifacts,
+		AllowDirty:        raw.AllowDirty,
+	}, nil
+}
+
+func decodeOptionalObject[T any](raw json.RawMessage) (T, error) {
+	var zero T
+	if len(raw) == 0 || string(raw) == "null" {
+		return zero, nil
+	}
+	if err := json.Unmarshal(raw, &zero); err != nil {
+		return zero, err
+	}
+	return zero, nil
+}
+
+func decodeFlexibleArray[T any](raw json.RawMessage, fromString func(string) T, normalize func(T) T) ([]T, error) {
+	if len(raw) == 0 || string(raw) == "null" {
+		return nil, nil
+	}
+	var values []T
+	if err := json.Unmarshal(raw, &values); err == nil {
+		for i, value := range values {
+			values[i] = normalize(value)
+		}
+		return values, nil
+	}
+	var stringValues []string
+	if err := json.Unmarshal(raw, &stringValues); err != nil {
+		return nil, err
+	}
+	values = make([]T, 0, len(stringValues))
+	for _, value := range stringValues {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			values = append(values, fromString(trimmed))
+		}
+	}
+	return values, nil
+}
+
+func riskFromString(value string) eve.Risk {
+	return eve.Risk{Title: value, Severity: "medium"}
+}
+
+func normalizeRisk(risk eve.Risk) eve.Risk {
+	if strings.TrimSpace(risk.Severity) == "" {
+		risk.Severity = "medium"
+	}
+	return risk
+}
+
+func timelineFromString(value string) eve.TimelineEntry {
+	return eve.TimelineEntry{Phase: "implementation", Title: value}
+}
+
+func normalizeTimelineEntry(entry eve.TimelineEntry) eve.TimelineEntry {
+	if strings.TrimSpace(entry.Phase) == "" {
+		entry.Phase = "implementation"
+	}
+	return entry
+}
+
+func decisionFromString(value string) eve.Decision {
+	return eve.Decision{Title: value}
+}
+
+func normalizeDecision(decision eve.Decision) eve.Decision {
+	return decision
+}
+
+func validationFromString(value string) eve.Validation {
+	return eve.Validation{Command: value, Status: inferValidationStatus(value)}
+}
+
+func normalizeValidation(validation eve.Validation) eve.Validation {
+	if strings.TrimSpace(validation.Status) == "" {
+		validation.Status = inferValidationStatus(validation.Command + " " + validation.Output)
+	}
+	return validation
+}
+
+func inferValidationStatus(value string) string {
+	lowered := strings.ToLower(value)
+	switch {
+	case strings.Contains(lowered, "skip"):
+		return "skipped"
+	case strings.Contains(lowered, "fail"):
+		return "failed"
+	default:
+		return "passed"
+	}
+}
+
+func artifactFromString(value string) eve.Artifact {
+	artifact := eve.Artifact{Type: "note", URI: value}
+	switch {
+	case strings.HasPrefix(value, "http://") || strings.HasPrefix(value, "https://"):
+		artifact.Type = "url"
+		artifact.URL = value
+		artifact.URI = ""
+	case strings.HasPrefix(value, ".") || strings.HasPrefix(value, "/"):
+		artifact.Path = value
+		artifact.URI = ""
+	}
+	return artifact
+}
+
+func normalizeArtifact(artifact eve.Artifact) eve.Artifact {
+	if strings.TrimSpace(artifact.Type) == "" {
+		artifact.Type = "note"
+	}
+	return artifact
+}
+
 func (server runtimeServer) resolveToolRepo(cwd string, repoID string) (repository, error) {
 	if strings.TrimSpace(repoID) == "" && strings.TrimSpace(cwd) == "" {
 		return server.repo, nil
 	}
 	if strings.TrimSpace(repoID) == server.repo.ID {
 		return server.repo, nil
+	}
+	if strings.TrimSpace(repoID) != "" {
+		if repo, ok := server.repoByID(strings.TrimSpace(repoID)); ok {
+			return repo, nil
+		}
 	}
 	return resolveRepo(repoRequest{CWD: cwd, RepoID: repoID})
 }
@@ -1019,22 +1271,29 @@ func toolError(message string) map[string]any {
 }
 
 func (server runtimeServer) mcpResources() ([]map[string]string, error) {
-	snapshots, err := server.repo.listSnapshots("")
-	if err != nil {
-		return nil, err
-	}
 	resources := []map[string]string{
 		{"uri": "eve://repos", "name": "repos", "title": "EVE repositories", "mimeType": "application/json"},
-		{"uri": "eve://repos/" + server.repo.ID, "name": server.repo.ID, "title": server.repo.ID, "mimeType": "application/json"},
-		{"uri": "eve://repos/" + server.repo.ID + "/snapshots", "name": "snapshots", "title": "Snapshots", "mimeType": "application/json"},
 	}
-	for _, snapshot := range snapshots {
-		resources = append(resources, map[string]string{
-			"uri":      "eve://repos/" + server.repo.ID + "/snapshots/" + snapshot.ID,
-			"name":     snapshot.ID,
-			"title":    snapshot.Title,
-			"mimeType": "application/json",
-		})
+	for _, repo := range server.repositories() {
+		snapshots, err := repo.listSnapshots("")
+		if err != nil {
+			if repo.Root == server.repo.Root {
+				return nil, err
+			}
+			continue
+		}
+		resources = append(resources,
+			map[string]string{"uri": "eve://repos/" + repo.ID, "name": repo.ID, "title": repo.ID, "mimeType": "application/json"},
+			map[string]string{"uri": "eve://repos/" + repo.ID + "/snapshots", "name": repo.ID + "-snapshots", "title": repo.ID + " Snapshots", "mimeType": "application/json"},
+		)
+		for _, snapshot := range snapshots {
+			resources = append(resources, map[string]string{
+				"uri":      "eve://repos/" + repo.ID + "/snapshots/" + snapshot.ID,
+				"name":     snapshot.ID,
+				"title":    snapshot.Title,
+				"mimeType": "application/json",
+			})
+		}
 	}
 	return resources, nil
 }
@@ -1049,37 +1308,58 @@ func (server runtimeServer) readMCPResource(params json.RawMessage) (any, *mcpEr
 	var value any
 	switch input.URI {
 	case "eve://repos":
-		summary, err := server.repo.summary()
-		if err != nil {
-			return nil, &mcpError{Code: -32000, Message: err.Error()}
-		}
-		value = []repoSummary{summary}
-	case "eve://repos/" + server.repo.ID:
-		summary, err := server.repo.summary()
-		if err != nil {
-			return nil, &mcpError{Code: -32000, Message: err.Error()}
-		}
-		value = summary
-	case "eve://repos/" + server.repo.ID + "/snapshots":
-		snapshots, err := server.repo.listSnapshots("")
-		if err != nil {
-			return nil, &mcpError{Code: -32000, Message: err.Error()}
-		}
-		rows := make([]snapshotSummary, 0, len(snapshots))
-		for _, snapshot := range snapshots {
-			rows = append(rows, summarizeSnapshot(snapshot))
+		var rows []repoSummary
+		for _, repo := range server.repositories() {
+			summary, err := repo.summary()
+			if err != nil {
+				if repo.Root == server.repo.Root {
+					return nil, &mcpError{Code: -32000, Message: err.Error()}
+				}
+				continue
+			}
+			rows = append(rows, summary)
 		}
 		value = rows
 	default:
-		prefix := "eve://repos/" + server.repo.ID + "/snapshots/"
-		if !strings.HasPrefix(input.URI, prefix) {
+		const repoPrefix = "eve://repos/"
+		if !strings.HasPrefix(input.URI, repoPrefix) {
 			return nil, &mcpError{Code: -32602, Message: "unknown resource: " + input.URI}
 		}
-		snapshot, err := server.repo.loadSnapshot(strings.TrimPrefix(input.URI, prefix))
-		if err != nil {
-			return nil, &mcpError{Code: -32000, Message: err.Error()}
+		rest := strings.TrimPrefix(input.URI, repoPrefix)
+		parts := strings.Split(rest, "/")
+		if len(parts) == 0 || parts[0] == "" {
+			return nil, &mcpError{Code: -32602, Message: "unknown resource: " + input.URI}
 		}
-		value = snapshot
+		repo, ok := server.repoByID(parts[0])
+		if !ok {
+			return nil, &mcpError{Code: -32602, Message: "unknown repository: " + parts[0]}
+		}
+		switch {
+		case len(parts) == 1:
+			summary, err := repo.summary()
+			if err != nil {
+				return nil, &mcpError{Code: -32000, Message: err.Error()}
+			}
+			value = summary
+		case len(parts) == 2 && parts[1] == "snapshots":
+			snapshots, err := repo.listSnapshots("")
+			if err != nil {
+				return nil, &mcpError{Code: -32000, Message: err.Error()}
+			}
+			rows := make([]snapshotSummary, 0, len(snapshots))
+			for _, snapshot := range snapshots {
+				rows = append(rows, summarizeSnapshot(snapshot))
+			}
+			value = rows
+		case len(parts) == 3 && parts[1] == "snapshots":
+			snapshot, err := repo.loadSnapshot(parts[2])
+			if err != nil {
+				return nil, &mcpError{Code: -32000, Message: err.Error()}
+			}
+			value = snapshot
+		default:
+			return nil, &mcpError{Code: -32602, Message: "unknown resource: " + input.URI}
+		}
 	}
 	data, _ := json.Marshal(value)
 	return map[string]any{

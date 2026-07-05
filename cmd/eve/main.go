@@ -122,6 +122,7 @@ func runInit(args []string, stdout io.Writer, stderr io.Writer) int {
 			return 1
 		}
 	}
+	rememberRepository(repo)
 	fmt.Fprintf(stdout, "Initialized EVE snapshots in %s\n", repo.eveDir)
 	return 0
 }
@@ -151,6 +152,7 @@ func runDev(args []string, stdout io.Writer, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "%v\n", err)
 		return 1
 	}
+	rememberRepository(repo)
 
 	server := newRuntimeServer(repo, strings.TrimSpace(*addr))
 	fmt.Fprintf(stdout, "EVE Runtime listening on http://%s\n", server.addr)
@@ -420,7 +422,11 @@ func (repo repository) saveSnapshot(snapshot *eve.Snapshot) error {
 	if err := os.WriteFile(repo.snapshotPath(snapshot.ID), append(canonical, '\n'), 0o644); err != nil {
 		return fmt.Errorf("write snapshot %s: %w", snapshot.ID, err)
 	}
-	return repo.rebuildCache()
+	if err := repo.rebuildCache(); err != nil {
+		return err
+	}
+	rememberRepository(repo)
+	return nil
 }
 
 func (repo repository) listSnapshots(snapshotType string) ([]*eve.Snapshot, error) {
