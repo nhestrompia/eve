@@ -1,13 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 24,
-  "latestAt": "2026-07-05T01:54:53Z",
-  "latestSnapshot": "snap_495bc3157e54be63",
-  "latestTitle": "Make recent activity repository pills filter",
+  "snapshotCount": 25,
+  "commitCount": 1147,
+  "decisionCount": 51,
+  "riskCount": 18,
+  "artifactCount": 26,
+  "latestAt": "2026-07-05T02:11:17Z",
+  "latestSnapshot": "snap_92332f1b89ca7518",
+  "latestTitle": "Fix activity dashboard stats",
   "branch": "main",
-  "head": "4164aa8875a982772dbd0cd7c4a26c6905f0eb00",
+  "head": "6df0c8ad82dd9dca56b9e948ff1be9b19ef19b98",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "4164aa8875a982772dbd0cd7c4a26c6905f0eb00"
+  "latestGitState": "6df0c8ad82dd9dca56b9e948ff1be9b19ef19b98"
 }
