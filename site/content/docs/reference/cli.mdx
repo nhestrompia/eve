@@ -1,0 +1,125 @@
+---
+title: CLI Reference
+description: Commands available in the EVE CLI.
+---
+
+## Usage
+
+```sh
+eve <command>
+```
+
+## Commands
+
+### init
+
+Initialize EVE storage in the current Git repository.
+
+```sh
+eve init
+```
+
+### add
+
+Create or update a staged snapshot draft.
+
+```sh
+eve add --title <title> --summary <summary> [--type feature] [--validation <command>]
+```
+
+Common flags:
+
+- `--title`
+- `--type`
+- `--summary`
+- `--user-visible-change`
+- `--decision`
+- `--risk`
+- `--timeline`
+- `--validation`
+- `--artifact`
+- `--corrects`
+- `--supersedes`
+- `--reverts`
+- `--depends-on`
+- `--related`
+- `--json`
+- `--allow-dirty`
+
+### commit
+
+Validate the staged draft, derive Git facts, and write the canonical snapshot.
+
+```sh
+eve commit
+eve commit --allow-dirty
+```
+
+### dev
+
+Start the local runtime, web UI, local API, and HTTP MCP endpoint.
+
+```sh
+eve dev
+eve dev --addr localhost:4317
+```
+
+### mcp-stdio
+
+Start the MCP server over stdio.
+
+```sh
+eve mcp-stdio
+eve mcp-stdio --cwd /path/to/repo
+```
+
+### install-mcp
+
+Configure supported MCP clients.
+
+```sh
+eve install-mcp
+eve install-mcp --install
+eve install-mcp --clients codex,claude
+```
+
+### snapshot
+
+Print a snapshot.
+
+```sh
+eve snapshot <snapshot-id>
+```
+
+### checkout
+
+Checkout the Git state associated with a snapshot.
+
+```sh
+eve checkout <snapshot-id>
+eve checkout --force <snapshot-id>
+```
+
+### validate
+
+Validate a snapshot JSON file.
+
+```sh
+eve validate .eve/snapshots/<snapshot-id>.json
+```
+
+### canonicalize
+
+Write canonical JSON for a snapshot.
+
+```sh
+eve canonicalize .eve/snapshots/<snapshot-id>.json
+```
+
+### version
+
+Print the CLI and snapshot schema versions.
+
+```sh
+eve version
+```

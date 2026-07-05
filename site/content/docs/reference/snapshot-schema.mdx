@@ -1,0 +1,94 @@
+---
+title: Snapshot Schema
+description: The shape of canonical EVE snapshot records.
+---
+
+Canonical snapshots are JSON files.
+
+```json
+{
+  "id": "snap_123",
+  "schemaVersion": "0.1.0",
+  "title": "Add GitHub OAuth",
+  "type": "feature",
+  "summary": "Users can now sign in with GitHub.",
+  "userVisibleChange": "The login screen now includes a GitHub sign-in option.",
+  "relationships": {
+    "corrects": [],
+    "supersedes": [],
+    "reverts": [],
+    "dependsOn": [],
+    "related": []
+  },
+  "risks": [],
+  "timeline": [],
+  "decisions": [],
+  "validation": [],
+  "artifacts": [],
+  "implementation": {
+    "branch": "main",
+    "gitState": "abc123",
+    "commits": ["abc123"],
+    "dirty": false
+  },
+  "createdAt": "2026-07-03T15:00:00Z"
+}
+```
+
+## Types
+
+Snapshot `type` must be one of:
+
+- `feature`
+- `bugfix`
+- `experiment`
+- `refactor`
+- `release`
+
+## Risks
+
+Risk severity must be one of:
+
+- `low`
+- `medium`
+- `high`
+
+## Timeline phases
+
+Timeline phase must be one of:
+
+- `planning`
+- `implementation`
+- `validation`
+- `review`
+- `release`
+
+## Validation statuses
+
+Validation status must be one of:
+
+- `passed`
+- `failed`
+- `skipped`
+
+## Artifact types
+
+Artifact type must be one of:
+
+- `screenshot`
+- `video`
+- `preview`
+- `url`
+- `note`
+- `log`
+- `conversation`
+
+Each artifact needs a `uri`, `path`, or `url`.
+
+## Schema file
+
+The JSON Schema lives at:
+
+```text
+schema/eve.snapshot.v0.schema.json
+```

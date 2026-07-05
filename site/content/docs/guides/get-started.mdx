@@ -1,0 +1,52 @@
+---
+title: Get Started
+description: Install EVE, initialize a repository, and open the local UI.
+---
+
+## Prerequisites
+
+- Go 1.26 or newer
+- Node.js and npm, only when rebuilding the embedded local UI
+- A Git repository
+
+## Run from this checkout
+
+```sh
+npm --prefix ui ci
+npm --prefix ui run build
+go run ./cmd/eve init
+go run ./cmd/eve dev
+```
+
+Open `http://localhost:4317`.
+
+## Install the CLI
+
+From this repository, install the CLI and configure common agent hosts:
+
+```sh
+go run ./cmd/eve install-mcp --install
+```
+
+This installs `eve`, finds the installed binary, and configures Codex, Claude Code, and opencode MCP settings with an absolute command path.
+
+## Confirm the version
+
+```sh
+eve version
+```
+
+## Create the first snapshot
+
+```sh
+eve add \
+  --title "Add GitHub OAuth" \
+  --type feature \
+  --summary "Users can now sign in with GitHub." \
+  --user-visible-change "The login screen now includes a GitHub sign-in option." \
+  --validation "go test ./..."
+
+eve commit
+```
+
+The committed snapshot appears under `.eve/snapshots/`.

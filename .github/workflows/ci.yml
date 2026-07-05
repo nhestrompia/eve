@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            ui/package-lock.json
+            site/package-lock.json
+
+      - name: Test Go
+        run: go test ./...
+
+      - name: Install UI dependencies
+        run: npm --prefix ui ci
+
+      - name: Test UI
+        run: npm --prefix ui test
+
+      - name: Build UI
+        run: npm --prefix ui run build
+
+      - name: Install site dependencies
+        run: npm --prefix site ci
+
+      - name: Build site
+        run: npm --prefix site run build

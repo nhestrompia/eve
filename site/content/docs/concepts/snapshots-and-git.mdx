@@ -1,0 +1,52 @@
+---
+title: Snapshots and Git
+description: The boundary between Git implementation history and EVE product snapshots.
+---
+
+EVE is intentionally built beside Git.
+
+Git remains the source of truth for implementation history. EVE adds a product-history record for completed work.
+
+## Commit versus snapshot
+
+```text
+Commit
+  Records a code checkpoint.
+  Optimized for diffs, merges, authorship, and implementation history.
+
+Snapshot
+  Records a completed product change.
+  Optimized for product meaning, evidence, relationships, and agent context.
+```
+
+A single snapshot can correspond to one commit, several commits, or a working state that is later committed. The important boundary is that a snapshot describes a completed unit of product work, not every implementation checkpoint.
+
+## Git facts EVE derives
+
+When a snapshot is committed, EVE derives implementation facts from the repository:
+
+- Current branch
+- Resolved Git state
+- Base commit, when available
+- Commit list
+- Dirty state
+
+Agents and humans provide product meaning. EVE derives implementation facts.
+
+## Clean working tree by default
+
+`eve commit` expects the implementation working tree to be clean by default. This keeps the product record aligned with a reviewable Git state.
+
+Use `--allow-dirty` only when the workflow intentionally records a dirty state and the snapshot explains why.
+
+## Relationship fields
+
+Snapshots can point at other snapshots with structured relationships:
+
+- `corrects`
+- `supersedes`
+- `reverts`
+- `dependsOn`
+- `related`
+
+These fields let product history form a graph instead of a flat log.

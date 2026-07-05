@@ -1,0 +1,38 @@
+---
+title: Repository Practices
+description: The project metadata, verification, licensing, and release expectations for EVE.
+---
+
+The EVE repository is expected to be understandable to humans, agents, and GitHub automation.
+
+## Included repository files
+
+- `README.md` for the project overview and local commands
+- `LICENSE` for the open-source license
+- `CONTRIBUTING.md` for contribution workflow
+- `SECURITY.md` for vulnerability reporting
+- `CHANGELOG.md` for release notes
+- `.github/workflows/ci.yml` for verification
+- `.github/workflows/release.yml` for tagged releases
+- `.github/dependabot.yml` for dependency update checks
+
+## Verification
+
+Run the relevant tests before recording an EVE snapshot:
+
+```sh
+go test ./...
+npm --prefix ui test
+npm --prefix ui run build
+npm --prefix site run build
+```
+
+## Product-change rule
+
+After completing and verifying a product change in this repository:
+
+1. Commit the implementation changes to Git.
+2. Record the product change with EVE.
+3. Commit the generated `.eve/` record to Git.
+
+Include the verification in the EVE record.

@@ -1,0 +1,31 @@
+{
+  "name": "@eve/site",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build --webpack",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "fumadocs-core": "^16.10.7",
+    "fumadocs-mdx": "^15.0.13",
+    "fumadocs-ui": "^16.10.7",
+    "next": "^16.2.10",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@types/mdx": "^2.0.14",
+    "@types/node": "^26.1.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "postcss": "^8.5.16",
+    "typescript": "^6.0.3"
+  },
+  "overrides": {
+    "postcss": "^8.5.16"
+  }
+}

@@ -1,0 +1,55 @@
+---
+title: What is EVE?
+description: EVE records completed product changes next to Git history.
+---
+
+EVE is a repository-native product history layer for software teams that use human developers, coding agents, or both.
+
+Git records implementation checkpoints: commits, branches, authorship, diffs, and merge history. EVE records the completed product unit those checkpoints implement: what changed for users, why it changed, how it was verified, which risks and decisions mattered, and which artifacts prove the result.
+
+The canonical record lives in the repository under `.eve/`, so it can be reviewed, versioned, cloned, diffed, and carried forward with the codebase.
+
+## Why it exists
+
+Agentic development makes implementation faster, but it can make product memory worse. A finished change may be spread across a chat thread, terminal output, screenshots, commits, and local context that disappears after the work is merged.
+
+EVE gives every completed change a structured record:
+
+- Product summary and user-visible change
+- Decisions and rationale
+- Risks and mitigations
+- Validation commands and outcomes
+- Screenshots, logs, URLs, or other artifacts
+- Git branch, commits, dirty state, and resolved implementation state
+
+The result is a product history that both humans and agents can query before making the next change.
+
+## Core idea
+
+One EVE snapshot represents one completed product change. It can be a feature, bug fix, experiment, refactor, or release.
+
+```text
+Git commit:  What changed in the code?
+EVE snapshot: What changed in the product, why, and how was it verified?
+```
+
+EVE does not replace Git. It complements Git with product meaning.
+
+## Who it is for
+
+EVE is useful when a repository needs durable answers to questions like:
+
+- What changed for users in this feature?
+- Which command verified this fix?
+- Which screenshots show the shipped behavior?
+- Which previous change does this correct, supersede, or depend on?
+- What should an agent know before touching this area again?
+
+It is designed for local-first development and trusted repository workflows.
+
+## Start here
+
+- [Get started](/docs/guides/get-started)
+- [Record a change](/docs/guides/record-a-change)
+- [Agent guide](/docs/agents/agent-guide)
+- [Snapshot schema](/docs/reference/snapshot-schema)

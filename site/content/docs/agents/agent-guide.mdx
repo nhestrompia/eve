@@ -1,0 +1,43 @@
+---
+title: Agent Guide
+description: How coding agents should read and write EVE product history.
+---
+
+Agents should treat EVE as durable repository memory.
+
+Before changing behavior, read relevant EVE snapshots. After completing and verifying behavior, write a new snapshot that records the product meaning and evidence.
+
+## Agent workflow
+
+1. Inspect the repository and recent snapshots.
+2. Implement the requested product change.
+3. Run relevant verification.
+4. Commit implementation changes to Git when the repository workflow calls for it.
+5. Complete an EVE snapshot with the title, type, summary, validation, artifacts, and relationships.
+6. Commit the generated `.eve/` record to Git.
+
+## What agents should write
+
+Good EVE records are concise, specific, and evidence-oriented.
+
+Include:
+
+- What changed for users or maintainers
+- Why notable decisions were made
+- Which validation was run and whether it passed
+- Which artifacts demonstrate the result
+- Known risks or follow-up concerns
+- Related snapshot IDs
+
+Avoid:
+
+- Long conversational transcripts as the primary summary
+- Claims without verification
+- Secrets, tokens, or private data
+- Implementation-only detail that Git already captures better
+
+## Prefer MCP when available
+
+When the MCP server is available, prefer the structured MCP tools over shell-only flows. MCP lets an agent complete snapshots without relying on fragile text parsing.
+
+Use the CLI fallback when MCP is not connected.

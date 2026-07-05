@@ -1,0 +1,56 @@
+---
+title: Record a Change
+description: A practical workflow for writing useful EVE snapshots.
+---
+
+Record an EVE snapshot after the product change is implemented and verified.
+
+## Recommended workflow
+
+1. Complete the implementation.
+2. Run the relevant verification.
+3. Commit the implementation changes to Git.
+4. Create an EVE snapshot with the product meaning and verification.
+5. Commit the generated `.eve/` record to Git.
+
+This repository follows that workflow for product changes.
+
+## Minimal record
+
+```sh
+eve add \
+  --title "Fix checkout toast timing" \
+  --type bugfix \
+  --summary "Checkout result toasts now appear after the checkout request finishes." \
+  --validation "go test ./..."
+
+eve commit
+```
+
+## Better record
+
+Add the user-visible change, decisions, risks, and artifacts when they clarify the work:
+
+```sh
+eve add \
+  --title "Fix checkout toast timing" \
+  --type bugfix \
+  --summary "Checkout result toasts now appear after the checkout request finishes." \
+  --user-visible-change "Users see an accurate success or failure toast after checkout." \
+  --decision "Keep checkout feedback in the existing toast system." \
+  --risk "Checkout failures could still be ambiguous without server details." \
+  --validation "go test ./..." \
+  --artifact "output/playwright/checkout-result-toast.png"
+
+eve commit
+```
+
+## Writing guidance
+
+Use language that future maintainers can act on:
+
+- Write summaries in product terms.
+- Include exact verification commands.
+- Describe artifacts so readers know what they prove.
+- Add risks when something remains uncertain.
+- Link related snapshots when a change corrects or supersedes earlier work.

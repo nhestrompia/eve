@@ -6,6 +6,34 @@ Git is still the source of truth for implementation checkpoints. eve adds a
 small product-history layer for the completed unit of work: a feature, bug fix,
 experiment, refactor, or release.
 
+## Website and Documentation
+
+This repository includes a functional documentation website in `site/`, built
+with Next.js and Fumadocs.
+
+Run it locally:
+
+```sh
+npm --prefix site ci
+npm --prefix site run dev
+```
+
+Build it:
+
+```sh
+npm --prefix site run build
+```
+
+The site is ready for Vercel deployment. Use `site` as the project root, keep
+the default Next.js build command, and publish from Vercel's generated output.
+
+The docs explain:
+
+- What EVE records and why it complements Git
+- How snapshots, validation, artifacts, and relationships work
+- How coding agents should read and write EVE history
+- CLI, MCP, local API, and snapshot schema reference
+
 ## What eve Stores
 
 Canonical product history lives in the repository:
@@ -80,7 +108,40 @@ EVE_BIN="$EVE_BIN_DIR/eve"
 go test ./...
 npm --prefix ui test
 npm --prefix ui run build
+npm --prefix site run build
 ```
+
+Before the first site build, install site dependencies:
+
+```sh
+npm --prefix site ci
+```
+
+## Releases
+
+Releases are created from Git tags:
+
+```sh
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+The GitHub Actions release workflow builds `eve` binaries for Linux, macOS, and
+Windows, then publishes them to a GitHub release.
+
+## Repository Practices
+
+This repository includes:
+
+- `LICENSE`
+- `CONTRIBUTING.md`
+- `SECURITY.md`
+- `CHANGELOG.md`
+- CI for Go, embedded UI, and docs site verification
+- Dependabot configuration for Go modules, npm packages, and GitHub Actions
+
+For completed product changes in this repository, commit the implementation,
+record the product change with EVE, then commit the generated `.eve/` record.
 
 ## Architecture
 

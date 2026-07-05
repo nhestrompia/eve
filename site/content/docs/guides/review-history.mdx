@@ -1,0 +1,54 @@
+---
+title: Review History
+description: Browse product snapshots in the local EVE UI and from the CLI.
+---
+
+EVE provides a local web UI for reviewing repository product history.
+
+```sh
+eve dev
+```
+
+Open `http://localhost:4317`.
+
+## What to review
+
+The UI is designed around questions reviewers and agents ask repeatedly:
+
+- What changed?
+- Why did it change?
+- How was it verified?
+- Which decisions and risks matter?
+- Which artifacts prove the behavior?
+- Which Git state implements it?
+- Which snapshots are related?
+
+## Inspect from the CLI
+
+```sh
+eve snapshot <snapshot-id>
+```
+
+## Checkout an implementation state
+
+```sh
+eve checkout <snapshot-id>
+```
+
+Use force only when you intentionally want to overwrite local working tree state:
+
+```sh
+eve checkout --force <snapshot-id>
+```
+
+## Validate a snapshot file
+
+```sh
+eve validate .eve/snapshots/<snapshot-id>.json
+```
+
+## Canonicalize a snapshot file
+
+```sh
+eve canonicalize .eve/snapshots/<snapshot-id>.json
+```

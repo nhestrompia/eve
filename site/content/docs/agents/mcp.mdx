@@ -1,0 +1,62 @@
+---
+title: MCP
+description: EVE exposes product history through Model Context Protocol resources and tools.
+---
+
+EVE exposes local product history to agents through MCP.
+
+## Transports
+
+Stdio:
+
+```sh
+eve mcp-stdio
+```
+
+Streamable HTTP, after starting the local runtime:
+
+```sh
+eve dev
+```
+
+Connect the client to:
+
+```text
+http://localhost:4317/mcp
+```
+
+## Resources
+
+```text
+eve://repos
+eve://repos/{repoId}
+eve://repos/{repoId}/snapshots
+eve://repos/{repoId}/snapshots/{snapshotId}
+```
+
+## Tools
+
+- `list_repos`
+- `list_snapshots`
+- `get_snapshot`
+- `complete_snapshot`
+- `skip_snapshot`
+- `checkout_snapshot`
+
+## Recommended setup
+
+```sh
+eve install-mcp
+```
+
+From this repository, install and configure in one command:
+
+```sh
+go run ./cmd/eve install-mcp --install
+```
+
+This configures Codex, Claude Code, and opencode by default.
+
+## Security model
+
+Version 0 assumes trusted local usage. Keep local HTTP bound to localhost and only connect agents you trust.

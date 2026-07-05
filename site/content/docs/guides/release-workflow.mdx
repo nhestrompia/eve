@@ -1,0 +1,40 @@
+---
+title: Release Workflow
+description: How the repository turns tagged versions into GitHub releases.
+---
+
+EVE uses Git tags as release triggers.
+
+## Versioning
+
+The CLI version is defined in `types.go` as `CLIVersion`.
+
+Before cutting a release:
+
+1. Update the version if needed.
+2. Run the verification suite.
+3. Commit the release preparation.
+4. Tag the release.
+5. Push the tag.
+
+```sh
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+## Release artifacts
+
+The release workflow builds CLI binaries for common operating systems and CPU architectures, then publishes them to a GitHub release.
+
+## Verification
+
+The CI workflow runs:
+
+- `go test ./...`
+- `npm --prefix ui ci`
+- `npm --prefix ui test`
+- `npm --prefix ui run build`
+- `npm --prefix site ci`
+- `npm --prefix site run build`
+
+Treat a green CI run as the minimum bar, not a replacement for targeted product verification.

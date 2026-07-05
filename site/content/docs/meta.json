@@ -1,0 +1,24 @@
+{
+  "title": "EVE",
+  "pages": [
+    "index",
+    "---Concepts---",
+    "concepts/product-history",
+    "concepts/snapshots-and-git",
+    "concepts/storage-model",
+    "---Guides---",
+    "guides/get-started",
+    "guides/record-a-change",
+    "guides/review-history",
+    "guides/release-workflow",
+    "---Agents---",
+    "agents/agent-guide",
+    "agents/mcp",
+    "---Reference---",
+    "reference/cli",
+    "reference/snapshot-schema",
+    "reference/local-api",
+    "---Project---",
+    "project/repository"
+  ]
+}

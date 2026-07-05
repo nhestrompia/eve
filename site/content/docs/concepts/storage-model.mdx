@@ -1,0 +1,36 @@
+---
+title: Storage Model
+description: Where EVE records live and which files are canonical.
+---
+
+EVE stores product history inside the repository.
+
+```text
+.eve/
+  config.json
+  snapshots/*.json
+  artifacts/<snapshot-id>/*
+  cache/
+```
+
+## Canonical files
+
+The canonical product records are snapshot JSON files under `.eve/snapshots/`.
+
+These files are intended to be committed to Git. They are the durable product history.
+
+## Artifacts
+
+Artifacts are supporting evidence for snapshots. They can be local files, repository paths, URLs, screenshots, videos, logs, notes, or conversation records.
+
+Artifacts should be safe to commit. Do not store credentials, private customer data, or machine-local secrets in `.eve/`.
+
+## Cache
+
+`.eve/cache/` is rebuildable. It exists to make local browsing and indexing fast.
+
+Cache files should not be treated as the source of truth.
+
+## Drafts
+
+The CLI can stage a draft before committing it as a canonical snapshot. Drafts are useful for incremental agent workflows where product meaning is assembled as the implementation progresses.

@@ -1,0 +1,43 @@
+---
+title: Product History
+description: How EVE turns completed work into durable product memory.
+---
+
+Product history is the layer of knowledge that explains the meaning of implementation work.
+
+Git can tell you that a file changed. EVE is meant to tell you what shipped, which behavior changed, how the work was verified, and what future contributors should know before building on it.
+
+## What belongs in product history
+
+An EVE snapshot should describe the completed unit of work from a product perspective:
+
+- The title and type of change
+- A concise summary
+- The user-visible behavior, when applicable
+- Decisions made during implementation
+- Known risks and mitigations
+- Validation evidence
+- Artifacts such as screenshots, videos, logs, URLs, and notes
+- Relationships to other snapshots
+
+The record should be useful months later to someone who was not present when the work happened.
+
+## What does not belong
+
+EVE is not a replacement for commit messages, code review comments, issue trackers, or long-form design docs.
+
+Avoid using snapshots for:
+
+- Every intermediate commit
+- Raw terminal dumps without interpretation
+- Private credentials or secrets
+- Unverified claims
+- Exhaustive implementation narration that belongs in code review
+
+Keep the snapshot focused on the product result and the evidence for it.
+
+## How agents benefit
+
+Agents are good at reading structured local context. EVE gives them a stable source of truth that is closer to product intent than a commit log.
+
+Before changing a feature, an agent can inspect the related snapshots to understand prior decisions, risks, and validation expectations. After completing work, the agent can write a new snapshot that future agents and humans can trust.
