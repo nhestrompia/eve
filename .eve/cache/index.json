@@ -1,13 +1,13 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 19,
-  "latestAt": "2026-07-05T01:31:35Z",
-  "latestSnapshot": "snap_e051f1bdb5fdf1a3",
-  "latestTitle": "Test multi-commit snapshot checkout",
+  "snapshotCount": 20,
+  "latestAt": "2026-07-05T01:34:20Z",
+  "latestSnapshot": "snap_2020c93da928537c",
+  "latestTitle": "Improve agent snapshot workflow",
   "branch": "main",
-  "head": "59ac1cdd3eef684fb8bd1c05113dcb27903dd179",
+  "head": "33c758e074bc519e24b8dd68833f61c60592de37",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "59ac1cdd3eef684fb8bd1c05113dcb27903dd179"
+  "latestGitState": "33c758e074bc519e24b8dd68833f61c60592de37"
 }
