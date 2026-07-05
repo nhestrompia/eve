@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 26,
-  "commitCount": 26,
-  "decisionCount": 52,
+  "snapshotCount": 27,
+  "commitCount": 29,
+  "decisionCount": 54,
   "riskCount": 18,
   "artifactCount": 26,
-  "latestAt": "2026-07-05T10:37:42Z",
-  "latestSnapshot": "snap_b8395d68eab861d5",
-  "latestTitle": "Fix snapshot implementation commit boundaries",
+  "latestAt": "2026-07-05T10:49:36Z",
+  "latestSnapshot": "snap_2a51af4c8e91a45c",
+  "latestTitle": "Fix merge duplicate declarations",
   "branch": "main",
-  "head": "38abd74b057f1905522c0ea64e536476df992649",
+  "head": "fe65571b159a769451093037903e0583d51143cf",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "38abd74b057f1905522c0ea64e536476df992649"
+  "latestGitState": "fe65571b159a769451093037903e0583d51143cf"
 }
