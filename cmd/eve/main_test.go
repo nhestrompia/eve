@@ -232,6 +232,45 @@ func TestCheckoutRefusesDirtyTreeUnlessForced(t *testing.T) {
 	}
 }
 
+func TestCheckoutSnapshotWithMultipleCommitsUsesGitState(t *testing.T) {
+	repo := initTempGitRepo(t)
+	t.Chdir(repo)
+	mustRun(t, []string{"init"})
+
+	productPath := filepath.Join(repo, "product.txt")
+	if err := os.WriteFile(productPath, []byte("product\nfirst\n"), 0o644); err != nil {
+		t.Fatalf("write first product change: %v", err)
+	}
+	gitRun(t, repo, "add", "product.txt")
+	gitRun(t, repo, "commit", "-m", "first product change")
+	firstCommit := gitOutputForTest(t, repo, "rev-parse", "HEAD")
+
+	if err := os.WriteFile(productPath, []byte("product\nfirst\nsecond\n"), 0o644); err != nil {
+		t.Fatalf("write second product change: %v", err)
+	}
+	gitRun(t, repo, "add", "product.txt")
+	gitRun(t, repo, "commit", "-m", "second product change")
+	snapshotCommit := gitOutputForTest(t, repo, "rev-parse", "HEAD")
+
+	snapshot := sampleSnapshot("snap_multi_commit", "Multi Commit Snapshot", snapshotCommit)
+	snapshot.Implementation.Commits = []string{firstCommit, snapshotCommit}
+	writeSnapshot(t, repo, snapshot)
+	gitRun(t, repo, "add", ".eve")
+	gitRun(t, repo, "commit", "-m", "record snapshot")
+
+	var stdout, stderr bytes.Buffer
+	code := run([]string{"checkout", "snap_multi_commit"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("checkout code = %d stderr = %q stdout = %q, want success", code, stderr.String(), stdout.String())
+	}
+	if got := gitOutputForTest(t, repo, "rev-parse", "HEAD"); got != snapshotCommit {
+		t.Fatalf("HEAD = %s, want snapshot gitState %s", got, snapshotCommit)
+	}
+	if !strings.Contains(stdout.String(), "Commit: "+snapshotCommit) {
+		t.Fatalf("stdout = %q, want checked out gitState", stdout.String())
+	}
+}
+
 func TestCompleteSnapshotDerivesGitFacts(t *testing.T) {
 	repo := initTempGitRepo(t)
 	facts, err := deriveGitFacts(repoFromRoot(repo))
