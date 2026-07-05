@@ -1,11 +1,11 @@
 ---
 title: Snapshots and Git
-description: The boundary between Git implementation history and EVE product snapshots.
+description: The boundary between Git implementation history and eve product snapshots.
 ---
 
-EVE is intentionally built beside Git.
+eve is intentionally built beside Git.
 
-Git remains the source of truth for implementation history. EVE adds a product-history record for completed work.
+Git remains the source of truth for implementation history. eve adds a product-history record for completed work.
 
 ## Commit versus snapshot
 
@@ -21,9 +21,9 @@ Snapshot
 
 A single snapshot can correspond to one commit, several commits, or a working state that is later committed. The important boundary is that a snapshot describes a completed unit of product work, not every implementation checkpoint.
 
-## Git facts EVE derives
+## Git facts eve derives
 
-When a snapshot is committed, EVE derives implementation facts from the repository:
+When a snapshot is committed, eve derives implementation facts from the repository:
 
 - Current branch
 - Resolved Git state
@@ -31,7 +31,7 @@ When a snapshot is committed, EVE derives implementation facts from the reposito
 - Commit list
 - Dirty state
 
-Agents and humans provide product meaning. EVE derives implementation facts.
+Agents and humans provide product meaning. eve derives implementation facts.
 
 ## Clean working tree by default
 

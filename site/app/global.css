@@ -7,6 +7,22 @@
   --eve-blue: oklch(0.52 0.18 258);
   --eve-green: oklch(0.56 0.13 155);
   --eve-amber: oklch(0.66 0.13 74);
+  --color-fd-background: var(--eve-surface);
+  --color-fd-foreground: var(--eve-ink);
+  --color-fd-muted: oklch(0.955 0.008 247);
+  --color-fd-muted-foreground: oklch(0.46 0.032 258);
+  --color-fd-card: var(--eve-paper);
+  --color-fd-card-foreground: var(--eve-ink);
+  --color-fd-popover: var(--eve-paper);
+  --color-fd-popover-foreground: var(--eve-ink);
+  --color-fd-border: oklch(0.88 0.012 247);
+  --color-fd-primary: var(--eve-blue);
+  --color-fd-primary-foreground: oklch(0.99 0.005 247);
+  --color-fd-secondary: oklch(0.955 0.008 247);
+  --color-fd-secondary-foreground: var(--eve-ink);
+  --color-fd-accent: oklch(0.94 0.018 247);
+  --color-fd-accent-foreground: var(--eve-ink);
+  --color-fd-ring: var(--eve-blue);
 }
 
 body {
@@ -16,12 +32,104 @@ body {
   color: var(--eve-ink);
 }
 
+.dark {
+  --eve-ink: oklch(0.92 0.012 247);
+  --eve-muted: oklch(0.72 0.018 247);
+  --eve-line: oklch(0.34 0.018 258);
+  --eve-surface: oklch(0.16 0.016 258);
+  --eve-paper: oklch(0.205 0.018 258);
+  --eve-blue: oklch(0.76 0.1 255);
+  --eve-green: oklch(0.74 0.11 155);
+  --eve-amber: oklch(0.78 0.12 74);
+  --color-fd-background: var(--eve-surface);
+  --color-fd-foreground: var(--eve-ink);
+  --color-fd-muted: oklch(0.24 0.018 258);
+  --color-fd-muted-foreground: oklch(0.74 0.018 247);
+  --color-fd-card: var(--eve-paper);
+  --color-fd-card-foreground: var(--eve-ink);
+  --color-fd-popover: oklch(0.21 0.018 258);
+  --color-fd-popover-foreground: var(--eve-ink);
+  --color-fd-border: oklch(0.34 0.018 258);
+  --color-fd-primary: var(--eve-blue);
+  --color-fd-primary-foreground: oklch(0.14 0.018 258);
+  --color-fd-secondary: oklch(0.24 0.018 258);
+  --color-fd-secondary-foreground: var(--eve-ink);
+  --color-fd-accent: oklch(0.28 0.022 258);
+  --color-fd-accent-foreground: oklch(0.93 0.012 247);
+  --color-fd-ring: var(--eve-blue);
+}
+
+.dark body {
+  background:
+    linear-gradient(180deg, oklch(0.18 0.018 258), var(--eve-surface) 42rem),
+    var(--eve-surface);
+  color: var(--eve-ink);
+}
+
+.dark #nd-sidebar {
+  --color-fd-muted: oklch(0.25 0.018 258);
+  --color-fd-muted-foreground: oklch(0.76 0.018 247);
+  --color-fd-secondary: oklch(0.28 0.018 258);
+  --color-fd-primary: oklch(0.8 0.09 255);
+}
+
+#nd-sidebar {
+  --color-fd-primary: var(--eve-blue);
+}
+
+#nd-sidebar a,
+#nd-sidebar button {
+  letter-spacing: 0;
+}
+
+.dark #nd-sidebar a,
+.dark #nd-sidebar button,
+.dark #nd-sidebar [data-active='true'] {
+  color: var(--color-fd-muted-foreground);
+}
+
+.dark #nd-sidebar [data-active='true'],
+.dark #nd-sidebar [aria-current='page'] {
+  color: var(--eve-ink);
+}
+
+.dark #nd-sidebar [class*='text-fd-primary'] {
+  color: var(--color-fd-primary);
+}
+
+.eve-docs-brand,
+.eve-home-brand {
+  display: inline-flex;
+  align-items: center;
+}
+
+.eve-docs-brand img,
+.eve-home-brand img {
+  display: block;
+  width: auto;
+  object-fit: contain;
+}
+
+.eve-docs-brand img {
+  height: 26px;
+}
+
+.eve-home-brand img {
+  height: 30px;
+}
+
+.dark .eve-docs-brand img,
+.dark .eve-home-brand img {
+  filter: invert(1) brightness(1.55);
+}
+
 .eve-home {
   min-height: 100vh;
+  overflow: clip;
 }
 
 .eve-home-shell {
-  width: min(1120px, calc(100% - 32px));
+  width: min(1180px, calc(100% - 32px));
   margin: 0 auto;
 }
 
@@ -31,12 +139,6 @@ body {
   justify-content: space-between;
   gap: 24px;
   padding: 24px 0;
-}
-
-.eve-wordmark {
-  font-size: 15px;
-  font-weight: 750;
-  letter-spacing: 0;
 }
 
 .eve-nav-links {
@@ -76,26 +178,30 @@ body {
 
 .eve-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
-  gap: clamp(32px, 6vw, 72px);
-  align-items: center;
-  padding: clamp(48px, 8vw, 96px) 0 56px;
+  grid-template-columns: minmax(0, 0.95fr) minmax(360px, 1.05fr);
+  gap: clamp(36px, 7vw, 92px);
+  align-items: end;
+  padding: clamp(56px, 9vw, 108px) 0 64px;
+}
+
+.eve-hero-copy {
+  padding-bottom: clamp(0px, 4vw, 42px);
 }
 
 .eve-kicker {
   margin: 0 0 16px;
   color: var(--eve-blue);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 760;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .eve-hero h1 {
   max-width: 12ch;
   margin: 0;
-  font-size: clamp(48px, 8vw, 92px);
-  line-height: 0.95;
+  font-size: clamp(46px, 7vw, 88px);
+  font-weight: 760;
+  line-height: 0.94;
   letter-spacing: 0;
 }
 
@@ -114,39 +220,59 @@ body {
   margin-top: 32px;
 }
 
-.eve-record {
+.eve-product-surface {
   border: 1px solid var(--eve-line);
   border-radius: 8px;
-  background: color-mix(in oklch, var(--eve-paper) 94%, var(--eve-blue));
+  background:
+    linear-gradient(145deg, color-mix(in oklch, var(--eve-paper) 96%, var(--eve-blue)), var(--eve-paper)),
+    var(--eve-paper);
   box-shadow:
     0 1px 2px rgba(15, 23, 42, 0.04),
     0 16px 48px rgba(15, 23, 42, 0.08);
   overflow: hidden;
 }
 
-.eve-record-header {
+.eve-surface-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   border-bottom: 1px solid var(--eve-line);
-  padding: 14px 16px;
+  padding: 14px 18px;
   color: var(--eve-muted);
   font-size: 13px;
 }
 
-.eve-record-body {
+.eve-surface-bar code,
+.eve-surface-cell code {
+  border-radius: 6px;
+  background: color-mix(in oklch, var(--eve-line) 54%, transparent);
+  padding: 3px 6px;
+  color: var(--eve-ink);
+}
+
+.eve-surface-grid {
   display: grid;
-  gap: 18px;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 1px;
+  background: var(--eve-line);
   padding: 20px;
 }
 
-.eve-field {
+.eve-surface-cell {
   display: grid;
-  gap: 6px;
+  align-content: start;
+  gap: 10px;
+  min-height: 148px;
+  background: var(--eve-paper);
+  padding: clamp(18px, 3vw, 28px);
 }
 
-.eve-field span {
+.eve-surface-cell-large {
+  grid-row: span 2;
+}
+
+.eve-surface-cell span {
   color: var(--eve-muted);
   font-size: 12px;
   font-weight: 760;
@@ -154,16 +280,10 @@ body {
   text-transform: uppercase;
 }
 
-.eve-field strong,
-.eve-field code {
-  font-size: 15px;
-}
-
-.eve-field code {
-  width: fit-content;
-  border-radius: 6px;
-  background: color-mix(in oklch, var(--eve-line) 54%, transparent);
-  padding: 3px 6px;
+.eve-surface-cell strong {
+  max-width: 18ch;
+  font-size: clamp(18px, 2vw, 24px);
+  line-height: 1.15;
 }
 
 .eve-bands {
@@ -176,7 +296,7 @@ body {
 .eve-band {
   border: 1px solid var(--eve-line);
   border-radius: 8px;
-  background: var(--eve-paper);
+  background: color-mix(in oklch, var(--eve-paper) 98%, var(--eve-blue));
   padding: 20px;
 }
 
@@ -208,5 +328,13 @@ body {
 
   .eve-nav-links a {
     padding-inline: 8px;
+  }
+
+  .eve-surface-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .eve-surface-cell-large {
+    grid-row: auto;
   }
 }

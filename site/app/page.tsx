@@ -1,11 +1,14 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function HomePage() {
   return (
     <main className="eve-home">
       <div className="eve-home-shell">
         <nav className="eve-home-nav" aria-label="Primary">
-          <div className="eve-wordmark">EVE</div>
+          <Link className="eve-home-brand" href="/" aria-label="eve home">
+            <Image src="/eve.svg" alt="" width={96} height={40} unoptimized priority />
+          </Link>
           <div className="eve-nav-links">
             <Link href="/docs">Docs</Link>
             <a href="https://github.com/nhestrompia/eve">GitHub</a>
@@ -13,13 +16,12 @@ export default function HomePage() {
         </nav>
 
         <section className="eve-hero">
-          <div>
-            <p className="eve-kicker">Product history for agentic development</p>
-            <h1>Explain the change, not just the diff.</h1>
+          <div className="eve-hero-copy">
+            <p className="eve-kicker">git tracks code, eve tracks product</p>
+            <h1>Product memory that lives with the repo.</h1>
             <p>
-              EVE records completed product snapshots beside Git commits. It keeps the user-visible
-              change, decisions, risks, validation, artifacts, and implementation facts in the repository
-              so humans and agents can understand what shipped.
+              eve records the completed product change beside Git: what changed for users, why it
+              changed, how it was verified, and which artifacts prove the result.
             </p>
             <div className="eve-actions">
               <Link className="eve-button" data-tone="primary" href="/docs/guides/get-started">
@@ -31,33 +33,35 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="eve-record" aria-label="Example EVE record">
-            <div className="eve-record-header">
-              <span>.eve/snapshots/snap_123.json</span>
-              <span>passed</span>
+          <div className="eve-product-surface" aria-label="Example eve record">
+            <div className="eve-surface-bar">
+              <span>snapshot</span>
+              <code>.eve/snapshots/snap_123.json</code>
             </div>
-            <div className="eve-record-body">
-              <div className="eve-field">
-                <span>Title</span>
-                <strong>Add GitHub OAuth</strong>
+            <div className="eve-surface-grid">
+              <div className="eve-surface-cell eve-surface-cell-large">
+                <span>product change</span>
+                <strong>Users can sign in with GitHub.</strong>
               </div>
-              <div className="eve-field">
-                <span>User-visible change</span>
-                <strong>The login screen now includes a GitHub sign-in option.</strong>
-              </div>
-              <div className="eve-field">
-                <span>Validation</span>
+              <div className="eve-surface-cell">
+                <span>validation</span>
+                <strong>passed</strong>
                 <code>go test ./...</code>
               </div>
-              <div className="eve-field">
-                <span>Implementation</span>
-                <code>branch main, gitState abc123</code>
+              <div className="eve-surface-cell">
+                <span>decision</span>
+                <strong>Keep Git as implementation truth.</strong>
+              </div>
+              <div className="eve-surface-cell">
+                <span>implementation</span>
+                <strong>branch main</strong>
+                <code>gitState abc123</code>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="eve-bands" aria-label="EVE value">
+        <section className="eve-bands" aria-label="eve value">
           <article className="eve-band">
             <h2>Repository-native</h2>
             <p>Canonical records live in `.eve/`, travel with the code, and remain reviewable in GitHub.</p>

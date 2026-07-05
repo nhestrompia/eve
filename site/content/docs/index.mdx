@@ -1,11 +1,11 @@
 ---
-title: What is EVE?
-description: EVE records completed product changes next to Git history.
+title: What is eve?
+description: git tracks code, eve tracks product.
 ---
 
-EVE is a repository-native product history layer for software teams that use human developers, coding agents, or both.
+eve is a repository-native product history layer for software teams that use human developers, coding agents, or both.
 
-Git records implementation checkpoints: commits, branches, authorship, diffs, and merge history. EVE records the completed product unit those checkpoints implement: what changed for users, why it changed, how it was verified, which risks and decisions mattered, and which artifacts prove the result.
+Git records implementation checkpoints: commits, branches, authorship, diffs, and merge history. eve records the completed product unit those checkpoints implement: what changed for users, why it changed, how it was verified, which risks and decisions mattered, and which artifacts prove the result.
 
 The canonical record lives in the repository under `.eve/`, so it can be reviewed, versioned, cloned, diffed, and carried forward with the codebase.
 
@@ -13,7 +13,7 @@ The canonical record lives in the repository under `.eve/`, so it can be reviewe
 
 Agentic development makes implementation faster, but it can make product memory worse. A finished change may be spread across a chat thread, terminal output, screenshots, commits, and local context that disappears after the work is merged.
 
-EVE gives every completed change a structured record:
+eve gives every completed change a structured record:
 
 - Product summary and user-visible change
 - Decisions and rationale
@@ -26,18 +26,18 @@ The result is a product history that both humans and agents can query before mak
 
 ## Core idea
 
-One EVE snapshot represents one completed product change. It can be a feature, bug fix, experiment, refactor, or release.
+One eve snapshot represents one completed product change. It can be a feature, bug fix, experiment, refactor, or release.
 
 ```text
 Git commit:  What changed in the code?
-EVE snapshot: What changed in the product, why, and how was it verified?
+eve snapshot: What changed in the product, why, and how was it verified?
 ```
 
-EVE does not replace Git. It complements Git with product meaning.
+eve does not replace Git. It complements Git with product meaning.
 
 ## Who it is for
 
-EVE is useful when a repository needs durable answers to questions like:
+eve is useful when a repository needs durable answers to questions like:
 
 - What changed for users in this feature?
 - Which command verified this fix?

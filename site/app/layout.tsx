@@ -5,11 +5,14 @@ import './global.css';
 
 export const metadata: Metadata = {
   title: {
-    default: 'EVE - Product history for agentic development',
-    template: '%s | EVE',
+    default: 'eve - git tracks code, eve tracks product',
+    template: '%s | eve',
   },
   description:
-    'EVE records completed product changes next to Git history so developers and agents can understand what changed, why, and how it was verified.',
+    'eve records completed product changes next to Git history so developers and agents can understand what changed, why, and how it was verified.',
+  icons: {
+    icon: '/eve.svg',
+  },
 };
 
 export const viewport: Viewport = {
