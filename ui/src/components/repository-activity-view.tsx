@@ -60,9 +60,9 @@ export function RepositoryActivityView({
 
   return (
     <main className="min-h-[calc(100dvh-76px)] min-w-0 bg-background px-4 py-5 sm:px-6 sm:py-7 lg:px-8 lg:py-8">
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_350px] xl:gap-7">
+      <div className="grid grid-cols-1 gap-6 2xl:grid-cols-[minmax(0,1fr)_350px] 2xl:gap-7">
         <section className="min-w-0 space-y-7">
-          <header className="grid grid-cols-1 items-end gap-7 xl:grid-cols-[minmax(400px,0.8fr)_minmax(0,1.2fr)]">
+          <header className="space-y-5">
             <div>
               <p className="font-mono text-xs font-semibold uppercase tracking-wide text-slate-600">
                 Overview
@@ -76,7 +76,7 @@ export function RepositoryActivityView({
                   : "Track and understand how your products are evolving across repositories."}
               </p>
             </div>
-            <div className="flex min-w-0 gap-3 overflow-x-auto pb-1 xl:flex-wrap xl:justify-end xl:overflow-visible xl:pb-0">
+            <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(176px,1fr))] gap-3">
               {repoRows.slice(0, 4).map((repo, index) => (
                 <RepositoryOverviewCard
                   key={repo.name}
@@ -109,7 +109,7 @@ export function RepositoryActivityView({
           />
         </section>
 
-        <aside className="space-y-5">
+        <aside className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-2 2xl:block 2xl:space-y-5">
           <PlatformOverview stats={stats} />
           <VelocityPanel repositories={repoRows} evolutions={evolutions} />
           <AgentContributionPanel
@@ -137,7 +137,7 @@ function RepositoryOverviewCard({
     <Link
       to="/repositories/$repo"
       params={{ repo: repo.name }}
-      className={`w-[196px] min-w-[196px] rounded-lg bg-white p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.1)] transition-[background-color,box-shadow,scale] duration-150 hover:bg-slate-50 active:scale-[0.96] ${selected ? "ring-2 ring-blue-500/20" : ""}`}
+      className={`min-w-0 rounded-lg bg-white p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.1)] transition-[background-color,box-shadow,scale] duration-150 hover:bg-slate-50 active:scale-[0.96] ${selected ? "ring-2 ring-blue-500/20" : ""}`}
     >
       <div className="flex items-center justify-between gap-3">
         <span className="flex min-w-0 flex-1 items-center gap-2">
@@ -151,11 +151,11 @@ function RepositoryOverviewCard({
       <div className="mt-4">
         <RepoSparkline tone={tone} seed={repo.name} />
       </div>
-      <p className="mt-3 text-xs leading-4 text-muted-foreground">
-        <span className="block truncate">
+      <p className="mt-3 min-w-0 text-xs leading-4 text-muted-foreground">
+        <span className="block overflow-hidden text-ellipsis whitespace-nowrap">
           {repo.evolutionCount} EVs · {repo.snapshotCount} snaps
         </span>
-        <span className="block truncate">
+        <span className="block overflow-hidden text-ellipsis whitespace-nowrap">
           {repo.commitCount} {repo.commitCount === 1 ? "commit" : "commits"}
         </span>
       </p>
