@@ -18,12 +18,20 @@ The EVE repository is expected to be understandable to humans, agents, and GitHu
 
 ## Verification
 
-Run the relevant tests before recording an EVE snapshot:
+Run the relevant tests before recording an EVE snapshot.
+
+For normal EVE development:
 
 ```sh
 go test ./...
 npm --prefix ui test
 npm --prefix ui run build
+```
+
+For documentation-site changes only:
+
+```sh
+npm --prefix site ci
 npm --prefix site run build
 ```
 

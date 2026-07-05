@@ -9,9 +9,11 @@ experiment, refactor, or release.
 ## Website and Documentation
 
 This repository includes a functional documentation website in `site/`, built
-with Next.js and Fumadocs.
+with Next.js and Fumadocs. You do not need to run the docs site to use EVE from
+a fork or local checkout.
 
-Run it locally:
+Only run the docs site when you are editing documentation or preparing a docs
+deployment:
 
 ```sh
 npm --prefix site ci
@@ -104,17 +106,19 @@ EVE_BIN="$EVE_BIN_DIR/eve"
 
 ## Verify
 
+For normal EVE development:
+
 ```sh
 go test ./...
 npm --prefix ui test
 npm --prefix ui run build
-npm --prefix site run build
 ```
 
-Before the first site build, install site dependencies:
+For documentation-site changes only:
 
 ```sh
 npm --prefix site ci
+npm --prefix site run build
 ```
 
 ## Releases

@@ -6,14 +6,22 @@ Thanks for working on EVE.
 
 Run the checks that match your change:
 
+For normal EVE development:
+
 ```sh
 go test ./...
 npm --prefix ui test
 npm --prefix ui run build
-npm --prefix site run build
 ```
 
-Use `npm --prefix ui ci` and `npm --prefix site ci` before the first local build.
+Use `npm --prefix ui ci` before the first local UI build.
+
+For documentation-site changes only:
+
+```sh
+npm --prefix site ci
+npm --prefix site run build
+```
 
 ## Product Changes
 
