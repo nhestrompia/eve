@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 29,
-  "commitCount": 31,
-  "decisionCount": 58,
+  "snapshotCount": 30,
+  "commitCount": 32,
+  "decisionCount": 59,
   "riskCount": 19,
   "artifactCount": 28,
-  "latestAt": "2026-07-05T15:19:57Z",
-  "latestSnapshot": "snap_f9c5de3eace4e87f",
-  "latestTitle": "Add public docs site and repository standards",
+  "latestAt": "2026-07-05T15:24:46Z",
+  "latestSnapshot": "snap_e83bf59d08900eb6",
+  "latestTitle": "Clarify optional docs site commands",
   "branch": "main",
-  "head": "e3d94091603fb4c30b348187d1720205766a7af9",
+  "head": "b7534b8eb1794548db42b08371f5e7492f26a14e",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "e3d94091603fb4c30b348187d1720205766a7af9"
+  "latestGitState": "b7534b8eb1794548db42b08371f5e7492f26a14e"
 }
