@@ -52,17 +52,25 @@ go run ./cmd/eve version
 Install the CLI if you want to call `eve` from other repositories:
 
 ```sh
-go install ./cmd/eve
-EVE_BIN="${GOBIN:-$(go env GOPATH)/bin}/eve"
-"$EVE_BIN" version
-cd /path/to/repo
-"$EVE_BIN" dev
+go run ./cmd/eve install-mcp --install
 ```
 
-If `GOBIN` is set, the installed binary is `$GOBIN/eve` instead. Use an
-absolute path to the installed binary in editor and agent MCP config. GUI apps
-and agent hosts often do not inherit the same `PATH` as your interactive shell,
-so `command = "eve"` can fail even after a successful install.
+That one command runs `go install ./cmd/eve`, finds the installed binary, and
+adds Eve to Codex, Claude Code, and opencode MCP config with an absolute command
+path. GUI apps and agent hosts often do not inherit the same `PATH` as your
+interactive shell, so `command = "eve"` can fail even after a successful
+install.
+
+Useful installed commands:
+
+```sh
+EVE_BIN_DIR="$(go env GOBIN)"
+[ -n "$EVE_BIN_DIR" ] || EVE_BIN_DIR="$(go env GOPATH)/bin"
+EVE_BIN="$EVE_BIN_DIR/eve"
+"$EVE_BIN" version
+"$EVE_BIN" install-mcp
+"$EVE_BIN" dev
+```
 
 ## Verify
 
@@ -153,11 +161,46 @@ And MCP tools:
 - `skip_snapshot`
 - `checkout_snapshot`
 
-Install `eve` once, then add it to each agent as a global/user MCP server. Set
-`EVE_BIN` to the absolute installed binary before using the examples:
+From this checkout, the recommended setup is one command:
 
 ```sh
-EVE_BIN="${GOBIN:-$(go env GOPATH)/bin}/eve"
+go run ./cmd/eve install-mcp --install
+```
+
+After Eve is installed, rerun setup any time with:
+
+```sh
+EVE_BIN_DIR="$(go env GOBIN)"
+[ -n "$EVE_BIN_DIR" ] || EVE_BIN_DIR="$(go env GOPATH)/bin"
+EVE_BIN="$EVE_BIN_DIR/eve"
+"$EVE_BIN" install-mcp
+```
+
+By default this configures Codex, Claude Code, and opencode. To configure only
+some clients:
+
+```sh
+EVE_BIN_DIR="$(go env GOBIN)"
+[ -n "$EVE_BIN_DIR" ] || EVE_BIN_DIR="$(go env GOPATH)/bin"
+EVE_BIN="$EVE_BIN_DIR/eve"
+"$EVE_BIN" install-mcp --clients codex,claude
+```
+
+To pin a specific repository instead of letting the MCP client start Eve from
+the active workspace:
+
+```sh
+EVE_BIN_DIR="$(go env GOBIN)"
+[ -n "$EVE_BIN_DIR" ] || EVE_BIN_DIR="$(go env GOPATH)/bin"
+EVE_BIN="$EVE_BIN_DIR/eve"
+"$EVE_BIN" install-mcp --cwd /path/to/repo
+```
+
+If you installed Eve somewhere custom, pass the absolute binary path:
+
+```sh
+EVE_BIN=/absolute/path/to/eve
+"$EVE_BIN" install-mcp --eve-bin "$EVE_BIN"
 ```
 
 The recommended stdio setup has no hard-coded repository path: the agent starts
@@ -172,13 +215,16 @@ set that client's MCP working directory to the workspace, set `EVE_CWD`, or pass
 Quick local check:
 
 ```sh
+EVE_BIN_DIR="$(go env GOBIN)"
+[ -n "$EVE_BIN_DIR" ] || EVE_BIN_DIR="$(go env GOPATH)/bin"
+EVE_BIN="$EVE_BIN_DIR/eve"
 printf '%s\n' \
   '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' \
   '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' |
   "$EVE_BIN" mcp-stdio
 ```
 
-### Codex
+### Manual Codex Setup
 
 Codex reads MCP servers from `~/.codex/config.toml`, or from a trusted
 project-scoped `.codex/config.toml`. For all projects, add it to
@@ -197,6 +243,9 @@ tool_timeout_sec = 120
 Or add it with the Codex CLI:
 
 ```sh
+EVE_BIN_DIR="$(go env GOBIN)"
+[ -n "$EVE_BIN_DIR" ] || EVE_BIN_DIR="$(go env GOPATH)/bin"
+EVE_BIN="$EVE_BIN_DIR/eve"
 codex mcp add eve -- "$EVE_BIN" mcp-stdio
 ```
 
@@ -222,11 +271,14 @@ tool_timeout_sec = 120
 
 Use `/mcp` in Codex to confirm the server is connected.
 
-### Claude Code
+### Manual Claude Code Setup
 
 User-wide stdio setup:
 
 ```sh
+EVE_BIN_DIR="$(go env GOBIN)"
+[ -n "$EVE_BIN_DIR" ] || EVE_BIN_DIR="$(go env GOPATH)/bin"
+EVE_BIN="$EVE_BIN_DIR/eve"
 claude mcp add --scope user --transport stdio eve -- "$EVE_BIN" mcp-stdio --cwd '${CLAUDE_PROJECT_DIR:-.}'
 ```
 
@@ -254,7 +306,7 @@ claude mcp add --transport http eve http://localhost:4317/mcp
 Use `/mcp` or `claude mcp list` to check status. Claude Code asks for approval
 before using project-scoped `.mcp.json` servers.
 
-### opencode
+### Manual opencode Setup
 
 Add a local server to your global `opencode.json`:
 
@@ -265,7 +317,6 @@ Add a local server to your global `opencode.json`:
     "eve": {
       "type": "local",
       "command": ["/absolute/path/to/eve", "mcp-stdio"],
-      "cwd": ".",
       "enabled": true
     }
   }
@@ -293,7 +344,7 @@ Check with:
 opencode mcp list
 ```
 
-### Other Agents
+### Pi and Other Agents
 
 Use whichever MCP transport the client supports:
 

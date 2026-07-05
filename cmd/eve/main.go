@@ -45,6 +45,8 @@ func runWithIO(args []string, stdin io.Reader, stdout io.Writer, stderr io.Write
 		return runDev(args[1:], stdout, stderr)
 	case "mcp-stdio":
 		return runMCPStdio(args[1:], stdin, stdout, stderr)
+	case "install-mcp":
+		return runInstallMCP(args[1:], stdout, stderr)
 	case "snapshot":
 		return runSnapshot(args[1:], stdout, stderr)
 	case "checkout":
@@ -73,6 +75,8 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "Commands:")
 	fmt.Fprintln(w, "  init")
 	fmt.Fprintln(w, "  dev [--addr localhost:4317]")
+	fmt.Fprintln(w, "  mcp-stdio [--cwd /path/to/repo]")
+	fmt.Fprintln(w, "  install-mcp [--install] [--clients codex,claude,opencode]")
 	fmt.Fprintln(w, "  snapshot <snapshot-id>")
 	fmt.Fprintln(w, "  checkout [--force] <snapshot-id>")
 	fmt.Fprintln(w, "  validate <snapshot.json>")

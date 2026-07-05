@@ -25,6 +25,107 @@ func TestRunVersion(t *testing.T) {
 	}
 }
 
+func TestInstallMCPWritesClientConfigs(t *testing.T) {
+	home := t.TempDir()
+	eveBin := filepath.Join(home, "bin", "eve")
+	if err := os.MkdirAll(filepath.Dir(eveBin), 0o755); err != nil {
+		t.Fatalf("mkdir bin: %v", err)
+	}
+	if err := os.WriteFile(eveBin, []byte("fake eve"), 0o755); err != nil {
+		t.Fatalf("write eve bin: %v", err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	code := run([]string{"install-mcp", "--home", home, "--eve-bin", eveBin}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("install-mcp exit code = %d, stderr = %s", code, stderr.String())
+	}
+	for _, want := range []string{"Configured codex", "Configured claude", "Configured opencode"} {
+		if !strings.Contains(stdout.String(), want) {
+			t.Fatalf("stdout = %q, want %q", stdout.String(), want)
+		}
+	}
+
+	codexConfig := readTextFile(t, filepath.Join(home, ".codex", "config.toml"))
+	for _, want := range []string{
+		`[mcp_servers.eve]`,
+		`command = "` + eveBin + `"`,
+		`args = ["mcp-stdio"]`,
+	} {
+		if !strings.Contains(codexConfig, want) {
+			t.Fatalf("codex config = %q, want %q", codexConfig, want)
+		}
+	}
+
+	var claude map[string]any
+	readJSONFile(t, filepath.Join(home, ".claude.json"), &claude)
+	claudeEve := claude["mcpServers"].(map[string]any)["eve"].(map[string]any)
+	if claudeEve["command"] != eveBin {
+		t.Fatalf("claude eve command = %#v, want %s", claudeEve["command"], eveBin)
+	}
+	if got := strings.Join(jsonStringSlice(t, claudeEve["args"]), " "); got != "mcp-stdio --cwd ${CLAUDE_PROJECT_DIR:-.}" {
+		t.Fatalf("claude args = %q", got)
+	}
+
+	var opencode map[string]any
+	readJSONFile(t, filepath.Join(home, ".config", "opencode", "opencode.json"), &opencode)
+	opencodeEve := opencode["mcp"].(map[string]any)["eve"].(map[string]any)
+	if opencodeEve["type"] != "local" || opencodeEve["enabled"] != true {
+		t.Fatalf("opencode eve = %#v, want enabled local server", opencodeEve)
+	}
+	if got := strings.Join(jsonStringSlice(t, opencodeEve["command"]), " "); got != eveBin+" mcp-stdio" {
+		t.Fatalf("opencode command = %q", got)
+	}
+	if _, ok := opencodeEve["cwd"]; ok {
+		t.Fatalf("opencode eve = %#v, should not set cwd by default", opencodeEve)
+	}
+}
+
+func TestInstallMCPUpdatesExistingCodexTable(t *testing.T) {
+	home := t.TempDir()
+	eveBin := filepath.Join(home, "eve")
+	if err := os.WriteFile(eveBin, []byte("fake eve"), 0o755); err != nil {
+		t.Fatalf("write eve bin: %v", err)
+	}
+	configPath := filepath.Join(home, ".codex", "config.toml")
+	if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil {
+		t.Fatalf("mkdir codex config dir: %v", err)
+	}
+	existing := `model = "gpt-5"
+
+[mcp_servers.eve]
+command = "eve"
+args = ["mcp-stdio"]
+
+[mcp_servers.other]
+command = "other"
+`
+	if err := os.WriteFile(configPath, []byte(existing), 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	code := run([]string{"install-mcp", "--clients", "codex", "--home", home, "--eve-bin", eveBin, "--cwd", "/repo"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("install-mcp exit code = %d, stderr = %s", code, stderr.String())
+	}
+
+	config := readTextFile(t, configPath)
+	for _, want := range []string{
+		`model = "gpt-5"`,
+		`command = "` + eveBin + `"`,
+		`args = ["mcp-stdio", "--cwd", "/repo"]`,
+		`[mcp_servers.other]`,
+	} {
+		if !strings.Contains(config, want) {
+			t.Fatalf("codex config = %q, want %q", config, want)
+		}
+	}
+	if strings.Contains(config, `command = "eve"`) {
+		t.Fatalf("codex config still contains old eve command: %q", config)
+	}
+}
+
 func TestInitCreatesSnapshotStructure(t *testing.T) {
 	repo := initTempGitRepo(t)
 	t.Chdir(repo)
@@ -237,6 +338,43 @@ func gitOutputForTest(t *testing.T, repo string, args ...string) string {
 		t.Fatalf("git %v: %v", args, err)
 	}
 	return strings.TrimSpace(string(output))
+}
+
+func readTextFile(t *testing.T, path string) string {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	return string(data)
+}
+
+func readJSONFile(t *testing.T, path string, out any) {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	if err := json.Unmarshal(data, out); err != nil {
+		t.Fatalf("decode %s: %v", path, err)
+	}
+}
+
+func jsonStringSlice(t *testing.T, value any) []string {
+	t.Helper()
+	items, ok := value.([]any)
+	if !ok {
+		t.Fatalf("value = %#v, want JSON array", value)
+	}
+	result := make([]string, 0, len(items))
+	for _, item := range items {
+		text, ok := item.(string)
+		if !ok {
+			t.Fatalf("item = %#v, want string", item)
+		}
+		result = append(result, text)
+	}
+	return result
 }
 
 func sampleSnapshot(id string, title string, gitState string) *eve.Snapshot {
