@@ -1,13 +1,13 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 18,
-  "latestAt": "2026-07-05T00:59:56Z",
-  "latestSnapshot": "snap_df45bce25d4af466",
-  "latestTitle": "Add MCP client installer command",
+  "snapshotCount": 19,
+  "latestAt": "2026-07-05T01:31:35Z",
+  "latestSnapshot": "snap_e051f1bdb5fdf1a3",
+  "latestTitle": "Test multi-commit snapshot checkout",
   "branch": "main",
-  "head": "4adb82085e2cdb80ec5c41b3a01662e8a3f9946c",
+  "head": "59ac1cdd3eef684fb8bd1c05113dcb27903dd179",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "4adb82085e2cdb80ec5c41b3a01662e8a3f9946c"
+  "latestGitState": "59ac1cdd3eef684fb8bd1c05113dcb27903dd179"
 }
