@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 30,
-  "commitCount": 32,
-  "decisionCount": 59,
-  "riskCount": 19,
-  "artifactCount": 28,
-  "latestAt": "2026-07-05T15:24:46Z",
-  "latestSnapshot": "snap_e83bf59d08900eb6",
-  "latestTitle": "Clarify optional docs site commands",
+  "snapshotCount": 31,
+  "commitCount": 33,
+  "decisionCount": 61,
+  "riskCount": 20,
+  "artifactCount": 30,
+  "latestAt": "2026-07-05T15:51:35Z",
+  "latestSnapshot": "snap_7ff72a8e93e8dd14",
+  "latestTitle": "Improve docs site branding and dark mode",
   "branch": "main",
-  "head": "b7534b8eb1794548db42b08371f5e7492f26a14e",
+  "head": "52975fcd044a1569097120a69855c7de35f3d9ef",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "b7534b8eb1794548db42b08371f5e7492f26a14e"
+  "latestGitState": "52975fcd044a1569097120a69855c7de35f3d9ef"
 }
