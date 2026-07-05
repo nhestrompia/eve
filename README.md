@@ -6,6 +6,11 @@ Git is still the source of truth for implementation checkpoints. eve adds a
 small product-history layer for the completed unit of work: a feature, bug fix,
 experiment, refactor, or release.
 
+<img width="3024" height="1610" alt="image" src="https://github.com/user-attachments/assets/b48392ea-41df-4138-a596-f0c2ece470a2" />
+<img width="3024" height="1610" alt="image" src="https://github.com/user-attachments/assets/13a3320d-63b5-4df8-aa82-59e131612418" />
+
+
+
 ## What eve Stores
 
 Canonical product history lives in the repository:
