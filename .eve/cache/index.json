@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 28,
-  "commitCount": 30,
-  "decisionCount": 56,
-  "riskCount": 18,
+  "snapshotCount": 29,
+  "commitCount": 31,
+  "decisionCount": 58,
+  "riskCount": 19,
   "artifactCount": 28,
-  "latestAt": "2026-07-05T10:57:32Z",
-  "latestSnapshot": "snap_569dc3503e0c8590",
-  "latestTitle": "Fix snapshot detail hero layout",
+  "latestAt": "2026-07-05T15:19:57Z",
+  "latestSnapshot": "snap_f9c5de3eace4e87f",
+  "latestTitle": "Add public docs site and repository standards",
   "branch": "main",
-  "head": "48be6573e6cd925a5342df168284835744e5e610",
+  "head": "e3d94091603fb4c30b348187d1720205766a7af9",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "48be6573e6cd925a5342df168284835744e5e610"
+  "latestGitState": "e3d94091603fb4c30b348187d1720205766a7af9"
 }
