@@ -9,6 +9,12 @@ Git remains the source of truth for implementation history. eve adds a small
 repository-native layer for the completed product unit: a feature, bug fix,
 experiment, refactor, or release.
 
+## Preview
+
+<img width="3024" height="1610" alt="eve local product history UI" src="https://github.com/user-attachments/assets/b48392ea-41df-4138-a596-f0c2ece470a2" />
+
+<img width="3024" height="1610" alt="eve snapshot detail UI" src="https://github.com/user-attachments/assets/13a3320d-63b5-4df8-aa82-59e131612418" />
+
 ## Website and Documentation
 
 This repository includes a functional documentation website in `site/`, built
