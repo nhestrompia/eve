@@ -396,10 +396,27 @@ function RecentActivityPanel({
   details: DetailResponse[];
   selectedRepo?: string;
 }) {
-  const visibleRows = evolutions.slice(0, 6);
+  const [activeRepo, setActiveRepo] = useState<string | undefined>(selectedRepo);
+
+  useEffect(() => {
+    setActiveRepo(selectedRepo);
+  }, [selectedRepo]);
+
   const detailById = new Map(
     details.map((detail) => [detail.summary.id, detail]),
   );
+  const filteredRows = activeRepo
+    ? evolutions.filter(
+        (evolution) =>
+          repoForEvolution(
+            evolution,
+            detailById.get(evolution.id),
+            repositories,
+            selectedRepo,
+          ) === activeRepo,
+      )
+    : evolutions;
+  const visibleRows = filteredRows.slice(0, 6);
 
   return (
     <section className="space-y-3">
@@ -410,18 +427,24 @@ function RecentActivityPanel({
         </button>
       </div>
       <div className="flex flex-wrap gap-2">
-        <Link to="/" className={filterPillClass(!selectedRepo)}>
+        <button
+          type="button"
+          className={filterPillClass(!activeRepo)}
+          aria-pressed={!activeRepo}
+          onClick={() => setActiveRepo(undefined)}
+        >
           All repositories
-        </Link>
+        </button>
         {repositories.slice(0, 5).map((repo) => (
-          <Link
+          <button
             key={repo.name}
-            to="/repositories/$repo"
-            params={{ repo: repo.name }}
-            className={filterPillClass(selectedRepo === repo.name)}
+            type="button"
+            className={filterPillClass(activeRepo === repo.name)}
+            aria-pressed={activeRepo === repo.name}
+            onClick={() => setActiveRepo(repo.name)}
           >
             {repo.name}
-          </Link>
+          </button>
         ))}
       </div>
       <div className="overflow-hidden rounded-lg bg-white shadow-[0_0_0_1px_rgba(15,23,42,0.1)]">
@@ -483,7 +506,7 @@ function RecentActivityPanel({
 }
 
 function filterPillClass(active: boolean) {
-  return `inline-flex h-7 items-center rounded-full px-4 text-xs font-semibold shadow-[0_0_0_1px_rgba(15,23,42,0.12)] transition-colors hover:bg-slate-100 ${
+  return `inline-flex h-7 cursor-pointer appearance-none items-center justify-center rounded-full border-0 px-4 text-xs font-semibold shadow-[0_0_0_1px_rgba(15,23,42,0.12)] transition-colors hover:bg-slate-100 ${
     active
       ? "bg-slate-950 text-white hover:bg-slate-900"
       : "bg-white text-slate-600"
