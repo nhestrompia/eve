@@ -550,7 +550,7 @@ function PlatformOverview({ stats }: { stats: PlatformStats }) {
     ["Total snapshots", stats.evolutions],
     ["Snapshots", stats.snapshots],
     ["Commits", stats.commits],
-    ["Artifacts", stats.sessions],
+    ["Artifacts", stats.artifacts],
     ["Decisions", stats.decisions],
     ["Risks", stats.risks],
   ] as const;
