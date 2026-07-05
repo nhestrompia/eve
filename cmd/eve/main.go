@@ -41,6 +41,10 @@ func runWithIO(args []string, stdin io.Reader, stdout io.Writer, stderr io.Write
 	switch args[0] {
 	case "init":
 		return runInit(args[1:], stdout, stderr)
+	case "add":
+		return runAdd(args[1:], stdin, stdout, stderr)
+	case "commit":
+		return runCommit(args[1:], stdout, stderr)
 	case "dev":
 		return runDev(args[1:], stdout, stderr)
 	case "mcp-stdio":
@@ -74,6 +78,8 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Commands:")
 	fmt.Fprintln(w, "  init")
+	fmt.Fprintln(w, "  add --title <title> --summary <summary> [--type feature] [--validation <command>]")
+	fmt.Fprintln(w, "  commit [--allow-dirty]")
 	fmt.Fprintln(w, "  dev [--addr localhost:4317]")
 	fmt.Fprintln(w, "  mcp-stdio [--cwd /path/to/repo]")
 	fmt.Fprintln(w, "  install-mcp [--install] [--clients codex,claude,opencode]")
@@ -125,6 +131,251 @@ func runInit(args []string, stdout io.Writer, stderr io.Writer) int {
 	rememberRepository(repo)
 	fmt.Fprintf(stdout, "Initialized EVE snapshots in %s\n", repo.eveDir)
 	return 0
+}
+
+func runAdd(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int {
+	fs := flag.NewFlagSet("add", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	cwd := fs.String("cwd", "", "repository working directory")
+	repoID := fs.String("repo-id", "", "repository id")
+	jsonPath := fs.String("json", "", "read snapshot draft JSON from file, or '-' for stdin")
+	title := fs.String("title", "", "snapshot title")
+	snapshotType := fs.String("type", "feature", "snapshot type")
+	summary := fs.String("summary", "", "snapshot summary")
+	userVisibleChange := fs.String("user-visible-change", "", "user-visible change")
+	allowDirty := fs.Bool("allow-dirty", false, "allow committing a dirty implementation state")
+	var decisions, risks, timeline, validation, artifacts stringListFlag
+	var corrects, supersedes, reverts, dependsOn, related stringListFlag
+	fs.Var(&decisions, "decision", "decision title; repeatable")
+	fs.Var(&risks, "risk", "risk title; repeatable, severity defaults to medium")
+	fs.Var(&timeline, "timeline", "timeline entry title; repeatable, phase defaults to implementation")
+	fs.Var(&validation, "validation", "validation command or result; repeatable")
+	fs.Var(&artifacts, "artifact", "artifact path, URL, or note; repeatable")
+	fs.Var(&corrects, "corrects", "related snapshot corrected by this snapshot; repeatable")
+	fs.Var(&supersedes, "supersedes", "snapshot superseded by this snapshot; repeatable")
+	fs.Var(&reverts, "reverts", "snapshot reverted by this snapshot; repeatable")
+	fs.Var(&dependsOn, "depends-on", "snapshot this snapshot depends on; repeatable")
+	fs.Var(&related, "related", "related snapshot id; repeatable")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	if fs.NArg() != 0 {
+		fmt.Fprintln(stderr, "eve add takes no positional arguments")
+		return 2
+	}
+	repo, err := resolveRepo(repoRequest{CWD: *cwd, RepoID: *repoID})
+	if err != nil {
+		fmt.Fprintf(stderr, "%v\n", err)
+		return 1
+	}
+	draft, err := repo.loadSnapshotDraft()
+	if errors.Is(err, os.ErrNotExist) {
+		draft = completeSnapshotInputRaw{}
+	} else if err != nil {
+		fmt.Fprintf(stderr, "%v\n", err)
+		return 1
+	}
+	if strings.TrimSpace(*jsonPath) != "" {
+		jsonDraft, err := readSnapshotDraftJSON(strings.TrimSpace(*jsonPath), stdin)
+		if err != nil {
+			fmt.Fprintf(stderr, "%v\n", err)
+			return 1
+		}
+		draft = jsonDraft
+	}
+	changed := strings.TrimSpace(*jsonPath) != ""
+	if flagWasSet(fs, "cwd") {
+		draft.CWD = *cwd
+	}
+	if flagWasSet(fs, "repo-id") {
+		draft.RepoID = *repoID
+	}
+	if flagWasSet(fs, "title") {
+		draft.Title = *title
+		changed = true
+	}
+	if flagWasSet(fs, "type") {
+		draft.Type = *snapshotType
+		changed = true
+	} else if strings.TrimSpace(draft.Type) == "" {
+		draft.Type = *snapshotType
+	}
+	if flagWasSet(fs, "summary") {
+		draft.Summary = *summary
+		changed = true
+	}
+	if flagWasSet(fs, "user-visible-change") {
+		draft.UserVisibleChange = *userVisibleChange
+		changed = true
+	}
+	if flagWasSet(fs, "allow-dirty") {
+		draft.AllowDirty = *allowDirty
+		changed = true
+	}
+	if appendStringRawArray(&draft.Decisions, []string(decisions)) {
+		changed = true
+	}
+	if appendStringRawArray(&draft.Risks, []string(risks)) {
+		changed = true
+	}
+	if appendStringRawArray(&draft.Timeline, []string(timeline)) {
+		changed = true
+	}
+	if appendStringRawArray(&draft.Validation, []string(validation)) {
+		changed = true
+	}
+	if appendStringRawArray(&draft.Artifacts, []string(artifacts)) {
+		changed = true
+	}
+	if mergeRelationships(&draft.Relationships, []string(corrects), []string(supersedes), []string(reverts), []string(dependsOn), []string(related)) {
+		changed = true
+	}
+	if !changed {
+		fmt.Fprintln(stderr, "eve add requires --title, --summary, --json, or another snapshot field")
+		return 2
+	}
+	if err := repo.saveSnapshotDraft(draft); err != nil {
+		fmt.Fprintf(stderr, "%v\n", err)
+		return 1
+	}
+	fmt.Fprintf(stdout, "Staged EVE snapshot draft in %s\n", repo.stagedSnapshotPath())
+	return 0
+}
+
+func runCommit(args []string, stdout io.Writer, stderr io.Writer) int {
+	fs := flag.NewFlagSet("commit", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	cwd := fs.String("cwd", "", "repository working directory")
+	repoID := fs.String("repo-id", "", "repository id")
+	allowDirty := fs.Bool("allow-dirty", false, "allow committing a dirty implementation state")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	if fs.NArg() != 0 {
+		fmt.Fprintln(stderr, "eve commit takes no positional arguments")
+		return 2
+	}
+	repo, err := resolveRepo(repoRequest{CWD: *cwd, RepoID: *repoID})
+	if err != nil {
+		fmt.Fprintf(stderr, "%v\n", err)
+		return 1
+	}
+	draft, err := repo.loadSnapshotDraft()
+	if errors.Is(err, os.ErrNotExist) {
+		fmt.Fprintln(stderr, "no staged EVE snapshot draft; run eve add first")
+		return 2
+	}
+	if err != nil {
+		fmt.Fprintf(stderr, "%v\n", err)
+		return 1
+	}
+	if *allowDirty {
+		draft.AllowDirty = true
+	}
+	input, err := normalizeCompleteSnapshotInput(draft)
+	if err != nil {
+		fmt.Fprintf(stderr, "%v\n", err)
+		return 1
+	}
+	snapshot, err := completeSnapshot(repo, input, []string{filepath.ToSlash(filepath.Join(".eve", "staged"))})
+	if err != nil {
+		fmt.Fprintf(stderr, "%v\n", err)
+		return 1
+	}
+	if err := repo.clearSnapshotDraft(); err != nil {
+		fmt.Fprintf(stderr, "clear staged draft: %v\n", err)
+		return 1
+	}
+	fmt.Fprintf(stdout, "Committed EVE snapshot %s\n", snapshot.ID)
+	fmt.Fprintf(stdout, "Path: %s\n", repo.snapshotPath(snapshot.ID))
+	return 0
+}
+
+type stringListFlag []string
+
+func (values *stringListFlag) String() string {
+	return strings.Join(*values, ",")
+}
+
+func (values *stringListFlag) Set(value string) error {
+	*values = append(*values, value)
+	return nil
+}
+
+func flagWasSet(fs *flag.FlagSet, name string) bool {
+	wasSet := false
+	fs.Visit(func(f *flag.Flag) {
+		if f.Name == name {
+			wasSet = true
+		}
+	})
+	return wasSet
+}
+
+func readSnapshotDraftJSON(path string, stdin io.Reader) (completeSnapshotInputRaw, error) {
+	var data []byte
+	var err error
+	if path == "-" {
+		data, err = io.ReadAll(stdin)
+	} else {
+		data, err = os.ReadFile(path)
+	}
+	if err != nil {
+		return completeSnapshotInputRaw{}, fmt.Errorf("read snapshot draft JSON: %w", err)
+	}
+	var draft completeSnapshotInputRaw
+	if err := json.Unmarshal(data, &draft); err != nil {
+		return completeSnapshotInputRaw{}, fmt.Errorf("parse snapshot draft JSON: %w", err)
+	}
+	return draft, nil
+}
+
+func appendStringRawArray(raw *json.RawMessage, values []string) bool {
+	cleaned := cleanStrings(values)
+	if len(cleaned) == 0 {
+		return false
+	}
+	var existing []json.RawMessage
+	if len(*raw) > 0 && string(*raw) != "null" {
+		if err := json.Unmarshal(*raw, &existing); err != nil {
+			existing = nil
+		}
+	}
+	for _, value := range cleaned {
+		data, _ := json.Marshal(value)
+		existing = append(existing, data)
+	}
+	data, _ := json.Marshal(existing)
+	*raw = data
+	return true
+}
+
+func mergeRelationships(raw *json.RawMessage, corrects, supersedes, reverts, dependsOn, related []string) bool {
+	if len(corrects)+len(supersedes)+len(reverts)+len(dependsOn)+len(related) == 0 {
+		return false
+	}
+	relationships := eve.Relationships{}
+	if len(*raw) > 0 && string(*raw) != "null" {
+		_ = json.Unmarshal(*raw, &relationships)
+	}
+	relationships.Corrects = append(relationships.Corrects, cleanStrings(corrects)...)
+	relationships.Supersedes = append(relationships.Supersedes, cleanStrings(supersedes)...)
+	relationships.Reverts = append(relationships.Reverts, cleanStrings(reverts)...)
+	relationships.DependsOn = append(relationships.DependsOn, cleanStrings(dependsOn)...)
+	relationships.Related = append(relationships.Related, cleanStrings(related)...)
+	data, _ := json.Marshal(relationships)
+	*raw = data
+	return true
+}
+
+func cleanStrings(values []string) []string {
+	cleaned := make([]string, 0, len(values))
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			cleaned = append(cleaned, trimmed)
+		}
+	}
+	return cleaned
 }
 
 func runDev(args []string, stdout io.Writer, stderr io.Writer) int {
@@ -314,6 +565,10 @@ type repoSummary struct {
 	ID             string `json:"id"`
 	Root           string `json:"root"`
 	SnapshotCount  int    `json:"snapshotCount"`
+	CommitCount    int    `json:"commitCount"`
+	DecisionCount  int    `json:"decisionCount"`
+	RiskCount      int    `json:"riskCount"`
+	ArtifactCount  int    `json:"artifactCount"`
 	LatestAt       string `json:"latestAt"`
 	LatestSnapshot string `json:"latestSnapshot"`
 	LatestTitle    string `json:"latestTitle"`
@@ -393,6 +648,7 @@ func (repo repository) configPath() string   { return filepath.Join(repo.eveDir,
 func (repo repository) snapshotsDir() string { return filepath.Join(repo.eveDir, "snapshots") }
 func (repo repository) artifactsDir() string { return filepath.Join(repo.eveDir, "artifacts") }
 func (repo repository) cacheDir() string     { return filepath.Join(repo.eveDir, "cache") }
+func (repo repository) stagedDir() string    { return filepath.Join(repo.eveDir, "staged") }
 
 func (repo repository) ensureDirs() error {
 	for _, dir := range []string{repo.snapshotsDir(), repo.artifactsDir(), repo.cacheDir()} {
@@ -405,6 +661,10 @@ func (repo repository) ensureDirs() error {
 
 func (repo repository) snapshotPath(id string) string {
 	return filepath.Join(repo.snapshotsDir(), id+".json")
+}
+
+func (repo repository) stagedSnapshotPath() string {
+	return filepath.Join(repo.stagedDir(), "snapshot.json")
 }
 
 func (repo repository) loadSnapshot(id string) (*eve.Snapshot, error) {
@@ -426,6 +686,43 @@ func (repo repository) saveSnapshot(snapshot *eve.Snapshot) error {
 		return err
 	}
 	rememberRepository(repo)
+	return nil
+}
+
+func (repo repository) loadSnapshotDraft() (completeSnapshotInputRaw, error) {
+	var draft completeSnapshotInputRaw
+	data, err := os.ReadFile(repo.stagedSnapshotPath())
+	if errors.Is(err, os.ErrNotExist) {
+		return draft, err
+	}
+	if err != nil {
+		return draft, fmt.Errorf("read staged snapshot draft: %w", err)
+	}
+	if err := json.Unmarshal(data, &draft); err != nil {
+		return draft, fmt.Errorf("parse staged snapshot draft: %w", err)
+	}
+	return draft, nil
+}
+
+func (repo repository) saveSnapshotDraft(draft completeSnapshotInputRaw) error {
+	if err := os.MkdirAll(repo.stagedDir(), 0o755); err != nil {
+		return fmt.Errorf("create %s: %w", repo.stagedDir(), err)
+	}
+	data, err := json.MarshalIndent(draft, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal staged snapshot draft: %w", err)
+	}
+	if err := os.WriteFile(repo.stagedSnapshotPath(), append(data, '\n'), 0o644); err != nil {
+		return fmt.Errorf("write staged snapshot draft: %w", err)
+	}
+	return nil
+}
+
+func (repo repository) clearSnapshotDraft() error {
+	if err := os.Remove(repo.stagedSnapshotPath()); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	_ = os.Remove(repo.stagedDir())
 	return nil
 }
 
@@ -466,6 +763,12 @@ func (repo repository) summary() (repoSummary, error) {
 		return repoSummary{}, err
 	}
 	summary := repoSummary{ID: repo.ID, Root: repo.Root, SnapshotCount: len(snapshots)}
+	for _, snapshot := range snapshots {
+		summary.CommitCount += len(snapshot.Implementation.Commits)
+		summary.DecisionCount += len(snapshot.Decisions)
+		summary.RiskCount += len(snapshot.Risks)
+		summary.ArtifactCount += len(snapshot.Artifacts)
+	}
 	if facts, err := deriveGitFacts(repo); err == nil {
 		summary.Branch = facts.Branch
 		summary.Head = facts.GitState
@@ -592,6 +895,10 @@ type gitFacts struct {
 }
 
 func deriveGitFacts(repo repository) (gitFacts, error) {
+	return deriveGitFactsIgnoring(repo, nil)
+}
+
+func deriveGitFactsIgnoring(repo repository, ignoredStatusPaths []string) (gitFacts, error) {
 	branch, err := gitOutput(repo.Root, "branch", "--show-current")
 	if err != nil {
 		return gitFacts{}, err
@@ -618,8 +925,82 @@ func deriveGitFacts(repo repository) (gitFacts, error) {
 		Branch:   strings.TrimSpace(branch),
 		GitState: strings.TrimSpace(head),
 		Commits:  commits,
-		Dirty:    strings.TrimSpace(status) != "",
+		Dirty:    hasRelevantGitStatus(status, ignoredStatusPaths),
 	}, nil
+}
+
+func hasRelevantGitStatus(status string, ignoredPaths []string) bool {
+	for _, line := range strings.Split(status, "\n") {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		if !gitStatusLineIgnored(line, ignoredPaths) {
+			return true
+		}
+	}
+	return false
+}
+
+func gitStatusLineIgnored(line string, ignoredPaths []string) bool {
+	if len(ignoredPaths) == 0 {
+		return false
+	}
+	pathPart := ""
+	if len(line) > 3 {
+		pathPart = strings.TrimSpace(line[3:])
+	}
+	if strings.Contains(pathPart, " -> ") {
+		parts := strings.Split(pathPart, " -> ")
+		pathPart = strings.TrimSpace(parts[len(parts)-1])
+	}
+	pathPart = strings.Trim(pathPart, `"`)
+	pathPart = filepath.ToSlash(pathPart)
+	for _, ignored := range ignoredPaths {
+		normalized := strings.TrimSuffix(filepath.ToSlash(strings.TrimSpace(ignored)), "/")
+		if normalized == "" {
+			continue
+		}
+		if pathPart == normalized || strings.HasPrefix(pathPart, normalized+"/") {
+			return true
+		}
+	}
+	return false
+}
+
+func completeSnapshot(repo repository, input completeSnapshotInput, ignoredStatusPaths []string) (*eve.Snapshot, error) {
+	facts, err := deriveGitFactsIgnoring(repo, ignoredStatusPaths)
+	if err != nil {
+		return nil, err
+	}
+	if facts.Dirty && !input.AllowDirty {
+		return nil, errors.New("working tree has uncommitted changes; commit implementation changes before completing an EVE snapshot. Pass --allow-dirty only for an intentionally dirty record")
+	}
+	snapshot := &eve.Snapshot{
+		ID:                newSnapshotID(),
+		SchemaVersion:     eve.SnapshotSchemaVersion,
+		Title:             strings.TrimSpace(input.Title),
+		Type:              strings.TrimSpace(input.Type),
+		Summary:           strings.TrimSpace(input.Summary),
+		UserVisibleChange: strings.TrimSpace(input.UserVisibleChange),
+		Relationships:     input.Relationships,
+		Risks:             input.Risks,
+		Timeline:          input.Timeline,
+		Decisions:         input.Decisions,
+		Validation:        input.Validation,
+		Artifacts:         input.Artifacts,
+		Implementation: eve.Implementation{
+			Branch:     facts.Branch,
+			GitState:   facts.GitState,
+			BaseCommit: facts.BaseCommit,
+			Commits:    facts.Commits,
+			Dirty:      facts.Dirty,
+		},
+		CreatedAt: nowUTC(),
+	}
+	if err := repo.saveSnapshot(snapshot); err != nil {
+		return nil, err
+	}
+	return snapshot, nil
 }
 
 func gitOutput(root string, args ...string) (string, error) {

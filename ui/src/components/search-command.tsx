@@ -16,15 +16,23 @@ export function SearchCommand({
   onOpenChange: (open: boolean) => void;
 }) {
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const results = useQuery({
-    queryKey: ['command-search', query],
-    queryFn: () => api.search(query),
-    enabled: open
+    queryKey: ['command-search', debouncedQuery],
+    queryFn: () => api.search(debouncedQuery),
+    enabled: open,
+    staleTime: 5_000
   });
 
   useEffect(() => {
     if (open) setQuery(initialQuery);
   }, [initialQuery, open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const timeout = window.setTimeout(() => setDebouncedQuery(query), 120);
+    return () => window.clearTimeout(timeout);
+  }, [open, query]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -53,7 +61,7 @@ export function SearchCommand({
           </Button>
         </div>
         <div className="mt-4 max-h-[420px] overflow-auto">
-          {results.isLoading ? <p className="p-4 text-muted-foreground">Searching...</p> : null}
+          {results.isLoading || query !== debouncedQuery ? <p className="p-4 text-muted-foreground">Searching...</p> : null}
           {results.data?.results.length === 0 ? <p className="p-4 text-muted-foreground">No matching Snapshots.</p> : null}
           <div className="space-y-2">
             {results.data?.results.map((result) => (

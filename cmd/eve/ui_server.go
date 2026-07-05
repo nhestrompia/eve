@@ -13,7 +13,10 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/nhestrompia/eve"
 )
@@ -22,8 +25,9 @@ import (
 var embeddedUI embed.FS
 
 type runtimeServer struct {
-	repo repository
-	addr string
+	repo        repository
+	addr        string
+	searchCache *snapshotSearchCache
 }
 
 type apiError struct {
@@ -45,25 +49,56 @@ type configResponse struct {
 }
 
 type snapshotSummary struct {
-	ID                string `json:"id"`
-	Title             string `json:"title"`
-	Type              string `json:"type"`
-	Summary           string `json:"summary"`
-	UserVisibleChange string `json:"userVisibleChange,omitempty"`
-	GitState          string `json:"gitState"`
-	Branch            string `json:"branch"`
-	Dirty             bool   `json:"dirty"`
-	ValidationState   string `json:"validationState"`
-	CreatedAt         string `json:"createdAt"`
+	ID                    string `json:"id"`
+	Repository            string `json:"repository,omitempty"`
+	Title                 string `json:"title"`
+	Type                  string `json:"type"`
+	Summary               string `json:"summary"`
+	UserVisibleChange     string `json:"userVisibleChange,omitempty"`
+	GitState              string `json:"gitState"`
+	Branch                string `json:"branch"`
+	Dirty                 bool   `json:"dirty"`
+	CommitCount           int    `json:"commitCount"`
+	DecisionCount         int    `json:"decisionCount"`
+	RiskCount             int    `json:"riskCount"`
+	ArtifactCount         int    `json:"artifactCount"`
+	FailedValidationCount int    `json:"failedValidationCount"`
+	ValidationState       string `json:"validationState"`
+	CreatedAt             string `json:"createdAt"`
 }
 
 type snapshotDetailResponse struct {
-	Snapshot  *eve.Snapshot     `json:"snapshot"`
-	Summary   snapshotSummary   `json:"summary"`
-	Sessions  []uiSessionRecord `json:"sessions"`
-	Providers []uiProviderInfo  `json:"providers"`
-	Commits   []uiGitCommit     `json:"commits"`
-	RawJSON   json.RawMessage   `json:"rawJson"`
+	Repository string            `json:"repository"`
+	Snapshot   *eve.Snapshot     `json:"snapshot"`
+	Summary    snapshotSummary   `json:"summary"`
+	Sessions   []uiSessionRecord `json:"sessions"`
+	Providers  []uiProviderInfo  `json:"providers"`
+	Commits    []uiGitCommit     `json:"commits"`
+	RawJSON    json.RawMessage   `json:"rawJson"`
+}
+
+type snapshotSearchResponse struct {
+	Query   string                 `json:"query"`
+	Results []snapshotSearchResult `json:"results"`
+}
+
+type snapshotSearchResult struct {
+	Evolution snapshotSummary `json:"evolution"`
+	Matches   []string        `json:"matches"`
+}
+
+type indexedSnapshot struct {
+	Repo       repository
+	Snapshot   *eve.Snapshot
+	Summary    snapshotSummary
+	SearchText string
+}
+
+type snapshotSearchCache struct {
+	mu        sync.Mutex
+	expiresAt time.Time
+	signature string
+	entries   []indexedSnapshot
 }
 
 type sessionListResponse struct {
@@ -163,17 +198,86 @@ type legacySession struct {
 }
 
 func newRuntimeServer(repo repository, addr string) runtimeServer {
-	return runtimeServer{repo: repo, addr: addr}
+	return runtimeServer{repo: repo, addr: addr, searchCache: &snapshotSearchCache{}}
 }
 
 func (server runtimeServer) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/config", server.handleConfig)
+	mux.HandleFunc("/api/search", server.handleSnapshotSearch)
+	mux.HandleFunc("/api/snapshots", server.handleGlobalSnapshots)
+	mux.HandleFunc("/api/snapshots/", server.handleGlobalSnapshotRoutes)
 	mux.HandleFunc("/api/repos", server.handleRepos)
 	mux.HandleFunc("/api/repos/", server.handleRepoRoutes)
 	mux.HandleFunc("/mcp", server.handleMCPHTTP)
 	mux.Handle("/", spaHandler())
 	return logRequests(mux)
+}
+
+func (server runtimeServer) handleGlobalSnapshots(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeMethodNotAllowed(w)
+		return
+	}
+	entries, err := server.indexedSnapshots()
+	if err != nil {
+		writeAPIError(w, http.StatusInternalServerError, err)
+		return
+	}
+	rows := make([]snapshotSummary, 0, len(entries))
+	for _, entry := range entries {
+		rows = append(rows, entry.Summary)
+	}
+	writeJSON(w, http.StatusOK, rows)
+}
+
+func (server runtimeServer) handleGlobalSnapshotRoutes(w http.ResponseWriter, r *http.Request) {
+	trimmed := strings.Trim(strings.TrimPrefix(r.URL.Path, "/api/snapshots/"), "/")
+	parts := strings.Split(trimmed, "/")
+	if len(parts) != 1 || parts[0] == "" || r.Method != http.MethodGet {
+		writeAPIError(w, http.StatusNotFound, fmt.Errorf("snapshot route not found"))
+		return
+	}
+	repo, ok := server.repoForSnapshot(parts[0])
+	if !ok {
+		writeAPIError(w, http.StatusNotFound, fmt.Errorf("snapshot %s not found", parts[0]))
+		return
+	}
+	server.handleSnapshotDetail(w, r, repo, parts[0])
+}
+
+func (server runtimeServer) handleSnapshotSearch(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeMethodNotAllowed(w)
+		return
+	}
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	normalized := strings.ToLower(query)
+	limit := 50
+	if rawLimit := strings.TrimSpace(r.URL.Query().Get("limit")); rawLimit != "" {
+		if parsed, err := strconv.Atoi(rawLimit); err == nil && parsed > 0 {
+			limit = min(parsed, 200)
+		}
+	}
+	entries, err := server.indexedSnapshots()
+	if err != nil {
+		writeAPIError(w, http.StatusInternalServerError, err)
+		return
+	}
+	results := make([]snapshotSearchResult, 0, min(len(entries), limit))
+	for _, entry := range entries {
+		if normalized != "" && !strings.Contains(entry.SearchText, normalized) {
+			continue
+		}
+		results = append(results, snapshotSearchResult{
+			Evolution: entry.Summary,
+			Matches:   snapshotSearchMatches(entry.Snapshot, entry.Repo, normalized),
+		})
+		if len(results) >= limit {
+			break
+		}
+	}
+	writeJSON(w, http.StatusOK, snapshotSearchResponse{Query: query, Results: results})
 }
 
 func (server runtimeServer) handleConfig(w http.ResponseWriter, r *http.Request) {
@@ -314,7 +418,7 @@ func (server runtimeServer) handleSnapshots(w http.ResponseWriter, r *http.Reque
 	}
 	rows := make([]snapshotSummary, 0, len(snapshots))
 	for _, snapshot := range snapshots {
-		rows = append(rows, summarizeSnapshot(snapshot))
+		rows = append(rows, summarizeSnapshotForRepo(repo, snapshot))
 	}
 	writeJSON(w, http.StatusOK, rows)
 }
@@ -327,12 +431,13 @@ func (server runtimeServer) handleSnapshotDetail(w http.ResponseWriter, r *http.
 	}
 	commits := server.gitCommits(repo, snapshot.Implementation.GitState, snapshot.Implementation.Commits)
 	writeJSON(w, http.StatusOK, snapshotDetailResponse{
-		Snapshot:  snapshot,
-		Summary:   summarizeSnapshot(snapshot),
-		Sessions:  server.snapshotSessionRecords(repo, snapshot),
-		Providers: providerInfos(),
-		Commits:   commits,
-		RawJSON:   raw,
+		Repository: repo.ID,
+		Snapshot:   snapshot,
+		Summary:    summarizeSnapshotForRepo(repo, snapshot),
+		Sessions:   server.snapshotSessionRecords(repo, snapshot),
+		Providers:  providerInfos(),
+		Commits:    commits,
+		RawJSON:    raw,
 	})
 }
 
@@ -406,17 +511,154 @@ func (server runtimeServer) loadSnapshotWithRaw(repo repository, id string) (*ev
 
 func summarizeSnapshot(snapshot *eve.Snapshot) snapshotSummary {
 	return snapshotSummary{
-		ID:                snapshot.ID,
-		Title:             snapshot.Title,
-		Type:              snapshot.Type,
-		Summary:           snapshot.Summary,
-		UserVisibleChange: snapshot.UserVisibleChange,
-		GitState:          snapshot.Implementation.GitState,
-		Branch:            snapshot.Implementation.Branch,
-		Dirty:             snapshot.Implementation.Dirty,
-		ValidationState:   validationState(snapshot.Validation),
-		CreatedAt:         snapshot.CreatedAt,
+		ID:                    snapshot.ID,
+		Title:                 snapshot.Title,
+		Type:                  snapshot.Type,
+		Summary:               snapshot.Summary,
+		UserVisibleChange:     snapshot.UserVisibleChange,
+		GitState:              snapshot.Implementation.GitState,
+		Branch:                snapshot.Implementation.Branch,
+		Dirty:                 snapshot.Implementation.Dirty,
+		CommitCount:           len(snapshot.Implementation.Commits),
+		DecisionCount:         len(snapshot.Decisions),
+		RiskCount:             len(snapshot.Risks),
+		ArtifactCount:         len(snapshot.Artifacts),
+		FailedValidationCount: failedValidationCount(snapshot.Validation),
+		ValidationState:       validationState(snapshot.Validation),
+		CreatedAt:             snapshot.CreatedAt,
 	}
+}
+
+func summarizeSnapshotForRepo(repo repository, snapshot *eve.Snapshot) snapshotSummary {
+	summary := summarizeSnapshot(snapshot)
+	summary.Repository = repo.ID
+	return summary
+}
+
+func (server runtimeServer) indexedSnapshots() ([]indexedSnapshot, error) {
+	repos := server.repositories()
+	signature := repositorySignature(repos)
+	now := time.Now()
+	cache := server.searchCache
+	cache.mu.Lock()
+	defer cache.mu.Unlock()
+	if cache.signature == signature && now.Before(cache.expiresAt) {
+		return append([]indexedSnapshot(nil), cache.entries...), nil
+	}
+
+	entries := make([]indexedSnapshot, 0)
+	for _, repo := range repos {
+		snapshots, err := repo.listSnapshots("")
+		if err != nil {
+			if repo.Root == server.repo.Root {
+				return nil, err
+			}
+			continue
+		}
+		for _, snapshot := range snapshots {
+			entries = append(entries, indexedSnapshot{
+				Repo:       repo,
+				Snapshot:   snapshot,
+				Summary:    summarizeSnapshotForRepo(repo, snapshot),
+				SearchText: snapshotSearchText(repo, snapshot),
+			})
+		}
+	}
+	sort.Slice(entries, func(i, j int) bool {
+		if entries[i].Summary.CreatedAt == entries[j].Summary.CreatedAt {
+			return entries[i].Summary.ID < entries[j].Summary.ID
+		}
+		return entries[i].Summary.CreatedAt > entries[j].Summary.CreatedAt
+	})
+	cache.signature = signature
+	cache.expiresAt = now.Add(5 * time.Second)
+	cache.entries = append([]indexedSnapshot(nil), entries...)
+	return entries, nil
+}
+
+func (server runtimeServer) repoForSnapshot(id string) (repository, bool) {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return repository{}, false
+	}
+	if entries, err := server.indexedSnapshots(); err == nil {
+		for _, entry := range entries {
+			if entry.Summary.ID == id {
+				return entry.Repo, true
+			}
+		}
+	}
+	for _, repo := range server.repositories() {
+		if _, err := os.Stat(repo.snapshotPath(id)); err == nil {
+			return repo, true
+		}
+	}
+	return repository{}, false
+}
+
+func repositorySignature(repos []repository) string {
+	parts := make([]string, 0, len(repos))
+	for _, repo := range repos {
+		parts = append(parts, repo.ID+"\x00"+repo.Root)
+	}
+	return strings.Join(parts, "\x00")
+}
+
+func snapshotSearchText(repo repository, snapshot *eve.Snapshot) string {
+	values := []string{
+		repo.ID,
+		repo.Root,
+		snapshot.ID,
+		snapshot.Title,
+		snapshot.Type,
+		snapshot.Summary,
+		snapshot.UserVisibleChange,
+		snapshot.Implementation.GitState,
+		snapshot.Implementation.Branch,
+		strings.Join(snapshot.Implementation.Commits, " "),
+	}
+	for _, validation := range snapshot.Validation {
+		values = append(values, validation.Command, validation.Status, validation.Output)
+	}
+	for _, decision := range snapshot.Decisions {
+		values = append(values, decision.Title, decision.Rationale)
+	}
+	for _, risk := range snapshot.Risks {
+		values = append(values, risk.Title, risk.Severity, risk.Mitigation)
+	}
+	return strings.ToLower(strings.Join(values, "\n"))
+}
+
+func snapshotSearchMatches(snapshot *eve.Snapshot, repo repository, query string) []string {
+	candidates := []string{snapshot.Title, snapshot.Summary, snapshot.UserVisibleChange, snapshot.ID, repo.ID}
+	for _, validation := range snapshot.Validation {
+		candidates = append(candidates, validation.Command)
+	}
+	for _, commit := range snapshot.Implementation.Commits {
+		candidates = append(candidates, commit)
+	}
+	if snapshot.Implementation.GitState != "" {
+		candidates = append(candidates, snapshot.Implementation.GitState)
+	}
+	matches := make([]string, 0, 3)
+	seen := map[string]bool{}
+	for _, candidate := range candidates {
+		candidate = strings.TrimSpace(candidate)
+		if candidate == "" || seen[candidate] {
+			continue
+		}
+		if query == "" || strings.Contains(strings.ToLower(candidate), query) {
+			matches = append(matches, candidate)
+			seen[candidate] = true
+		}
+		if len(matches) >= 3 {
+			break
+		}
+	}
+	if len(matches) == 0 {
+		matches = append(matches, snapshot.Title)
+	}
+	return matches
 }
 
 func (server runtimeServer) snapshotSessionRecords(repo repository, snapshot *eve.Snapshot) []uiSessionRecord {
@@ -723,6 +965,16 @@ func validationState(values []eve.Validation) string {
 	return "passed"
 }
 
+func failedValidationCount(values []eve.Validation) int {
+	count := 0
+	for _, value := range values {
+		if strings.EqualFold(value.Status, "failed") {
+			count++
+		}
+	}
+	return count
+}
+
 func spaHandler() http.Handler {
 	sub, err := fs.Sub(embeddedUI, "ui_dist")
 	if err != nil {
@@ -1020,36 +1272,8 @@ func (server runtimeServer) completeSnapshotTool(ctx context.Context, args json.
 	if err != nil {
 		return toolError(err.Error()), nil
 	}
-	facts, err := deriveGitFacts(repo)
+	snapshot, err := completeSnapshot(repo, input, nil)
 	if err != nil {
-		return toolError(err.Error()), nil
-	}
-	if facts.Dirty && !input.AllowDirty {
-		return toolError("working tree has uncommitted changes; commit implementation changes before completing an EVE snapshot, then call complete_snapshot again. Pass allowDirty=true only for an intentionally dirty record."), nil
-	}
-	snapshot := &eve.Snapshot{
-		ID:                newSnapshotID(),
-		SchemaVersion:     eve.SnapshotSchemaVersion,
-		Title:             strings.TrimSpace(input.Title),
-		Type:              strings.TrimSpace(input.Type),
-		Summary:           strings.TrimSpace(input.Summary),
-		UserVisibleChange: strings.TrimSpace(input.UserVisibleChange),
-		Relationships:     input.Relationships,
-		Risks:             input.Risks,
-		Timeline:          input.Timeline,
-		Decisions:         input.Decisions,
-		Validation:        input.Validation,
-		Artifacts:         input.Artifacts,
-		Implementation: eve.Implementation{
-			Branch:     facts.Branch,
-			GitState:   facts.GitState,
-			BaseCommit: facts.BaseCommit,
-			Commits:    facts.Commits,
-			Dirty:      facts.Dirty,
-		},
-		CreatedAt: nowUTC(),
-	}
-	if err := repo.saveSnapshot(snapshot); err != nil {
 		return toolError(err.Error()), nil
 	}
 	return toolResult(snapshot), nil

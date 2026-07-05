@@ -23,7 +23,7 @@ export function CheckoutActions({ snapshot }: { snapshot: SnapshotResponse }) {
   const [linkCopied, setLinkCopied] = useState(false);
   const queryClient = useQueryClient();
   const checkout = useMutation({
-    mutationFn: () => api.checkout(snapshot.id),
+    mutationFn: () => api.checkout(snapshot.id, snapshot.repository),
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: ['config'] });
       if (result.exitCode === 0) {

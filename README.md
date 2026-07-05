@@ -41,6 +41,8 @@ Open `http://localhost:4317`.
 Useful commands:
 
 ```sh
+go run ./cmd/eve add --title "Add GitHub OAuth" --type feature --summary "Users can now sign in with GitHub." --validation "go test ./..."
+go run ./cmd/eve commit
 go run ./cmd/eve snapshot <snapshot-id>
 go run ./cmd/eve checkout <snapshot-id>
 go run ./cmd/eve checkout --force <snapshot-id>
@@ -160,6 +162,21 @@ And MCP tools:
 - `complete_snapshot`
 - `skip_snapshot`
 - `checkout_snapshot`
+
+Agents should prefer the MCP `complete_snapshot` tool when available. The CLI
+also supports a two-step flow for shells and agent hosts without MCP access:
+
+```sh
+eve add --title "Add GitHub OAuth" \
+  --type feature \
+  --summary "Users can now sign in with GitHub." \
+  --validation "go test ./..."
+eve commit
+```
+
+`eve add` writes a draft under `.eve/staged/`; `eve commit` validates it,
+derives Git facts from the repository, writes `.eve/snapshots/<id>.json`, and
+removes the draft. The implementation working tree must be clean by default.
 
 From this checkout, the recommended setup is one command:
 
