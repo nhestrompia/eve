@@ -227,6 +227,43 @@ func TestRuntimeAPIAndMCP(t *testing.T) {
 	}
 }
 
+func TestRuntimeAPIDerivesDisplayCommitsFromSnapshotBoundary(t *testing.T) {
+	repo := initTempGitRepo(t)
+	t.Chdir(repo)
+	mustRun(t, []string{"init"})
+	gitRun(t, repo, "add", ".eve/config.json")
+	gitRun(t, repo, "commit", "-m", "initialize eve")
+
+	productPath := filepath.Join(repo, "product.txt")
+	if err := os.WriteFile(productPath, []byte("product\nfocused change\n"), 0o644); err != nil {
+		t.Fatalf("write product: %v", err)
+	}
+	gitRun(t, repo, "add", "product.txt")
+	gitRun(t, repo, "commit", "-m", "focused implementation")
+	head := gitOutputForTest(t, repo, "rev-parse", "HEAD")
+
+	pollutedCommits := strings.Split(gitOutputForTest(t, repo, "log", "--format=%H", "-n", "50"), "\n")
+	snapshot := sampleSnapshot("snap_polluted", "Polluted Commit Snapshot", head)
+	snapshot.Implementation.Commits = pollutedCommits
+	writeSnapshot(t, repo, snapshot)
+
+	handler := newRuntimeServer(repoFromRoot(repo), "localhost:0").routes()
+	var rows []snapshotSummary
+	requestJSON(t, handler, http.MethodGet, "/api/repos/"+filepath.Base(repo)+"/snapshots", nil, &rows)
+	if len(rows) != 1 || rows[0].CommitCount != 1 {
+		t.Fatalf("rows = %#v, want one display commit", rows)
+	}
+
+	var detail snapshotDetailResponse
+	requestJSON(t, handler, http.MethodGet, "/api/repos/"+filepath.Base(repo)+"/snapshots/snap_polluted", nil, &detail)
+	if len(detail.Commits) != 1 || detail.Commits[0].Hash != head {
+		t.Fatalf("detail commits = %#v, want only %s", detail.Commits, head)
+	}
+	if detail.Summary.CommitCount != 1 {
+		t.Fatalf("detail summary commit count = %d, want 1", detail.Summary.CommitCount)
+	}
+}
+
 func TestAddAndCommitSnapshotCLI(t *testing.T) {
 	repo := initTempGitRepo(t)
 	t.Chdir(repo)
@@ -266,6 +303,13 @@ func TestAddAndCommitSnapshotCLI(t *testing.T) {
 	snapshot := snapshots[0]
 	if snapshot.Title != "CLI Snapshot" || snapshot.Implementation.GitState != head {
 		t.Fatalf("snapshot = %#v, want CLI title at implementation head %s", snapshot, head)
+	}
+	initCommit := gitOutputForTest(t, repo, "rev-parse", "HEAD~1")
+	if snapshot.Implementation.BaseCommit != initCommit {
+		t.Fatalf("base commit = %s, want latest committed .eve change %s", snapshot.Implementation.BaseCommit, initCommit)
+	}
+	if got := snapshot.Implementation.Commits; len(got) != 1 || got[0] != head {
+		t.Fatalf("implementation commits = %#v, want only %s", got, head)
 	}
 	if len(snapshot.Validation) != 1 || snapshot.Validation[0].Command != "go test ./..." || snapshot.Validation[0].Status != "passed" {
 		t.Fatalf("validation = %#v, want passed go test", snapshot.Validation)

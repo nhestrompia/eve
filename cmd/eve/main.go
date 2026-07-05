@@ -764,7 +764,7 @@ func (repo repository) summary() (repoSummary, error) {
 	}
 	summary := repoSummary{ID: repo.ID, Root: repo.Root, SnapshotCount: len(snapshots)}
 	for _, snapshot := range snapshots {
-		summary.CommitCount += len(snapshot.Implementation.Commits)
+		summary.CommitCount += len(snapshotImplementationCommits(repo, snapshot))
 		summary.DecisionCount += len(snapshot.Decisions)
 		summary.RiskCount += len(snapshot.Risks)
 		summary.ArtifactCount += len(snapshot.Artifacts)
@@ -911,9 +911,38 @@ func deriveGitFactsIgnoring(repo repository, ignoredStatusPaths []string) (gitFa
 	if err != nil {
 		return gitFacts{}, err
 	}
-	commitsText, err := gitOutput(repo.Root, "log", "--format=%H", "-n", "50")
+	baseCommit := latestCommittedEVEChange(repo)
+	commits, err := implementationCommits(repo, baseCommit, strings.TrimSpace(head))
 	if err != nil {
 		return gitFacts{}, err
+	}
+	return gitFacts{
+		Branch:     strings.TrimSpace(branch),
+		GitState:   strings.TrimSpace(head),
+		BaseCommit: baseCommit,
+		Commits:    commits,
+		Dirty:      hasRelevantGitStatus(status, ignoredStatusPaths),
+	}, nil
+}
+
+func latestCommittedEVEChange(repo repository) string {
+	commit, err := gitOutput(repo.Root, "log", "-n", "1", "--format=%H", "--", ".eve")
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(commit)
+}
+
+func implementationCommits(repo repository, baseCommit string, head string) ([]string, error) {
+	args := []string{"log", "--format=%H"}
+	if strings.TrimSpace(baseCommit) != "" {
+		args = append(args, strings.TrimSpace(baseCommit)+".."+head)
+	} else {
+		args = append(args, "-n", "1", head)
+	}
+	commitsText, err := gitOutput(repo.Root, args...)
+	if err != nil {
+		return nil, err
 	}
 	commits := []string{}
 	for _, line := range strings.Split(commitsText, "\n") {
@@ -921,12 +950,7 @@ func deriveGitFactsIgnoring(repo repository, ignoredStatusPaths []string) (gitFa
 			commits = append(commits, trimmed)
 		}
 	}
-	return gitFacts{
-		Branch:   strings.TrimSpace(branch),
-		GitState: strings.TrimSpace(head),
-		Commits:  commits,
-		Dirty:    hasRelevantGitStatus(status, ignoredStatusPaths),
-	}, nil
+	return commits, nil
 }
 
 func hasRelevantGitStatus(status string, ignoredPaths []string) bool {

@@ -429,7 +429,7 @@ func (server runtimeServer) handleSnapshotDetail(w http.ResponseWriter, r *http.
 		writeAPIError(w, http.StatusNotFound, err)
 		return
 	}
-	commits := server.gitCommits(repo, snapshot.Implementation.GitState, snapshot.Implementation.Commits)
+	commits := server.gitCommits(repo, snapshotImplementationCommits(repo, snapshot))
 	writeJSON(w, http.StatusOK, snapshotDetailResponse{
 		Repository: repo.ID,
 		Snapshot:   snapshot,
@@ -532,6 +532,7 @@ func summarizeSnapshot(snapshot *eve.Snapshot) snapshotSummary {
 func summarizeSnapshotForRepo(repo repository, snapshot *eve.Snapshot) snapshotSummary {
 	summary := summarizeSnapshot(snapshot)
 	summary.Repository = repo.ID
+	summary.CommitCount = len(snapshotImplementationCommits(repo, snapshot))
 	return summary
 }
 
@@ -788,9 +789,9 @@ func conversationArtifactSession(artifact eve.Artifact) (string, string) {
 	return provider, id
 }
 
-func (server runtimeServer) gitCommits(repo repository, snapshot string, commits []string) []uiGitCommit {
+func (server runtimeServer) gitCommits(repo repository, commits []string) []uiGitCommit {
 	seen := map[string]bool{}
-	ordered := make([]string, 0, len(commits)+1)
+	ordered := make([]string, 0, len(commits))
 	add := func(commit string) {
 		commit = strings.TrimSpace(commit)
 		if commit == "" || seen[commit] {
@@ -799,7 +800,6 @@ func (server runtimeServer) gitCommits(repo repository, snapshot string, commits
 		seen[commit] = true
 		ordered = append(ordered, commit)
 	}
-	add(snapshot)
 	for _, commit := range commits {
 		add(commit)
 	}
@@ -815,6 +815,47 @@ func (server runtimeServer) gitCommits(repo repository, snapshot string, commits
 			ShortHash: shortHash(commit),
 			Subject:   "Commit metadata unavailable",
 		})
+	}
+	return out
+}
+
+func snapshotImplementationCommits(repo repository, snapshot *eve.Snapshot) []string {
+	if snapshot == nil {
+		return nil
+	}
+	head := strings.TrimSpace(snapshot.Implementation.GitState)
+	if head == "" {
+		return normalizedCommitList(snapshot.Implementation.Commits)
+	}
+	baseCommit := strings.TrimSpace(snapshot.Implementation.BaseCommit)
+	if baseCommit == "" {
+		baseCommit = latestCommittedEVEChangeBefore(repo, head)
+	}
+	commits, err := implementationCommits(repo, baseCommit, head)
+	if err == nil {
+		return commits
+	}
+	return normalizedCommitList(snapshot.Implementation.Commits)
+}
+
+func latestCommittedEVEChangeBefore(repo repository, ref string) string {
+	commit, err := gitOutput(repo.Root, "log", "-n", "1", "--format=%H", ref, "--", ".eve")
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(commit)
+}
+
+func normalizedCommitList(commits []string) []string {
+	seen := map[string]bool{}
+	out := make([]string, 0, len(commits))
+	for _, commit := range commits {
+		commit = strings.TrimSpace(commit)
+		if commit == "" || seen[commit] {
+			continue
+		}
+		seen[commit] = true
+		out = append(out, commit)
 	}
 	return out
 }
