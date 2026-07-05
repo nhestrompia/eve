@@ -4,7 +4,6 @@ import {
   AlertTriangle,
   ArrowRight,
   BookOpen,
-  ChevronDown,
   CircleHelp,
   Code2,
   Globe,
@@ -33,15 +32,19 @@ export function RepositoryActivityView({
   evolutions: EvolutionSummary[];
   selectedRepo?: string;
 }) {
-  const title = selectedRepo ?? 'Product snapshots';
+  const title = selectedRepo ?? "Product snapshots";
   const details = useQuery({
     queryKey: [
       "activity-overview-details",
-      evolutions.map((evolution) => evolution.id).join(","),
+      evolutions
+        .map((evolution) => `${evolution.repository ?? ""}:${evolution.id}`)
+        .join(","),
     ],
     queryFn: () =>
       Promise.all(
-        evolutions.map((evolution) => api.snapshotDetail(evolution.id)),
+        evolutions.map((evolution) =>
+          api.snapshotDetail(evolution.id, evolution.repository),
+        ),
       ),
     enabled: evolutions.length > 0,
     staleTime: 30_000,
@@ -57,7 +60,7 @@ export function RepositoryActivityView({
       : buildFallbackRepositories(evolutions, selectedRepo);
   const latestRepoRows = sortRepositoriesByLatestUse(repoRows);
   const detailRows = details.data ?? [];
-  const stats = buildPlatformStats(evolutions, detailRows);
+  const stats = buildPlatformStats(evolutions, detailRows, repoRows);
 
   return (
     <main className="min-h-[calc(100dvh-76px)] min-w-0 bg-background px-4 py-5 sm:px-6 sm:py-7 lg:px-8 lg:py-8">
@@ -77,13 +80,17 @@ export function RepositoryActivityView({
                   : "Review recorded product states and jump back into the repositories you touched most recently."}
               </p>
             </div>
-            <section className="min-w-0 space-y-2.5" aria-label="Recently used repositories">
+            <section
+              className="min-w-0 space-y-2.5"
+              aria-label="Recently used repositories"
+            >
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-sm font-semibold text-slate-700">
                   Recent repositories
                 </h2>
                 <span className="text-xs text-muted-foreground">
-                  {latestRepoRows.length} {latestRepoRows.length === 1 ? "repo" : "repos"}
+                  {latestRepoRows.length}{" "}
+                  {latestRepoRows.length === 1 ? "repo" : "repos"}
                 </span>
               </div>
               <div className="scrollbar-none -mx-4 flex min-w-0 snap-x gap-3 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
@@ -93,6 +100,11 @@ export function RepositoryActivityView({
                     repo={repo}
                     tone={REPO_TONES[index % REPO_TONES.length]}
                     selected={selectedRepo === repo.name}
+                    activityValues={repositoryVelocityBuckets(
+                      repo,
+                      evolutions,
+                      repoRows,
+                    )}
                   />
                 ))}
               </div>
@@ -138,10 +150,12 @@ function RepositoryOverviewCard({
   repo,
   tone,
   selected,
+  activityValues,
 }: {
   repo: RepositorySummary;
   tone: RepoTone;
   selected: boolean;
+  activityValues: number[];
 }) {
   const Icon = tone.icon;
   return (
@@ -160,7 +174,7 @@ function RepositoryOverviewCard({
         <Icon className={`size-4 shrink-0 ${tone.text}`} />
       </div>
       <div className="mt-4">
-        <RepoSparkline tone={tone} seed={repo.name} />
+        <RepoSparkline tone={tone} values={activityValues} />
       </div>
       <p className="mt-3 min-w-0 text-xs leading-4 text-muted-foreground">
         <span className="block overflow-hidden text-ellipsis whitespace-nowrap">
@@ -213,10 +227,9 @@ const REPO_TONES: RepoTone[] = [
   },
 ];
 
-function RepoSparkline({ tone, seed }: { tone: RepoTone; seed: string }) {
-  const values = seededSeries(seed, 11, 10, 38);
-  const points = values
-    .map((value, index) => `${index * 10},${46 - value}`)
+function RepoSparkline({ tone, values }: { tone: RepoTone; values: number[] }) {
+  const points = compressSeries(values, 11)
+    .map((value, index) => `${index * 10},${46 - sparklineY(value, values)}`)
     .join(" ");
   return (
     <svg
@@ -396,7 +409,9 @@ function RecentActivityPanel({
   details: DetailResponse[];
   selectedRepo?: string;
 }) {
-  const [activeRepo, setActiveRepo] = useState<string | undefined>(selectedRepo);
+  const [activeRepo, setActiveRepo] = useState<string | undefined>(
+    selectedRepo,
+  );
 
   useEffect(() => {
     setActiveRepo(selectedRepo);
@@ -422,9 +437,9 @@ function RecentActivityPanel({
     <section className="space-y-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-lg font-semibold">Recent activity</h2>
-        <button className="inline-flex h-9 w-fit items-center gap-2 rounded-md bg-white px-3 text-xs font-semibold shadow-[0_0_0_1px_rgba(15,23,42,0.12)] transition-colors hover:bg-slate-50">
+        {/* <button className="inline-flex h-9 w-fit items-center gap-2 rounded-md bg-white px-3 text-xs font-semibold shadow-[0_0_0_1px_rgba(15,23,42,0.12)] transition-colors hover:bg-slate-50">
           All activity types <ChevronDown className="size-4" />
-        </button>
+        </button> */}
       </div>
       <div className="flex flex-wrap gap-2">
         <button
@@ -484,7 +499,9 @@ function RecentActivityPanel({
                 </span>
                 <span className="min-w-0">
                   <span className="flex min-w-0 items-center gap-3">
-                    <strong className="truncate text-sm font-semibold">{evolution.title || 'Untitled Snapshot'}</strong>
+                    <strong className="truncate text-sm font-semibold">
+                      {evolution.title || "Untitled Snapshot"}
+                    </strong>
                     <StatusBadge status={evolution.status} />
                   </span>
                   <span className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
@@ -514,10 +531,11 @@ function filterPillClass(active: boolean) {
 }
 
 type PlatformStats = {
+  repositories: number;
   evolutions: number;
   snapshots: number;
   commits: number;
-  sessions: number;
+  artifacts: number;
   decisions: number;
   risks: number;
   failedVerifications: number;
@@ -526,12 +544,12 @@ type PlatformStats = {
 
 function PlatformOverview({ stats }: { stats: PlatformStats }) {
   const tiles = [
-    ['Total snapshots', stats.evolutions],
-    ['Snapshots', stats.snapshots],
-    ['Commits', stats.commits],
-    ['Artifacts', stats.sessions],
-    ['Decisions', stats.decisions],
-    ['Risks', stats.risks]
+    ["Repositories", stats.repositories],
+    ["Snapshots", stats.snapshots],
+    ["Commits", stats.commits],
+    ["Artifacts", stats.artifacts],
+    ["Decisions", stats.decisions],
+    ["Risks", stats.risks],
   ] as const;
   return (
     <RailCard title="Platform overview" eyebrow="Last 12 months">
@@ -566,6 +584,12 @@ function VelocityPanel({
       <div className="space-y-4">
         {repositories.slice(0, 4).map((repo, index) => {
           const tone = REPO_TONES[index % REPO_TONES.length];
+          const values = repositoryVelocityBuckets(
+            repo,
+            evolutions,
+            repositories,
+          );
+          const count = values.reduce((total, value) => total + value, 0);
           return (
             <div
               key={repo.name}
@@ -579,12 +603,9 @@ function VelocityPanel({
                 </span>
                 <span className="truncate">{repo.name}</span>
               </span>
-              <MiniBars
-                tone={tone}
-                seed={`${repo.name}-${evolutions.length}`}
-              />
+              <MiniBars tone={tone} values={values} />
               <span className="text-right text-sm font-semibold tabular-nums">
-                {repo.evolutionCount}
+                {count}
               </span>
             </div>
           );
@@ -622,7 +643,12 @@ function AgentContributionPanel({
             <span className="h-1.5 overflow-hidden rounded-full bg-slate-100">
               <span
                 className={`block h-full rounded-full ${row.tone.bg}`}
-                style={{ width: `${Math.max(7, (row.count / max) * 100)}%` }}
+                style={{
+                  width:
+                    row.count > 0
+                      ? `${Math.max(7, (row.count / max) * 100)}%`
+                      : "0%",
+                }}
               />
             </span>
             <span className="whitespace-nowrap text-right text-sm text-muted-foreground tabular-nums">
@@ -710,8 +736,7 @@ function RailCard({
   );
 }
 
-function MiniBars({ tone, seed }: { tone: RepoTone; seed: string }) {
-  const values = seededSeries(seed, 32, 1, 18);
+function MiniBars({ tone, values }: { tone: RepoTone; values: number[] }) {
   const max = Math.max(1, ...values);
   return (
     <span
@@ -720,11 +745,11 @@ function MiniBars({ tone, seed }: { tone: RepoTone; seed: string }) {
     >
       {values.map((value, index) => (
         <span
-          key={`${seed}-${index}`}
-          className={`w-[3px] rounded-sm ${index > values.length - 8 ? tone.bg : "bg-slate-200"}`}
+          key={index}
+          className={`w-[3px] rounded-sm ${value > 0 ? tone.bg : "bg-slate-200"}`}
           style={{
-            height: `${Math.max(3, (value / max) * 24)}px`,
-            opacity: index > values.length - 8 ? 0.9 : 0.55,
+            height: `${value > 0 ? Math.max(4, (value / max) * 24) : 3}px`,
+            opacity: value > 0 ? 0.9 : 0.55,
           }}
         />
       ))}
@@ -745,6 +770,18 @@ function buildFallbackRepositories(
         .length,
       commitCount: evolutions.reduce(
         (total, evolution) => total + (evolution.commitCount ?? 0),
+        0,
+      ),
+      decisionCount: evolutions.reduce(
+        (total, evolution) => total + (evolution.decisionCount ?? 0),
+        0,
+      ),
+      riskCount: evolutions.reduce(
+        (total, evolution) => total + (evolution.riskCount ?? 0),
+        0,
+      ),
+      artifactCount: evolutions.reduce(
+        (total, evolution) => total + (evolution.artifactCount ?? 0),
         0,
       ),
       latestAt: evolutions[0]?.updatedAt || evolutions[0]?.createdAt || "",
@@ -771,46 +808,124 @@ function sortRepositoriesByLatestUse(repositories: RepositorySummary[]) {
 function buildPlatformStats(
   evolutions: EvolutionSummary[],
   details: DetailResponse[],
+  repositories: RepositorySummary[],
 ): PlatformStats {
-  const decisions = details.reduce(
-    (total, detail) => total + detail.evolution.decisions.length,
-    0,
-  );
-  const risks = details.reduce(
-    (total, detail) => total + detail.evolution.risks.length,
-    0,
-  );
-  const failedVerifications = details.reduce(
-    (total, detail) =>
-      total +
-      detail.evolution.verification.filter(
-        (verification) => verification.status.toLowerCase() === "failed",
-      ).length,
-    0,
-  );
+  const hasDetails = details.length > 0;
+  const decisions = hasDetails
+    ? details.reduce(
+        (total, detail) => total + detail.snapshot.decisions.length,
+        0,
+      )
+    : evolutions.reduce(
+        (total, evolution) => total + (evolution.decisionCount ?? 0),
+        0,
+      );
+  const risks = hasDetails
+    ? details.reduce((total, detail) => total + detail.snapshot.risks.length, 0)
+    : evolutions.reduce(
+        (total, evolution) => total + (evolution.riskCount ?? 0),
+        0,
+      );
+  const artifacts = hasDetails
+    ? details.reduce(
+        (total, detail) => total + detail.snapshot.artifacts.length,
+        0,
+      )
+    : evolutions.reduce(
+        (total, evolution) => total + (evolution.artifactCount ?? 0),
+        0,
+      );
+  const failedVerifications = hasDetails
+    ? details.reduce(
+        (total, detail) =>
+          total +
+          detail.snapshot.validation.filter(
+            (verification) => verification.status.toLowerCase() === "failed",
+          ).length,
+        0,
+      )
+    : evolutions.reduce(
+        (total, evolution) => total + (evolution.failedValidationCount ?? 0),
+        0,
+      );
   return {
+    repositories: repositories.length,
     evolutions: evolutions.length,
     snapshots: evolutions.filter((evolution) => evolution.snapshot).length,
     commits: evolutions.reduce(
       (total, evolution) => total + (evolution.commitCount ?? 0),
       0,
     ),
-    sessions:
-      details.length > 0
-        ? details.reduce((total, detail) => total + detail.sessions.length, 0)
-        : evolutions.reduce(
-            (total, evolution) => total + evolution.sessionProviders.length,
-            0,
-          ),
+    artifacts,
     decisions,
     risks,
     failedVerifications,
-    missingDecisions:
-      details.length > 0
-        ? details.filter((detail) => detail.evolution.decisions.length === 0)
-            .length
-        : 0,
+    missingDecisions: hasDetails
+      ? details.filter((detail) => detail.snapshot.decisions.length === 0)
+          .length
+      : evolutions.filter((evolution) => (evolution.decisionCount ?? 0) === 0)
+          .length,
   };
+}
+
+function repositoryVelocityBuckets(
+  repo: RepositorySummary,
+  evolutions: EvolutionSummary[],
+  repositories: RepositorySummary[],
+) {
+  const values = Array.from({ length: VELOCITY_BUCKETS }, () => 0);
+  const now = new Date();
+  const windowStart = new Date(now);
+  windowStart.setDate(now.getDate() - VELOCITY_WINDOW_DAYS);
+  const bucketMs =
+    (now.getTime() - windowStart.getTime()) / VELOCITY_BUCKETS || 1;
+
+  for (const evolution of evolutions) {
+    if (!evolutionBelongsToRepository(evolution, repo, repositories)) continue;
+    const date = parseDate(evolution.updatedAt || evolution.createdAt);
+    if (!date) continue;
+    const time = date.getTime();
+    if (time < windowStart.getTime() || time > now.getTime()) continue;
+    const index = clamp(
+      Math.floor((time - windowStart.getTime()) / bucketMs),
+      0,
+      VELOCITY_BUCKETS - 1,
+    );
+    values[index] += 1;
+  }
+
+  return values;
+}
+
+function evolutionBelongsToRepository(
+  evolution: EvolutionSummary,
+  repo: RepositorySummary,
+  repositories: RepositorySummary[],
+) {
+  if (evolution.repository) {
+    return (
+      evolution.repository === repo.name || evolution.repository === repo.id
+    );
+  }
+  if (repositories.length <= 1) return true;
+  return repo.latestEvolution === evolution.id;
+}
+
+function compressSeries(values: number[], length: number) {
+  if (values.length <= length) return values;
+  return Array.from({ length }, (_, index) => {
+    const start = Math.floor((index / length) * values.length);
+    const end = Math.max(
+      start + 1,
+      Math.floor(((index + 1) / length) * values.length),
+    );
+    return values.slice(start, end).reduce((total, value) => total + value, 0);
+  });
+}
+
+function sparklineY(value: number, values: number[]) {
+  const max = Math.max(1, ...values);
+  return value > 0 ? Math.max(8, (value / max) * 32) : 8;
 }
 
 function repoForEvolution(
@@ -886,19 +1001,6 @@ function providerLabel(provider?: string) {
   if (value.includes("claude")) return "Claude";
   if (value.includes("opencode")) return "OpenCode";
   return "Other";
-}
-
-function seededSeries(seed: string, length: number, min: number, max: number) {
-  let state = seed
-    .split("")
-    .reduce((total, char) => total + char.charCodeAt(0), 17);
-  return Array.from({ length }, (_, index) => {
-    state = (state * 9301 + 49297 + index * 233) % 233280;
-    const wave = Math.sin((index + state / 1000) * 0.85) * 0.5 + 0.5;
-    return Math.round(
-      min + (max - min) * (0.35 * (state / 233280) + 0.65 * wave),
-    );
-  });
 }
 
 type ActivityDay = {
@@ -981,3 +1083,5 @@ const ACTIVITY_CELL_GAP = 3;
 const DAY_LABEL_WIDTH = 30;
 const MIN_ACTIVITY_WEEKS = 12;
 const MAX_ACTIVITY_WEEKS = 53;
+const VELOCITY_BUCKETS = 32;
+const VELOCITY_WINDOW_DAYS = 365;

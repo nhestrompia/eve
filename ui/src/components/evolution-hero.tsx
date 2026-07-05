@@ -27,7 +27,7 @@ export function EvolutionHero({
 }) {
   const queryClient = useQueryClient();
   const checkout = useMutation({
-    mutationFn: () => api.checkout(detail.summary.id),
+    mutationFn: () => api.checkout(detail.summary.id, detail.repository),
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: ["config"] });
       if (result.exitCode === 0) {

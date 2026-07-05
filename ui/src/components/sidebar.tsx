@@ -1,24 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import {
-  BookOpen,
-  History,
-  Plus,
-  Search,
-  Settings,
-  Sun,
-} from "lucide-react";
+import { BookOpen, History, Search, Settings, Sun } from "lucide-react";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 import { Button } from "./ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "./ui/dialog";
 import { Input } from "./ui/input";
 
 export function Sidebar({ onSearch }: { onSearch: (query?: string) => void }) {
@@ -42,7 +27,9 @@ export function Sidebar({ onSearch }: { onSearch: (query?: string) => void }) {
     try {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        setLocalRepositories(parsed.filter((value): value is string => typeof value === "string"));
+        setLocalRepositories(
+          parsed.filter((value): value is string => typeof value === "string"),
+        );
       }
     } catch {
       setLocalRepositories([]);
@@ -54,9 +41,9 @@ export function Sidebar({ onSearch }: { onSearch: (query?: string) => void }) {
       mergeSidebarRepositories(
         repositories.data ?? [],
         localRepositories,
-        config.data?.repository ?? "eve"
+        config.data?.repository ?? "eve",
       ),
-    [repositories.data, localRepositories, config.data?.repository]
+    [repositories.data, localRepositories, config.data?.repository],
   );
 
   const submitSearch = (event: FormEvent) => {
@@ -72,8 +59,8 @@ export function Sidebar({ onSearch }: { onSearch: (query?: string) => void }) {
     event.preventDefault();
     const name = repositoryName.trim();
     if (!name) return;
-    const next = Array.from(new Set([...localRepositories, name])).sort((left, right) =>
-      left.localeCompare(right)
+    const next = Array.from(new Set([...localRepositories, name])).sort(
+      (left, right) => left.localeCompare(right),
     );
     setLocalRepositories(next);
     window.localStorage.setItem(LOCAL_REPOSITORIES_KEY, JSON.stringify(next));
@@ -84,8 +71,16 @@ export function Sidebar({ onSearch }: { onSearch: (query?: string) => void }) {
 
   return (
     <aside className="flex flex-col border-b bg-white/78 md:fixed md:inset-y-0 md:left-0 md:z-30 md:w-[240px] md:overflow-y-auto md:border-b-0 md:border-r">
-      <Link to="/" aria-label="Go to activity" className="flex h-16 items-center px-4 transition-opacity hover:opacity-80 md:h-[76px] md:px-7">
-        <img src="/eve.svg" alt="eve" className="eve-logo h-10 w-[108px] object-contain object-left" />
+      <Link
+        to="/"
+        aria-label="Go to activity"
+        className="flex h-16 items-center px-4 transition-opacity hover:opacity-80 md:h-[76px] md:px-7"
+      >
+        <img
+          src="/eve.svg"
+          alt="eve"
+          className="eve-logo h-10 w-[108px] object-contain object-left"
+        />
       </Link>
 
       <form onSubmit={submitSearch} className="hidden px-5 pb-5 md:block">
@@ -146,7 +141,7 @@ export function Sidebar({ onSearch }: { onSearch: (query?: string) => void }) {
             </Link>
           ))}
         </div>
-        <Dialog open={repositoryDialogOpen} onOpenChange={setRepositoryDialogOpen}>
+        {/* <Dialog open={repositoryDialogOpen} onOpenChange={setRepositoryDialogOpen}>
           <DialogTrigger asChild>
             <button className="mt-3 flex min-h-10 w-fit items-center gap-3 rounded-lg px-2 text-muted-foreground hover:bg-slate-50 hover:text-foreground md:w-auto">
               <Plus className="size-4" />
@@ -189,7 +184,7 @@ export function Sidebar({ onSearch }: { onSearch: (query?: string) => void }) {
               </div>
             </form>
           </DialogContent>
-        </Dialog>
+        </Dialog> */}
       </div>
 
       <div className="mt-auto flex items-center justify-between border-t p-4 md:p-5">
@@ -236,10 +231,13 @@ type SidebarRepository = {
 function mergeSidebarRepositories(
   repositories: SidebarRepository[],
   localRepositories: string[],
-  fallbackRepository: string
+  fallbackRepository: string,
 ) {
   const rows = new Map<string, SidebarRepository>();
-  const source = repositories.length > 0 ? repositories : [{ name: fallbackRepository, evolutionCount: 0 }];
+  const source =
+    repositories.length > 0
+      ? repositories
+      : [{ name: fallbackRepository, evolutionCount: 0 }];
   for (const repo of source) {
     rows.set(repo.name, repo);
   }

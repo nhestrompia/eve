@@ -102,12 +102,17 @@ export type Evolution = {
 
 export type EvolutionSummary = {
   id: string;
+  repository?: string;
   title: string;
   type: string;
   status: string;
   outcome: string;
   snapshot: string;
   commitCount: number;
+  decisionCount: number;
+  riskCount: number;
+  artifactCount: number;
+  failedValidationCount: number;
   verificationState: string;
   verificationSummary: string;
   sessionProviders: string[];
@@ -117,6 +122,7 @@ export type EvolutionSummary = {
 
 export type SnapshotSummary = {
   id: string;
+  repository?: string;
   title: string;
   type: string;
   summary: string;
@@ -124,11 +130,17 @@ export type SnapshotSummary = {
   gitState: string;
   branch: string;
   dirty: boolean;
+  commitCount: number;
+  decisionCount: number;
+  riskCount: number;
+  artifactCount: number;
+  failedValidationCount: number;
   validationState: string;
   createdAt: string;
 };
 
 export type DetailResponse = {
+  repository: string;
   snapshot: Snapshot;
   evolution: Evolution;
   summary: EvolutionSummary;
@@ -253,6 +265,9 @@ export type RepositorySummary = {
   evolutionCount: number;
   snapshotCount: number;
   commitCount: number;
+  decisionCount?: number;
+  riskCount?: number;
+  artifactCount?: number;
   latestAt: string;
   latestEvolution: string;
   latestSnapshot?: string;
