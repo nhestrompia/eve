@@ -1,9 +1,9 @@
 ---
 title: Review History
-description: Browse product snapshots in the local eve UI and from the CLI.
+description: Inspect snapshots from the local UI and CLI.
 ---
 
-eve provides a local web UI for reviewing repository product history.
+eve provides a local web UI for reviewing repository product history without sending repository data to a hosted service.
 
 ```sh
 eve dev
@@ -13,7 +13,7 @@ Open `http://localhost:4317`.
 
 ## What to review
 
-The UI is designed around questions reviewers and agents ask repeatedly:
+Read snapshots the way you would read a product changelog with evidence attached:
 
 - What changed?
 - Why did it change?
@@ -35,7 +35,7 @@ eve snapshot <snapshot-id>
 eve checkout <snapshot-id>
 ```
 
-Use force only when you intentionally want to overwrite local working tree state:
+Use `--force` only when you intentionally want to overwrite local working tree state:
 
 ```sh
 eve checkout --force <snapshot-id>

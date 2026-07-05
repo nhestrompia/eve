@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to EVE will be documented here.
+All notable changes to eve will be documented here.
 
 This project uses Git tags for releases.
 

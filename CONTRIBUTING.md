@@ -1,12 +1,12 @@
 # Contributing
 
-Thanks for working on EVE.
+Thanks for working on eve.
 
 ## Local Verification
 
 Run the checks that match your change:
 
-For normal EVE development:
+For normal product or CLI development:
 
 ```sh
 go test ./...
@@ -28,10 +28,10 @@ npm --prefix site run build
 For completed product changes in this repository:
 
 1. Commit the implementation changes to Git.
-2. Record the product change with EVE using `eve add` and `eve commit`.
+2. Record the product change with eve using `eve add` and `eve commit`.
 3. Commit the generated `.eve/` record to Git.
 
-Include the verification command and result in the EVE record.
+Include the verification command and result in the eve record.
 
 ## Pull Requests
 

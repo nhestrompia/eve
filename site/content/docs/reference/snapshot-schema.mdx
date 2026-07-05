@@ -1,9 +1,9 @@
 ---
 title: Snapshot Schema
-description: The shape of canonical eve snapshot records.
+description: The JSON shape of canonical eve snapshot records.
 ---
 
-Canonical snapshots are JSON files.
+Canonical snapshots are JSON files written under `.eve/snapshots/`.
 
 ```json
 {
@@ -37,7 +37,7 @@ Canonical snapshots are JSON files.
 
 ## Types
 
-Snapshot `type` must be one of:
+Snapshot `type` describes the kind of completed product work:
 
 - `feature`
 - `bugfix`
@@ -73,7 +73,7 @@ Validation status must be one of:
 
 ## Artifact types
 
-Artifact type must be one of:
+Artifact type describes the evidence attached to a snapshot:
 
 - `screenshot`
 - `video`

@@ -1,15 +1,18 @@
 # eve
 
-eve records completed product snapshots next to Git history.
+git tracks code, eve tracks product.
 
-Git is still the source of truth for implementation checkpoints. eve adds a
-small product-history layer for the completed unit of work: a feature, bug fix,
+eve records the product meaning behind completed work: what changed for users,
+why it changed, how it was verified, and which Git state implemented it.
+
+Git remains the source of truth for implementation history. eve adds a small
+repository-native layer for the completed product unit: a feature, bug fix,
 experiment, refactor, or release.
 
 ## Website and Documentation
 
 This repository includes a functional documentation website in `site/`, built
-with Next.js and Fumadocs. You do not need to run the docs site to use EVE from
+with Next.js and Fumadocs. You do not need to run the docs site to use eve from
 a fork or local checkout.
 
 Only run the docs site when you are editing documentation or preparing a docs
@@ -31,9 +34,9 @@ the default Next.js build command, and publish from Vercel's generated output.
 
 The docs explain:
 
-- What EVE records and why it complements Git
+- What eve records and why it complements Git
 - How snapshots, validation, artifacts, and relationships work
-- How coding agents should read and write EVE history
+- How coding agents should read and write eve history
 - CLI, MCP, local API, and snapshot schema reference
 
 ## What eve Stores
@@ -88,7 +91,7 @@ go run ./cmd/eve install-mcp --install
 ```
 
 That one command runs `go install ./cmd/eve`, finds the installed binary, and
-adds Eve to Codex, Claude Code, and opencode MCP config with an absolute command
+adds eve to Codex, Claude Code, and opencode MCP config with an absolute command
 path. GUI apps and agent hosts often do not inherit the same `PATH` as your
 interactive shell, so `command = "eve"` can fail even after a successful
 install.
@@ -106,7 +109,7 @@ EVE_BIN="$EVE_BIN_DIR/eve"
 
 ## Verify
 
-For normal EVE development:
+For normal product or CLI development:
 
 ```sh
 go test ./...
@@ -145,7 +148,7 @@ This repository includes:
 - Dependabot configuration for Go modules, npm packages, and GitHub Actions
 
 For completed product changes in this repository, commit the implementation,
-record the product change with EVE, then commit the generated `.eve/` record.
+record the product change with eve, then commit the generated `.eve/` record.
 
 ## Architecture
 
@@ -155,7 +158,7 @@ flowchart LR
     User --> UI[Web UI]
     Agent[Codex, Claude Code, opencode, other MCP clients] --> MCP[MCP server]
 
-    CLI --> Runtime[EVE runtime]
+    CLI --> Runtime[eve runtime]
     UI --> API[Local API]
     API --> Runtime
     MCP --> Runtime
@@ -249,7 +252,7 @@ From this checkout, the recommended setup is one command:
 go run ./cmd/eve install-mcp --install
 ```
 
-After Eve is installed, rerun setup any time with:
+After eve is installed, rerun setup any time with:
 
 ```sh
 EVE_BIN_DIR="$(go env GOBIN)"
@@ -268,7 +271,7 @@ EVE_BIN="$EVE_BIN_DIR/eve"
 "$EVE_BIN" install-mcp --clients codex,claude
 ```
 
-To pin a specific repository instead of letting the MCP client start Eve from
+To pin a specific repository instead of letting the MCP client start eve from
 the active workspace:
 
 ```sh
@@ -278,7 +281,7 @@ EVE_BIN="$EVE_BIN_DIR/eve"
 "$EVE_BIN" install-mcp --cwd /path/to/repo
 ```
 
-If you installed Eve somewhere custom, pass the absolute binary path:
+If you installed eve somewhere custom, pass the absolute binary path:
 
 ```sh
 EVE_BIN=/absolute/path/to/eve

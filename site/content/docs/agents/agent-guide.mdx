@@ -1,11 +1,11 @@
 ---
 title: Agent Guide
-description: How coding agents should read and write eve product history.
+description: How coding agents should use eve as repository memory.
 ---
 
-Agents should treat eve as durable repository memory.
+Agents should treat eve as durable repository memory, not as another place to dump a transcript.
 
-Before changing behavior, read relevant eve snapshots. After completing and verifying behavior, write a new snapshot that records the product meaning and evidence.
+Before changing behavior, read relevant snapshots to understand previous product decisions and validation expectations. After completing and verifying behavior, write a new snapshot that records the product meaning and evidence.
 
 ## Agent workflow
 
@@ -41,3 +41,7 @@ Avoid:
 When the MCP server is available, prefer the structured MCP tools over shell-only flows. MCP lets an agent complete snapshots without relying on fragile text parsing.
 
 Use the CLI fallback when MCP is not connected.
+
+## Agent rule of thumb
+
+If a future agent would need the fact to avoid repeating a mistake, include it. If Git already shows the detail clearly, leave it in Git.

@@ -1,6 +1,6 @@
 ---
 title: Release Workflow
-description: How the repository turns tagged versions into GitHub releases.
+description: How tagged versions become GitHub releases.
 ---
 
 eve uses Git tags as release triggers.
@@ -37,4 +37,4 @@ The CI workflow runs:
 - `npm --prefix site ci`
 - `npm --prefix site run build`
 
-Treat a green CI run as the minimum bar, not a replacement for targeted product verification.
+Treat a green CI run as the minimum bar. If the release includes a product-facing change, record the targeted verification in the eve snapshot as well.

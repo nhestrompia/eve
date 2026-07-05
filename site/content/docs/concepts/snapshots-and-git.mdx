@@ -1,25 +1,25 @@
 ---
 title: Snapshots and Git
-description: The boundary between Git implementation history and eve product snapshots.
+description: How Git commits and eve snapshots work together.
 ---
 
-eve is intentionally built beside Git.
+eve is built beside Git, not above it.
 
-Git remains the source of truth for implementation history. eve adds a product-history record for completed work.
+Git remains the source of truth for implementation history. eve adds the product record that Git does not try to model.
 
 ## Commit versus snapshot
 
 ```text
 Commit
-  Records a code checkpoint.
-  Optimized for diffs, merges, authorship, and implementation history.
+  A code checkpoint.
+  Best for diffs, merges, authorship, and implementation history.
 
 Snapshot
-  Records a completed product change.
-  Optimized for product meaning, evidence, relationships, and agent context.
+  A completed product change.
+  Best for product meaning, evidence, relationships, and agent context.
 ```
 
-A single snapshot can correspond to one commit, several commits, or a working state that is later committed. The important boundary is that a snapshot describes a completed unit of product work, not every implementation checkpoint.
+A snapshot can correspond to one commit, several commits, or a working state that is later committed. The important boundary is conceptual: snapshots describe completed product work, not every implementation checkpoint.
 
 ## Git facts eve derives
 
@@ -31,13 +31,17 @@ When a snapshot is committed, eve derives implementation facts from the reposito
 - Commit list
 - Dirty state
 
-Agents and humans provide product meaning. eve derives implementation facts.
+Humans and agents provide the product meaning. eve derives the implementation facts.
 
 ## Clean working tree by default
 
 `eve commit` expects the implementation working tree to be clean by default. This keeps the product record aligned with a reviewable Git state.
 
 Use `--allow-dirty` only when the workflow intentionally records a dirty state and the snapshot explains why.
+
+## Why this boundary matters
+
+Keeping the two histories separate makes each one better. Git can stay focused on code. eve can stay focused on the shipped result, verification, and context that would otherwise be scattered across tools.
 
 ## Relationship fields
 

@@ -1,9 +1,9 @@
 ---
 title: Record a Change
-description: A practical workflow for writing useful eve snapshots.
+description: How to write a product snapshot that remains useful later.
 ---
 
-Record an eve snapshot after the product change is implemented and verified.
+Record an eve snapshot after the product change is implemented and verified. A snapshot should describe the completed product result, not the step-by-step implementation log.
 
 ## Recommended workflow
 
@@ -17,6 +17,8 @@ This repository follows that workflow for product changes.
 
 ## Minimal record
 
+Use a minimal record when the change is straightforward and the validation speaks for itself:
+
 ```sh
 eve add \
   --title "Fix checkout toast timing" \
@@ -29,7 +31,7 @@ eve commit
 
 ## Better record
 
-Add the user-visible change, decisions, risks, and artifacts when they clarify the work:
+Add user-visible behavior, decisions, risks, and artifacts when they clarify the work:
 
 ```sh
 eve add \
@@ -54,3 +56,5 @@ Use language that future maintainers can act on:
 - Describe artifacts so readers know what they prove.
 - Add risks when something remains uncertain.
 - Link related snapshots when a change corrects or supersedes earlier work.
+
+Prefer "users can reset a password without losing the pending invitation" over "updated auth flow." The first version gives the next reader something concrete to verify.

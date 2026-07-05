@@ -1,26 +1,26 @@
 ---
 title: Product History
-description: How eve turns completed work into durable product memory.
+description: What product history means and how eve records it.
 ---
 
-Product history is the layer of knowledge that explains the meaning of implementation work.
+Product history is the explanation of what changed in the product and why the change can be trusted.
 
-Git can tell you that a file changed. eve is meant to tell you what shipped, which behavior changed, how the work was verified, and what future contributors should know before building on it.
+Git can tell you a file changed. eve should tell you what shipped, which behavior changed, how the work was verified, and what future contributors should know before building on it.
 
 ## What belongs in product history
 
-An eve snapshot should describe the completed unit of work from a product perspective:
+An eve snapshot should describe a finished unit of work from the reader's point of view:
 
-- The title and type of change
-- A concise summary
-- The user-visible behavior, when applicable
-- Decisions made during implementation
-- Known risks and mitigations
-- Validation evidence
-- Artifacts such as screenshots, videos, logs, URLs, and notes
-- Relationships to other snapshots
+- the title and type of change
+- the product summary
+- the user-visible behavior, when there is one
+- decisions that explain why the result looks this way
+- risks, tradeoffs, or follow-up concerns
+- validation commands and outcomes
+- artifacts such as screenshots, videos, logs, URLs, and notes
+- relationships to earlier snapshots
 
-The record should be useful months later to someone who was not present when the work happened.
+A good snapshot is useful months later to someone who was not present when the work happened.
 
 ## What does not belong
 
@@ -36,8 +36,16 @@ Avoid using snapshots for:
 
 Keep the snapshot focused on the product result and the evidence for it.
 
+## What good looks like
+
+A weak snapshot says "fixed auth bug."
+
+A useful snapshot says "users are redirected back to the dashboard after GitHub OAuth; verified with `go test ./...` and a login-flow screenshot; risk remains around expired provider sessions."
+
+The second version gives a future reader enough context to understand the shipped behavior and decide what to check before changing it.
+
 ## How agents benefit
 
 Agents are good at reading structured local context. eve gives them a stable source of truth that is closer to product intent than a commit log.
 
-Before changing a feature, an agent can inspect the related snapshots to understand prior decisions, risks, and validation expectations. After completing work, the agent can write a new snapshot that future agents and humans can trust.
+Before changing a feature, an agent can inspect related snapshots to understand prior decisions, risks, and validation expectations. After completing work, the agent can write a new snapshot that future agents and humans can trust.

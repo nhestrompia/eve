@@ -1,6 +1,6 @@
 ---
 title: CLI Reference
-description: Commands available in the eve CLI.
+description: The main commands available in the eve CLI.
 ---
 
 ## Usage
@@ -21,7 +21,7 @@ eve init
 
 ### add
 
-Create or update a staged snapshot draft.
+Create or update a staged snapshot draft. Use this after implementation and verification, when you know what product result the snapshot should describe.
 
 ```sh
 eve add --title <title> --summary <summary> [--type feature] [--validation <command>]
@@ -48,7 +48,7 @@ Common flags:
 
 ### commit
 
-Validate the staged draft, derive Git facts, and write the canonical snapshot.
+Validate the staged draft, derive Git facts, and write the canonical snapshot under `.eve/snapshots/`.
 
 ```sh
 eve commit
@@ -57,7 +57,7 @@ eve commit --allow-dirty
 
 ### dev
 
-Start the local runtime, web UI, local API, and HTTP MCP endpoint.
+Start the local runtime, product UI, local API, and HTTP MCP endpoint.
 
 ```sh
 eve dev
@@ -93,7 +93,7 @@ eve snapshot <snapshot-id>
 
 ### checkout
 
-Checkout the Git state associated with a snapshot.
+Check out the Git state associated with a snapshot.
 
 ```sh
 eve checkout <snapshot-id>

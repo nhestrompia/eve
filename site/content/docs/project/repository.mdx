@@ -1,9 +1,9 @@
 ---
 title: Repository Practices
-description: The project metadata, verification, licensing, and release expectations for eve.
+description: Repository expectations for licensing, releases, verification, and product records.
 ---
 
-The eve repository is expected to be understandable to humans, agents, and GitHub automation.
+The eve repository should be understandable from a fresh clone. Humans, agents, and GitHub automation should all be able to find the same basic answers: how to run it, how to verify it, how releases are made, and where product history lives.
 
 ## Included repository files
 
@@ -20,7 +20,7 @@ The eve repository is expected to be understandable to humans, agents, and GitHu
 
 Run the relevant tests before recording an eve snapshot.
 
-For normal eve development:
+For normal product or CLI development:
 
 ```sh
 go test ./...
@@ -28,7 +28,7 @@ npm --prefix ui test
 npm --prefix ui run build
 ```
 
-For documentation-site changes only:
+For documentation-site changes:
 
 ```sh
 npm --prefix site ci

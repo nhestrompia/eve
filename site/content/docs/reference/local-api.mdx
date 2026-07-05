@@ -1,6 +1,6 @@
 ---
 title: Local API
-description: HTTP endpoints served by the local eve runtime.
+description: HTTP endpoints served by the trusted local eve runtime.
 ---
 
 `eve dev` starts the local runtime on localhost. It serves the web UI, local API, and MCP endpoint.
@@ -22,8 +22,8 @@ POST /mcp
 
 ## Intended use
 
-The local API supports the bundled eve UI and local development tooling. For agent integration, prefer MCP resources and tools.
+The local API supports the bundled eve UI and local development tooling. For agent integration, prefer MCP resources and tools because they expose product-history operations directly.
 
 ## Security
 
-Keep the runtime bound to localhost. Do not expose the local API to untrusted networks.
+Keep the runtime bound to localhost. Do not expose the local API to untrusted networks or untrusted agent clients.

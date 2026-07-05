@@ -3,49 +3,54 @@ title: What is eve?
 description: git tracks code, eve tracks product.
 ---
 
-eve is a repository-native product history layer for software teams that use human developers, coding agents, or both.
+eve is a product-history layer for Git repositories.
 
-Git records implementation checkpoints: commits, branches, authorship, diffs, and merge history. eve records the completed product unit those checkpoints implement: what changed for users, why it changed, how it was verified, which risks and decisions mattered, and which artifacts prove the result.
+Git is excellent at preserving implementation history: commits, diffs, branches, authorship, and merges. It does not naturally answer the product questions that appear later:
 
-The canonical record lives in the repository under `.eve/`, so it can be reviewed, versioned, cloned, diffed, and carried forward with the codebase.
+- What changed for users?
+- Why was this decision made?
+- Which command, screenshot, log, or URL proved the behavior?
+- What should a future maintainer or agent know before touching this again?
+
+eve records that missing layer beside Git. Each snapshot describes one completed product change and stores the evidence needed to trust it.
 
 ## Why it exists
 
-Agentic development makes implementation faster, but it can make product memory worse. A finished change may be spread across a chat thread, terminal output, screenshots, commits, and local context that disappears after the work is merged.
+Modern software work is scattered across pull requests, chat, terminals, screenshots, issue trackers, and agent sessions. The code may be merged, but the context that explains the change often disappears.
 
-eve gives every completed change a structured record:
+eve keeps the important part in the repository:
 
-- Product summary and user-visible change
-- Decisions and rationale
-- Risks and mitigations
-- Validation commands and outcomes
-- Screenshots, logs, URLs, or other artifacts
-- Git branch, commits, dirty state, and resolved implementation state
+- a short product summary
+- the user-visible change
+- decisions and risks
+- validation commands and results
+- artifacts such as screenshots, logs, URLs, and notes
+- the Git branch, commits, and clean or dirty state behind the work
 
-The result is a product history that both humans and agents can query before making the next change.
+Because snapshots live under `.eve/`, they can be cloned, reviewed, diffed, and carried forward like any other repository file.
 
 ## Core idea
 
-One eve snapshot represents one completed product change. It can be a feature, bug fix, experiment, refactor, or release.
+One eve snapshot represents one completed unit of product work. It can be a feature, bug fix, experiment, refactor, or release.
 
 ```text
-Git commit:  What changed in the code?
-eve snapshot: What changed in the product, why, and how was it verified?
+Git commit    What changed in the code?
+eve snapshot  What changed in the product, why, and how was it verified?
 ```
 
 eve does not replace Git. It complements Git with product meaning.
 
 ## Who it is for
 
-eve is useful when a repository needs durable answers to questions like:
+eve is useful for repositories where humans and coding agents both need durable context:
 
-- What changed for users in this feature?
-- Which command verified this fix?
-- Which screenshots show the shipped behavior?
-- Which previous change does this correct, supersede, or depend on?
-- What should an agent know before touching this area again?
+- maintainers reviewing why a feature exists
+- contributors working from a fork
+- release owners collecting proof of what shipped
+- agents that need local memory before editing code
+- teams that want product history to travel with the repository
 
-It is designed for local-first development and trusted repository workflows.
+The default workflow is local-first and Git-friendly: implement the change, verify it, commit the implementation, record the eve snapshot, then commit the `.eve/` record.
 
 ## Start here
 

@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-EVE is pre-1.0. Security fixes target the latest version on `main` unless a release branch is explicitly maintained.
+eve is pre-1.0. Security fixes target the latest version on `main` unless a release branch is explicitly maintained.
 
 ## Reporting a Vulnerability
 
@@ -19,4 +19,4 @@ Do not include live secrets or private data in reports.
 
 ## Local Runtime Assumption
 
-EVE currently assumes trusted local usage. Keep `eve dev` bound to localhost and only connect trusted MCP clients.
+eve currently assumes trusted local usage. Keep `eve dev` bound to localhost and only connect trusted MCP clients.
