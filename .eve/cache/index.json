@@ -1,13 +1,13 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 17,
-  "latestAt": "2026-07-04T20:06:35Z",
-  "latestSnapshot": "snap_90cadff39dc103de",
-  "latestTitle": "Document robust MCP binary setup",
+  "snapshotCount": 18,
+  "latestAt": "2026-07-05T00:59:56Z",
+  "latestSnapshot": "snap_df45bce25d4af466",
+  "latestTitle": "Add MCP client installer command",
   "branch": "main",
-  "head": "f2902dd17cc8d3acd4341fbb5b86dd83efa30297",
+  "head": "4adb82085e2cdb80ec5c41b3a01662e8a3f9946c",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "f2902dd17cc8d3acd4341fbb5b86dd83efa30297"
+  "latestGitState": "4adb82085e2cdb80ec5c41b3a01662e8a3f9946c"
 }
