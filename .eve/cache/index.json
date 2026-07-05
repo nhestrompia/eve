@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 31,
-  "commitCount": 33,
-  "decisionCount": 61,
-  "riskCount": 20,
-  "artifactCount": 30,
-  "latestAt": "2026-07-05T15:51:35Z",
-  "latestSnapshot": "snap_7ff72a8e93e8dd14",
-  "latestTitle": "Improve docs site branding and dark mode",
+  "snapshotCount": 32,
+  "commitCount": 34,
+  "decisionCount": 63,
+  "riskCount": 21,
+  "artifactCount": 33,
+  "latestAt": "2026-07-05T16:25:56Z",
+  "latestSnapshot": "snap_aabea3c62ec42bd1",
+  "latestTitle": "Refine docs landing page and copy",
   "branch": "main",
-  "head": "52975fcd044a1569097120a69855c7de35f3d9ef",
+  "head": "b4b766a059c70c7a8b213a9802136f35a68e608f",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "52975fcd044a1569097120a69855c7de35f3d9ef"
+  "latestGitState": "b4b766a059c70c7a8b213a9802136f35a68e608f"
 }
