@@ -55,6 +55,7 @@ export function RepositoryActivityView({
     repositories.length > 0
       ? repositories
       : buildFallbackRepositories(evolutions, selectedRepo);
+  const latestRepoRows = sortRepositoriesByLatestUse(repoRows);
   const detailRows = details.data ?? [];
   const stats = buildPlatformStats(evolutions, detailRows);
 
@@ -72,20 +73,30 @@ export function RepositoryActivityView({
               </h1>
               <p className="mt-3 max-w-[54ch] text-sm leading-6 text-muted-foreground text-pretty">
                 {selectedRepo
-                  ? "Track product states, snapshots, sessions, and verification recorded for this repository."
-                  : "Track and understand how your products are evolving across repositories."}
+                  ? "Review the product states EVE has recorded for this repository, including snapshots, verification, and implementation history."
+                  : "Review recorded product states and jump back into the repositories you touched most recently."}
               </p>
             </div>
-            <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(176px,1fr))] gap-3">
-              {repoRows.slice(0, 4).map((repo, index) => (
-                <RepositoryOverviewCard
-                  key={repo.name}
-                  repo={repo}
-                  tone={REPO_TONES[index % REPO_TONES.length]}
-                  selected={selectedRepo === repo.name}
-                />
-              ))}
-            </div>
+            <section className="min-w-0 space-y-2.5" aria-label="Recently used repositories">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-sm font-semibold text-slate-700">
+                  Recent repositories
+                </h2>
+                <span className="text-xs text-muted-foreground">
+                  {latestRepoRows.length} {latestRepoRows.length === 1 ? "repo" : "repos"}
+                </span>
+              </div>
+              <div className="scrollbar-none -mx-4 flex min-w-0 snap-x gap-3 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+                {latestRepoRows.map((repo, index) => (
+                  <RepositoryOverviewCard
+                    key={repo.name}
+                    repo={repo}
+                    tone={REPO_TONES[index % REPO_TONES.length]}
+                    selected={selectedRepo === repo.name}
+                  />
+                ))}
+              </div>
+            </section>
           </header>
 
           <section className="space-y-3">
@@ -137,7 +148,7 @@ function RepositoryOverviewCard({
     <Link
       to="/repositories/$repo"
       params={{ repo: repo.name }}
-      className={`min-w-0 rounded-lg bg-white p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.1)] transition-[background-color,box-shadow,scale] duration-150 hover:bg-slate-50 active:scale-[0.96] ${selected ? "ring-2 ring-blue-500/20" : ""}`}
+      className={`min-w-[224px] w-[224px] snap-start rounded-lg bg-white p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.1)] transition-[background-color,box-shadow,scale] duration-150 hover:bg-slate-50 active:scale-[0.96] sm:min-w-[252px] sm:w-[252px] ${selected ? "ring-2 ring-blue-500/20" : ""}`}
     >
       <div className="flex items-center justify-between gap-3">
         <span className="flex min-w-0 flex-1 items-center gap-2">
@@ -721,6 +732,17 @@ function buildFallbackRepositories(
       ),
     },
   ];
+}
+
+function sortRepositoriesByLatestUse(repositories: RepositorySummary[]) {
+  return [...repositories].sort((left, right) => {
+    const latestDelta = timestamp(right.latestAt) - timestamp(left.latestAt);
+    if (latestDelta !== 0) return latestDelta;
+    if (left.evolutionCount !== right.evolutionCount) {
+      return right.evolutionCount - left.evolutionCount;
+    }
+    return left.name.localeCompare(right.name);
+  });
 }
 
 function buildPlatformStats(
