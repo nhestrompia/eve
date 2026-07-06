@@ -271,6 +271,9 @@ func TestCompareCLIAndRuntimeAPIAggregateProductHistory(t *testing.T) {
 	if comparison.Repository != filepath.Base(repo) || len(comparison.Range) != 2 || len(comparison.Added) != 1 || len(comparison.Fixed) != 1 {
 		t.Fatalf("comparison = %#v, want aggregated feature and fix range", comparison)
 	}
+	if comparison.Changed == nil {
+		t.Fatalf("changed = nil, want empty array")
+	}
 	if len(comparison.Decisions) != 1 || comparison.Decisions[0].Title != "Use OAuth" {
 		t.Fatalf("decisions = %#v, want OAuth decision", comparison.Decisions)
 	}

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { BookOpen, GitCompareArrows, History, Search, Settings, Sun } from "lucide-react";
+import { BookOpen, History, Search, Settings, Sun } from "lucide-react";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 import { Button } from "./ui/button";
@@ -111,14 +111,6 @@ export function Sidebar({ onSearch }: { onSearch: (query?: string) => void }) {
         >
           <History className="size-4 text-blue-600" />
           Activity
-        </Link>
-        <Link
-          to="/compare"
-          className="flex h-11 shrink-0 items-center gap-3 rounded-lg px-4 font-medium text-slate-950 md:h-12 md:gap-4"
-          activeProps={{ className: "bg-slate-100 shadow-sm" }}
-        >
-          <GitCompareArrows className="size-4 text-blue-600" />
-          Compare
         </Link>
       </nav>
 

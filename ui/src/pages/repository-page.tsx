@@ -12,6 +12,7 @@ import {
   ExternalLink,
   FileText,
   GitBranch,
+  GitCompareArrows,
   HardDrive,
   History,
   Image as ImageIcon,
@@ -37,8 +38,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../components/ui/dialog";
-import { compactDate, shortCommit } from "../format";
+import { compactDate, humanDate, shortCommit, statusLabel } from "../format";
+import { defaultComparisonPair } from "../lib/comparison";
 import type {
+  ComparisonChange,
+  ComparisonCheck,
+  ComparisonDecision,
+  ComparisonRisk,
+  ComparisonTimelineItem,
   DetailResponse,
   EvolutionSummary,
   GitCommit,
@@ -227,6 +234,7 @@ function RepositoryOverviewPage({
 type RepositoryTab =
   | "overview"
   | "snapshots"
+  | "compare"
   | "activity"
   | "artifacts"
   | "settings";
@@ -237,6 +245,7 @@ function repositoryTabs(
   return [
     { id: "overview", label: "Overview" },
     { id: "snapshots", label: "Snapshots", count: snapshotCount },
+    { id: "compare", label: "Compare" },
     { id: "activity", label: "Activity" },
     { id: "artifacts", label: "Artifacts" },
     { id: "settings", label: "Settings" },
@@ -302,6 +311,10 @@ function RepositoryTabPanel({
 
       {activeTab === "snapshots" ? (
         <EvolutionTimelineCard evolutions={evolutions} spacious />
+      ) : null}
+
+      {activeTab === "compare" ? (
+        <RepositoryComparePanel evolutions={evolutions} />
       ) : null}
 
       {activeTab === "activity" ? (
@@ -517,6 +530,459 @@ function EvolutionTimelineCard({
       )}
     </section>
   );
+}
+
+type CompareSlot = "from" | "to";
+
+function RepositoryComparePanel({ evolutions }: { evolutions: EvolutionSummary[] }) {
+  const [fromId, setFromId] = useState("");
+  const [toId, setToId] = useState("");
+  const [activeSlot, setActiveSlot] = useState<CompareSlot>("from");
+  const sorted = useMemo(
+    () =>
+      [...evolutions].sort((left, right) =>
+        right.createdAt.localeCompare(left.createdAt),
+      ),
+    [evolutions],
+  );
+
+  useEffect(() => {
+    if (sorted.length < 2) {
+      setFromId("");
+      setToId("");
+      return;
+    }
+    const ids = new Set(sorted.map((evolution) => evolution.id));
+    if (ids.has(fromId) && ids.has(toId)) return;
+    const pair = defaultComparisonPair(sorted);
+    setFromId(pair?.from ?? "");
+    setToId(pair?.to ?? "");
+  }, [fromId, sorted, toId]);
+
+  const comparison = useQuery({
+    queryKey: ["compare", fromId, toId],
+    queryFn: () => api.compare(fromId, toId),
+    enabled: Boolean(fromId && toId && fromId !== toId),
+  });
+  const fromSnapshot = sorted.find((evolution) => evolution.id === fromId);
+  const toSnapshot = sorted.find((evolution) => evolution.id === toId);
+
+  const chooseSnapshot = (id: string) => {
+    if (activeSlot === "from") {
+      setFromId(id);
+      setActiveSlot("to");
+      return;
+    }
+    setToId(id);
+  };
+
+  if (sorted.length < 2) {
+    return (
+      <section className="rounded-lg bg-white p-5 shadow-[0_0_0_1px_rgba(15,23,42,0.1)]">
+        <h2 className="flex items-center gap-2 text-base font-semibold">
+          <GitCompareArrows className="size-4 text-blue-600" />
+          Compare snapshots
+        </h2>
+        <p className="mt-3 text-sm text-muted-foreground">
+          Record at least two snapshots in this repository to compare product states.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="grid grid-cols-1 gap-5 2xl:grid-cols-[340px_minmax(0,1fr)]">
+      <div className="space-y-5">
+        <section className="rounded-lg bg-white p-5 shadow-[0_0_0_1px_rgba(15,23,42,0.1)]">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="flex items-center gap-2 text-base font-semibold">
+              <GitCompareArrows className="size-4 text-blue-600" />
+              Compare snapshots
+            </h2>
+            <span className="rounded-md bg-secondary px-2 py-1 text-xs font-medium text-muted-foreground">
+              {sorted.length} snapshots
+            </span>
+          </div>
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">
+            Pick two points from this repository timeline to review the product-level changes between them.
+          </p>
+          <div className="mt-5 grid gap-3">
+            <CompareSlotButton
+              slot="from"
+              activeSlot={activeSlot}
+              snapshot={fromSnapshot}
+              onActivate={setActiveSlot}
+            />
+            <CompareSlotButton
+              slot="to"
+              activeSlot={activeSlot}
+              snapshot={toSnapshot}
+              onActivate={setActiveSlot}
+            />
+          </div>
+        </section>
+
+        <ComparisonTimelinePicker
+          evolutions={sorted}
+          fromId={fromId}
+          toId={toId}
+          activeSlot={activeSlot}
+          onChoose={chooseSnapshot}
+          onSetFrom={setFromId}
+          onSetTo={setToId}
+        />
+      </div>
+
+      <div className="min-w-0 space-y-5">
+        {fromId === toId ? (
+          <div className="rounded-lg border bg-white p-5 text-sm text-muted-foreground">
+            Choose two different snapshots to compare.
+          </div>
+        ) : null}
+        {comparison.isLoading ? <LoadingState label="Comparing Snapshots" /> : null}
+        {comparison.error ? <ErrorState error={comparison.error} /> : null}
+        {comparison.data ? (
+          <>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <ComparisonBoundaryCard label="From" snapshot={comparison.data.from} />
+              <ComparisonBoundaryCard label="To" snapshot={comparison.data.to} />
+            </div>
+            <div className="rounded-lg bg-white p-5 shadow-[0_0_0_1px_rgba(15,23,42,0.1)]">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h3 className="text-base font-semibold">Range summary</h3>
+                <span className="rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
+                  {comparison.data.range.length}{" "}
+                  {comparison.data.range.length === 1 ? "snapshot" : "snapshots"}
+                </span>
+              </div>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                This summary uses snapshot metadata only: user-visible changes, decisions, risks, validation, and timeline entries.
+              </p>
+            </div>
+            <ComparisonChangeSection title="Added" items={comparison.data.added} />
+            <ComparisonChangeSection title="Changed" items={comparison.data.changed} />
+            <ComparisonChangeSection title="Fixed" items={comparison.data.fixed} />
+            <ComparisonDecisionSection items={comparison.data.decisions} />
+            <ComparisonRiskSection items={comparison.data.risks} />
+            <ComparisonValidationSection items={comparison.data.validation} />
+            <ComparisonTimelineSection items={comparison.data.timeline} />
+          </>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function CompareSlotButton({
+  slot,
+  activeSlot,
+  snapshot,
+  onActivate,
+}: {
+  slot: CompareSlot;
+  activeSlot: CompareSlot;
+  snapshot?: EvolutionSummary;
+  onActivate: (slot: CompareSlot) => void;
+}) {
+  const active = activeSlot === slot;
+  return (
+    <button
+      type="button"
+      onClick={() => onActivate(slot)}
+      data-state={active ? "active" : "inactive"}
+      className="rounded-lg border bg-white p-4 text-left transition-colors hover:bg-slate-50 data-[state=active]:border-blue-300 data-[state=active]:bg-blue-50"
+    >
+      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {slot}
+      </span>
+      <span className="mt-2 block truncate text-sm font-semibold">
+        {snapshot?.title ?? `Select ${slot}`}
+      </span>
+      <span className="mt-1 block text-xs text-muted-foreground">
+        {snapshot ? compactDate(snapshot.createdAt) : "Click a timeline item"}
+      </span>
+    </button>
+  );
+}
+
+function ComparisonTimelinePicker({
+  evolutions,
+  fromId,
+  toId,
+  activeSlot,
+  onChoose,
+  onSetFrom,
+  onSetTo,
+}: {
+  evolutions: EvolutionSummary[];
+  fromId: string;
+  toId: string;
+  activeSlot: CompareSlot;
+  onChoose: (id: string) => void;
+  onSetFrom: (id: string) => void;
+  onSetTo: (id: string) => void;
+}) {
+  return (
+    <section className="rounded-lg bg-white p-5 shadow-[0_0_0_1px_rgba(15,23,42,0.1)]">
+      <div className="mb-5">
+        <h3 className="text-base font-semibold">Timeline selection</h3>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Selecting a row assigns it to {compareSlotLabel(activeSlot)}. Use the small actions when you want direct control.
+        </p>
+      </div>
+      <div className="relative max-h-[620px] space-y-0 overflow-y-auto overscroll-contain pl-8 pr-1">
+        {evolutions.map((evolution, index) => {
+          const isFrom = evolution.id === fromId;
+          const isTo = evolution.id === toId;
+          return (
+            <article key={evolution.id} className="relative pb-6 last:pb-0">
+              {index < evolutions.length - 1 ? (
+                <span className="absolute -left-[20px] top-5 h-full w-px bg-blue-600" />
+              ) : null}
+              <span
+                className={`absolute -left-[27px] top-3 flex size-4 rounded-full border-2 bg-white ring-4 ${
+                  isFrom || isTo
+                    ? "border-blue-600 ring-blue-50"
+                    : "border-slate-300 ring-slate-50"
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => onChoose(evolution.id)}
+                className={`w-full rounded-lg border p-3 text-left transition-colors hover:bg-slate-50 ${
+                  isFrom || isTo ? "border-blue-200 bg-blue-50/45" : "bg-white"
+                }`}
+              >
+                <span className="flex min-w-0 items-start justify-between gap-3">
+                  <span className="min-w-0">
+                    <strong className="block truncate text-sm font-semibold">
+                      {evolution.title}
+                    </strong>
+                    <span className="mt-1 block text-xs text-muted-foreground">
+                      {evolution.type} · {compactDate(evolution.createdAt)}
+                    </span>
+                  </span>
+                  <span className="flex shrink-0 gap-1">
+                    {isFrom ? (
+                      <span className="rounded-md bg-blue-600 px-2 py-1 text-xs font-semibold text-white">
+                        From
+                      </span>
+                    ) : null}
+                    {isTo ? (
+                      <span className="rounded-md bg-slate-900 px-2 py-1 text-xs font-semibold text-white">
+                        To
+                      </span>
+                    ) : null}
+                  </span>
+                </span>
+              </button>
+              <div className="mt-2 flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={isFrom ? "default" : "outline"}
+                  onClick={() => onSetFrom(evolution.id)}
+                  aria-label={`Set ${evolution.title} as from snapshot`}
+                >
+                  From
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={isTo ? "default" : "outline"}
+                  onClick={() => onSetTo(evolution.id)}
+                  aria-label={`Set ${evolution.title} as to snapshot`}
+                >
+                  To
+                </Button>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function ComparisonBoundaryCard({
+  label,
+  snapshot,
+}: {
+  label: string;
+  snapshot: { id: string; title: string; type: string; createdAt: string };
+}) {
+  return (
+    <Link
+      to="/snapshots/$id"
+      params={{ id: snapshot.id }}
+      className="rounded-lg bg-white p-5 shadow-[0_0_0_1px_rgba(15,23,42,0.1)] transition-colors hover:bg-slate-50"
+    >
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </p>
+      <h3 className="mt-2 text-base font-semibold text-balance">
+        {snapshot.title}
+      </h3>
+      <p className="mt-2 text-sm text-muted-foreground">
+        {statusLabel(snapshot.type)} · {humanDate(snapshot.createdAt)}
+      </p>
+    </Link>
+  );
+}
+
+function ComparisonChangeSection({
+  title,
+  items,
+}: {
+  title: string;
+  items: ComparisonChange[];
+}) {
+  return (
+    <ComparisonSection title={title} count={items.length} empty={`No ${title.toLowerCase()} product changes in this range.`}>
+      {items.map((item) => (
+        <ComparisonLinkedItem
+          key={`${title}-${item.snapshotId}-${item.text}`}
+          snapshotId={item.snapshotId}
+          snapshotTitle={item.snapshotTitle}
+          meta={humanDate(item.createdAt)}
+        >
+          {item.text}
+        </ComparisonLinkedItem>
+      ))}
+    </ComparisonSection>
+  );
+}
+
+function ComparisonDecisionSection({ items }: { items: ComparisonDecision[] }) {
+  return (
+    <ComparisonSection title="Decisions" count={items.length} empty="No decisions were recorded in this range.">
+      {items.map((item) => (
+        <ComparisonLinkedItem
+          key={`${item.snapshotId}-${item.title}`}
+          snapshotId={item.snapshotId}
+          snapshotTitle={item.snapshotTitle}
+          meta={item.rationale}
+        >
+          {item.title}
+        </ComparisonLinkedItem>
+      ))}
+    </ComparisonSection>
+  );
+}
+
+function ComparisonRiskSection({ items }: { items: ComparisonRisk[] }) {
+  return (
+    <ComparisonSection title="Risks" count={items.length} empty="No risks were recorded in this range.">
+      {items.map((item) => (
+        <ComparisonLinkedItem
+          key={`${item.snapshotId}-${item.title}`}
+          snapshotId={item.snapshotId}
+          snapshotTitle={item.snapshotTitle}
+          meta={`${statusLabel(item.severity)}${item.mitigation ? ` · ${item.mitigation}` : ""}`}
+        >
+          {item.title}
+        </ComparisonLinkedItem>
+      ))}
+    </ComparisonSection>
+  );
+}
+
+function ComparisonValidationSection({ items }: { items: ComparisonCheck[] }) {
+  return (
+    <ComparisonSection title="Validation" count={items.length} empty="No validation was recorded in this range.">
+      {items.map((item) => (
+        <ComparisonLinkedItem
+          key={`${item.snapshotId}-${item.command}`}
+          snapshotId={item.snapshotId}
+          snapshotTitle={item.snapshotTitle}
+          meta={statusLabel(item.status)}
+        >
+          {item.command}
+        </ComparisonLinkedItem>
+      ))}
+    </ComparisonSection>
+  );
+}
+
+function ComparisonTimelineSection({
+  items,
+}: {
+  items: ComparisonTimelineItem[];
+}) {
+  return (
+    <ComparisonSection title="Timeline" count={items.length} empty="No timeline entries were recorded in this range.">
+      {items.map((item) => (
+        <ComparisonLinkedItem
+          key={`${item.snapshotId}-${item.phase}-${item.title}-${item.occurredAt}`}
+          snapshotId={item.snapshotId}
+          snapshotTitle={item.snapshotTitle}
+          meta={`${statusLabel(item.phase)} · ${humanDate(item.occurredAt)}`}
+        >
+          {item.title}
+        </ComparisonLinkedItem>
+      ))}
+    </ComparisonSection>
+  );
+}
+
+function ComparisonSection({
+  title,
+  count,
+  empty,
+  children,
+}: {
+  title: string;
+  count: number;
+  empty: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="overflow-hidden rounded-lg bg-white shadow-[0_0_0_1px_rgba(15,23,42,0.1)]">
+      <div className="flex min-h-14 items-center justify-between gap-3 border-b px-5">
+        <h3 className="text-base font-semibold">{title}</h3>
+        <span className="rounded-md bg-secondary px-2 py-1 text-xs font-medium text-muted-foreground">
+          {count}
+        </span>
+      </div>
+      <div className="divide-y">
+        {count === 0 ? (
+          <p className="p-5 text-sm text-muted-foreground">{empty}</p>
+        ) : (
+          children
+        )}
+      </div>
+    </section>
+  );
+}
+
+function ComparisonLinkedItem({
+  snapshotId,
+  snapshotTitle,
+  meta,
+  children,
+}: {
+  snapshotId: string;
+  snapshotTitle: string;
+  meta?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      to="/snapshots/$id"
+      params={{ id: snapshotId }}
+      className="block px-5 py-4 transition-colors hover:bg-slate-50"
+    >
+      <p className="text-sm font-medium text-slate-950 text-pretty">{children}</p>
+      <p className="mt-1 text-xs leading-5 text-muted-foreground">
+        {snapshotTitle} · {snapshotId}
+        {meta ? ` · ${meta}` : ""}
+      </p>
+    </Link>
+  );
+}
+
+function compareSlotLabel(slot: CompareSlot) {
+  return slot === "from" ? "From" : "To";
 }
 
 function ActivityAccordionCard({

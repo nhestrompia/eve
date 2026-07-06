@@ -253,6 +253,13 @@ func compareSnapshots(repo repository, fromID string, toID string) (comparisonRe
 		From:       summarizeSnapshotForRepo(repo, fromSnapshot),
 		To:         summarizeSnapshotForRepo(repo, toSnapshot),
 		Range:      make([]snapshotSummary, 0, len(rangeSnapshots)),
+		Added:      []comparisonChange{},
+		Changed:    []comparisonChange{},
+		Fixed:      []comparisonChange{},
+		Decisions:  []comparisonDecision{},
+		Risks:      []comparisonRisk{},
+		Validation: []comparisonCheck{},
+		Timeline:   []comparisonTimeline{},
 	}
 	for _, snapshot := range rangeSnapshots {
 		comparison.Range = append(comparison.Range, summarizeSnapshotForRepo(repo, snapshot))

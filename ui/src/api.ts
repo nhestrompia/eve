@@ -245,7 +245,18 @@ async function snapshot(id: string, repo?: string): Promise<SnapshotResponse> {
 }
 
 async function compare(from: string, to: string): Promise<ComparisonResponse> {
-  return request<ComparisonResponse>(`/api/compare?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+  const response = await request<ComparisonResponse>(`/api/compare?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+  return {
+    ...response,
+    range: response.range ?? [],
+    added: response.added ?? [],
+    changed: response.changed ?? [],
+    fixed: response.fixed ?? [],
+    decisions: response.decisions ?? [],
+    risks: response.risks ?? [],
+    validation: response.validation ?? [],
+    timeline: response.timeline ?? []
+  };
 }
 
 function isImageArtifact(artifact: { type: string; path?: string; url?: string; uri?: string; mimeType?: string }) {
