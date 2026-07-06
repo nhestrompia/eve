@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 40,
+  "snapshotCount": 41,
   "commitCount": 45,
-  "decisionCount": 77,
+  "decisionCount": 79,
   "riskCount": 29,
   "artifactCount": 33,
-  "latestAt": "2026-07-06T14:54:04Z",
-  "latestSnapshot": "snap_d7129e3d65f0a18e",
-  "latestTitle": "Add snapshot changelog generator UI",
+  "latestAt": "2026-07-06T14:56:53Z",
+  "latestSnapshot": "snap_92832f09094b8cb6",
+  "latestTitle": "Display snapshot relationships in the UI",
   "branch": "main",
-  "head": "a52c27067bb0d3354167b6500ba8b1b517a57bd7",
+  "head": "045a665def5287ed03baabae05371f513c11a73b",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "a52c27067bb0d3354167b6500ba8b1b517a57bd7"
+  "latestGitState": "045a665def5287ed03baabae05371f513c11a73b"
 }
