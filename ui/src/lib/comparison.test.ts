@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { defaultComparisonPair } from './comparison';
+import {
+  defaultComparisonPair,
+  orderedComparisonPair,
+  updateComparisonRange,
+} from './comparison';
 import type { EvolutionSummary } from '../types';
 
 const base: EvolutionSummary = {
@@ -36,5 +40,35 @@ describe('comparison helpers', () => {
 
   it('returns undefined when no repository has two snapshots', () => {
     expect(defaultComparisonPair([{ ...base, id: 'only' }])).toBeUndefined();
+  });
+
+  it('normalizes manually selected snapshots into chronological order', () => {
+    const rows = [
+      { ...base, id: 'old', createdAt: '2026-07-01T09:00:00Z' },
+      { ...base, id: 'new', createdAt: '2026-07-03T09:00:00Z' }
+    ];
+
+    expect(orderedComparisonPair(rows, 'new', 'old')).toEqual({
+      from: 'old',
+      to: 'new'
+    });
+  });
+
+  it('expands and tightens the selected comparison range from timeline clicks', () => {
+    const rows = [
+      { ...base, id: 'one', createdAt: '2026-07-01T09:00:00Z' },
+      { ...base, id: 'two', createdAt: '2026-07-02T09:00:00Z' },
+      { ...base, id: 'three', createdAt: '2026-07-03T09:00:00Z' },
+      { ...base, id: 'four', createdAt: '2026-07-04T09:00:00Z' }
+    ];
+
+    expect(updateComparisonRange(rows, { from: 'two', to: 'three' }, 'one')).toEqual({
+      from: 'one',
+      to: 'three'
+    });
+    expect(updateComparisonRange(rows, { from: 'one', to: 'four' }, 'three')).toEqual({
+      from: 'one',
+      to: 'three'
+    });
   });
 });
