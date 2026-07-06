@@ -2,6 +2,7 @@ import { createRootRoute, createRoute, createRouter } from '@tanstack/react-rout
 import { AppShell } from './components/app-shell';
 import { ActivityPage } from './pages/activity-page';
 import { ConfigPage } from './pages/config-page';
+import { ComparePage } from './pages/compare-page';
 import { DecisionsPage } from './pages/decisions-page';
 import { EvolutionDetailPage } from './pages/evolution-detail-page';
 import { ImplementationPage } from './pages/implementation-page';
@@ -87,8 +88,15 @@ const configRoute = createRoute({
   component: ConfigPage
 });
 
+const compareRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/compare',
+  component: ComparePage
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
+  compareRoute,
   repositoryRoute,
   evolutionRoute,
   snapshotRoute,

@@ -26,6 +26,23 @@ git push origin v0.2.0
 
 The release workflow builds CLI binaries for common operating systems and CPU architectures, then publishes them to a GitHub release.
 
+## Release notes
+
+Use snapshots to draft product-facing release notes:
+
+```sh
+eve changelog --since <previous-snapshot-id> --markdown
+```
+
+You can also generate notes from a date or an explicit snapshot range:
+
+```sh
+eve changelog --since 2026-07-01 --markdown
+eve changelog --from <from-snapshot-id> --to <to-snapshot-id> --markdown
+```
+
+The changelog uses each snapshot's `userVisibleChange` when present and falls back to the snapshot title.
+
 ## Verification
 
 The CI workflow runs:

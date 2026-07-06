@@ -204,6 +204,7 @@ func newRuntimeServer(repo repository, addr string) runtimeServer {
 func (server runtimeServer) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/config", server.handleConfig)
+	mux.HandleFunc("/api/compare", server.handleCompare)
 	mux.HandleFunc("/api/search", server.handleSnapshotSearch)
 	mux.HandleFunc("/api/snapshots", server.handleGlobalSnapshots)
 	mux.HandleFunc("/api/snapshots/", server.handleGlobalSnapshotRoutes)
@@ -212,6 +213,39 @@ func (server runtimeServer) routes() http.Handler {
 	mux.HandleFunc("/mcp", server.handleMCPHTTP)
 	mux.Handle("/", spaHandler())
 	return logRequests(mux)
+}
+
+func (server runtimeServer) handleCompare(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeMethodNotAllowed(w)
+		return
+	}
+	fromID := strings.TrimSpace(r.URL.Query().Get("from"))
+	toID := strings.TrimSpace(r.URL.Query().Get("to"))
+	if fromID == "" || toID == "" {
+		writeAPIError(w, http.StatusBadRequest, fmt.Errorf("from and to query parameters are required"))
+		return
+	}
+	fromRepo, ok := server.repoForSnapshot(fromID)
+	if !ok {
+		writeAPIError(w, http.StatusNotFound, fmt.Errorf("snapshot %s not found", fromID))
+		return
+	}
+	toRepo, ok := server.repoForSnapshot(toID)
+	if !ok {
+		writeAPIError(w, http.StatusNotFound, fmt.Errorf("snapshot %s not found", toID))
+		return
+	}
+	if fromRepo.Root != toRepo.Root {
+		writeAPIError(w, http.StatusBadRequest, fmt.Errorf("snapshots must belong to the same repository"))
+		return
+	}
+	comparison, err := compareSnapshots(fromRepo, fromID, toID)
+	if err != nil {
+		writeAPIError(w, http.StatusBadRequest, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, comparison)
 }
 
 func (server runtimeServer) handleGlobalSnapshots(w http.ResponseWriter, r *http.Request) {

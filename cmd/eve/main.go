@@ -53,6 +53,10 @@ func runWithIO(args []string, stdin io.Reader, stdout io.Writer, stderr io.Write
 		return runInstallMCP(args[1:], stdout, stderr)
 	case "snapshot":
 		return runSnapshot(args[1:], stdout, stderr)
+	case "changelog":
+		return runChangelog(args[1:], stdout, stderr)
+	case "compare":
+		return runCompare(args[1:], stdout, stderr)
 	case "checkout":
 		return runCheckout(args[1:], stdout, stderr)
 	case "validate":
@@ -84,6 +88,8 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  mcp-stdio [--cwd /path/to/repo]")
 	fmt.Fprintln(w, "  install-mcp [--install] [--clients codex,claude,opencode]")
 	fmt.Fprintln(w, "  snapshot <snapshot-id>")
+	fmt.Fprintln(w, "  changelog [--since <snapshot-id|YYYY-MM-DD> | --from <snapshot-id> --to <snapshot-id>] [--markdown]")
+	fmt.Fprintln(w, "  compare <from-snapshot-id> <to-snapshot-id> [--markdown]")
 	fmt.Fprintln(w, "  checkout [--force] <snapshot-id>")
 	fmt.Fprintln(w, "  validate <snapshot.json>")
 	fmt.Fprintln(w, "  canonicalize <snapshot.json>")

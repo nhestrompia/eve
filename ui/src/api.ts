@@ -1,5 +1,6 @@
 import type {
   CheckoutResponse,
+  ComparisonResponse,
   ConfigResponse,
   DetailResponse,
   Evolution,
@@ -243,6 +244,10 @@ async function snapshot(id: string, repo?: string): Promise<SnapshotResponse> {
   };
 }
 
+async function compare(from: string, to: string): Promise<ComparisonResponse> {
+  return request<ComparisonResponse>(`/api/compare?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+}
+
 function isImageArtifact(artifact: { type: string; path?: string; url?: string; uri?: string; mimeType?: string }) {
   const source = artifact.path || artifact.url || artifact.uri || '';
   return (
@@ -273,6 +278,7 @@ export const api = {
   snapshots,
   snapshotDetail,
   snapshot,
+  compare,
   sessions: async (id: string): Promise<SessionListResponse> => {
     const detail = await snapshotDetail(id);
     return { evolutionId: id, sessions: detail.sessions, providers: detail.providers };

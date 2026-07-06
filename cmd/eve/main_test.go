@@ -182,6 +182,117 @@ func TestSnapshotValidateCanonicalizeAndCleanBreakList(t *testing.T) {
 	}
 }
 
+func TestChangelogCLISelectsRangesAndGroupsSnapshots(t *testing.T) {
+	repo := initTempGitRepo(t)
+	t.Chdir(repo)
+	mustRun(t, []string{"init"})
+	head := gitOutputForTest(t, repo, "rev-parse", "HEAD")
+
+	first := sampleSnapshot("snap_001", "Password login", head)
+	first.CreatedAt = "2026-07-01T09:00:00Z"
+	first.Type = "feature"
+	first.UserVisibleChange = "Added password login."
+	second := sampleSnapshot("snap_002", "Redirect loop", head)
+	second.CreatedAt = "2026-07-02T09:00:00Z"
+	second.Type = "bugfix"
+	second.UserVisibleChange = "Fixed redirect loop."
+	third := sampleSnapshot("snap_003", "Repository indexing", head)
+	third.CreatedAt = "2026-07-03T09:00:00Z"
+	third.Type = "refactor"
+	third.UserVisibleChange = "Improved repository indexing."
+	fourth := sampleSnapshot("snap_004", "Release prep", head)
+	fourth.CreatedAt = "2026-07-04T09:00:00Z"
+	fourth.Type = "release"
+	for _, snapshot := range []*eve.Snapshot{first, second, third, fourth} {
+		writeSnapshot(t, repo, snapshot)
+	}
+
+	assertCommandContains(t, []string{"changelog", "--since", "snap_001", "--markdown"}, []string{
+		"# Release Notes",
+		"## Improvements",
+		"- Improved repository indexing.",
+		"## Fixes",
+		"- Fixed redirect loop.",
+		"## Other",
+		"- Release prep",
+	})
+	assertCommandOmits(t, []string{"changelog", "--since", "snap_001", "--markdown"}, []string{"Added password login."})
+	assertCommandContains(t, []string{"changelog", "--since", "2026-07-03", "--markdown"}, []string{"Improved repository indexing.", "Release prep"})
+	assertCommandOmits(t, []string{"changelog", "--since", "2026-07-03", "--markdown"}, []string{"Fixed redirect loop."})
+	assertCommandContains(t, []string{"changelog", "--from", "snap_001", "--to", "snap_003"}, []string{"Fixed redirect loop.", "Improved repository indexing."})
+	assertCommandContains(t, []string{"changelog", "--since", "snap_004"}, []string{"No snapshot changes found."})
+
+	assertCommandFails(t, []string{"changelog", "--since", "snap_001", "--from", "snap_002", "--to", "snap_003"}, "--since cannot be combined")
+	assertCommandFails(t, []string{"changelog", "--from", "snap_003", "--to", "snap_001"}, "snapshot range is reversed")
+}
+
+func TestCompareCLIAndRuntimeAPIAggregateProductHistory(t *testing.T) {
+	repo := initTempGitRepo(t)
+	t.Chdir(repo)
+	mustRun(t, []string{"init"})
+	head := gitOutputForTest(t, repo, "rev-parse", "HEAD")
+
+	base := sampleSnapshot("snap_base", "Base state", head)
+	base.CreatedAt = "2026-07-01T09:00:00Z"
+	feature := sampleSnapshot("snap_feature", "OAuth login", head)
+	feature.CreatedAt = "2026-07-02T09:00:00Z"
+	feature.Type = "feature"
+	feature.UserVisibleChange = "Added OAuth login."
+	feature.Decisions = []eve.Decision{{Title: "Use OAuth", Rationale: "External providers reduce password handling."}}
+	feature.Risks = []eve.Risk{{Title: "Provider outage affects login.", Severity: "medium", Mitigation: "Keep sessions alive."}}
+	feature.Timeline = []eve.TimelineEntry{{Phase: "validation", Title: "Browser validation", Summary: "Login flow passed.", OccurredAt: "2026-07-02T10:00:00Z"}}
+	fix := sampleSnapshot("snap_fix", "Redirect fix", head)
+	fix.CreatedAt = "2026-07-03T09:00:00Z"
+	fix.Type = "bugfix"
+	fix.UserVisibleChange = "Fixed OAuth redirect loop."
+	for _, snapshot := range []*eve.Snapshot{base, feature, fix} {
+		writeSnapshot(t, repo, snapshot)
+	}
+
+	assertCommandContains(t, []string{"compare", "snap_base", "snap_fix", "--markdown"}, []string{
+		"# Snapshot Comparison",
+		"## Added",
+		"Added OAuth login.",
+		"## Fixed",
+		"Fixed OAuth redirect loop.",
+		"## Decisions",
+		"Use OAuth",
+		"## Risks",
+		"Provider outage affects login.",
+		"## Validation",
+		"go test ./...",
+		"## Timeline",
+		"snap_feature",
+	})
+
+	handler := newRuntimeServer(repoFromRoot(repo), "localhost:0").routes()
+	var comparison comparisonResponse
+	requestJSON(t, handler, http.MethodGet, "/api/compare?from=snap_base&to=snap_fix", nil, &comparison)
+	if comparison.Repository != filepath.Base(repo) || len(comparison.Range) != 2 || len(comparison.Added) != 1 || len(comparison.Fixed) != 1 {
+		t.Fatalf("comparison = %#v, want aggregated feature and fix range", comparison)
+	}
+	if len(comparison.Decisions) != 1 || comparison.Decisions[0].Title != "Use OAuth" {
+		t.Fatalf("decisions = %#v, want OAuth decision", comparison.Decisions)
+	}
+	assertRequestStatus(t, handler, http.MethodGet, "/api/compare?from=snap_fix&to=snap_base", http.StatusBadRequest, "snapshot range is reversed")
+	assertRequestStatus(t, handler, http.MethodGet, "/api/compare?from=missing&to=snap_base", http.StatusNotFound, "snapshot missing not found")
+}
+
+func TestCompareAPIRejectsCrossRepositorySnapshots(t *testing.T) {
+	parent := t.TempDir()
+	primary := initTempGitRepoAt(t, filepath.Join(parent, "primary"))
+	secondary := initTempGitRepoAt(t, filepath.Join(parent, "secondary"))
+	primaryHead := gitOutputForTest(t, primary, "rev-parse", "HEAD")
+	secondaryHead := gitOutputForTest(t, secondary, "rev-parse", "HEAD")
+	mustRunInRepo(t, primary, []string{"init"})
+	mustRunInRepo(t, secondary, []string{"init"})
+	writeSnapshot(t, primary, sampleSnapshot("snap_primary", "Primary Snapshot", primaryHead))
+	writeSnapshot(t, secondary, sampleSnapshot("snap_secondary", "Secondary Snapshot", secondaryHead))
+
+	handler := newRuntimeServer(repoFromRoot(primary), "localhost:0").routes()
+	assertRequestStatus(t, handler, http.MethodGet, "/api/compare?from=snap_primary&to=snap_secondary", http.StatusBadRequest, "same repository")
+}
+
 func TestRuntimeAPIAndMCP(t *testing.T) {
 	repo := initTempGitRepo(t)
 	t.Chdir(repo)
@@ -542,6 +653,32 @@ func assertCommandContains(t *testing.T, args []string, wants []string) {
 	}
 }
 
+func assertCommandOmits(t *testing.T, args []string, unwanted []string) {
+	t.Helper()
+	var stdout, stderr bytes.Buffer
+	code := run(args, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("%v exit code = %d stderr = %s", args, code, stderr.String())
+	}
+	for _, value := range unwanted {
+		if strings.Contains(stdout.String(), value) {
+			t.Fatalf("%v stdout = %q, should omit %q", args, stdout.String(), value)
+		}
+	}
+}
+
+func assertCommandFails(t *testing.T, args []string, want string) {
+	t.Helper()
+	var stdout, stderr bytes.Buffer
+	code := run(args, &stdout, &stderr)
+	if code == 0 {
+		t.Fatalf("%v exit code = 0 stdout = %s, want failure", args, stdout.String())
+	}
+	if !strings.Contains(stderr.String(), want) {
+		t.Fatalf("%v stderr = %q, want %q", args, stderr.String(), want)
+	}
+}
+
 func requestJSON(t *testing.T, handler http.Handler, method string, target string, body *bytes.Reader, out any) {
 	t.Helper()
 	if body == nil {
@@ -554,6 +691,18 @@ func requestJSON(t *testing.T, handler http.Handler, method string, target strin
 	}
 	if err := json.Unmarshal(recorder.Body.Bytes(), out); err != nil {
 		t.Fatalf("decode response: %v; body = %s", err, recorder.Body.String())
+	}
+}
+
+func assertRequestStatus(t *testing.T, handler http.Handler, method string, target string, status int, want string) {
+	t.Helper()
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, httptest.NewRequest(method, target, nil))
+	if recorder.Code != status {
+		t.Fatalf("%s %s status = %d body = %s, want %d", method, target, recorder.Code, recorder.Body.String(), status)
+	}
+	if !strings.Contains(recorder.Body.String(), want) {
+		t.Fatalf("%s %s body = %q, want %q", method, target, recorder.Body.String(), want)
 	}
 }
 

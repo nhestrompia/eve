@@ -139,6 +139,60 @@ export type SnapshotSummary = {
   createdAt: string;
 };
 
+export type ComparisonChange = {
+  snapshotId: string;
+  snapshotTitle: string;
+  text: string;
+  type: string;
+  createdAt: string;
+};
+
+export type ComparisonDecision = {
+  snapshotId: string;
+  snapshotTitle: string;
+  title: string;
+  rationale?: string;
+};
+
+export type ComparisonRisk = {
+  snapshotId: string;
+  snapshotTitle: string;
+  title: string;
+  severity: string;
+  mitigation?: string;
+};
+
+export type ComparisonCheck = {
+  snapshotId: string;
+  snapshotTitle: string;
+  command: string;
+  status: string;
+  output?: string;
+};
+
+export type ComparisonTimelineItem = {
+  snapshotId: string;
+  snapshotTitle: string;
+  phase: string;
+  title: string;
+  summary?: string;
+  occurredAt: string;
+};
+
+export type ComparisonResponse = {
+  repository: string;
+  from: SnapshotSummary;
+  to: SnapshotSummary;
+  range: SnapshotSummary[];
+  added: ComparisonChange[];
+  changed: ComparisonChange[];
+  fixed: ComparisonChange[];
+  decisions: ComparisonDecision[];
+  risks: ComparisonRisk[];
+  validation: ComparisonCheck[];
+  timeline: ComparisonTimelineItem[];
+};
+
 export type DetailResponse = {
   repository: string;
   snapshot: Snapshot;

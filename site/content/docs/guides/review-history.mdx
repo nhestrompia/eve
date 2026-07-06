@@ -29,6 +29,23 @@ Read snapshots the way you would read a product changelog with evidence attached
 eve snapshot <snapshot-id>
 ```
 
+## Generate a changelog
+
+```sh
+eve changelog --since <snapshot-id>
+eve changelog --from <from-snapshot-id> --to <to-snapshot-id> --markdown
+```
+
+Changelogs are generated from snapshot fields, so they describe product evolution rather than commit messages.
+
+## Compare product states
+
+```sh
+eve compare <from-snapshot-id> <to-snapshot-id>
+```
+
+The local UI also includes a Compare view for reviewing user-visible changes, decisions, risks, validation, and timeline entries between two snapshots.
+
 ## Checkout an implementation state
 
 ```sh
