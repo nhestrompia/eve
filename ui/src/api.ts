@@ -160,6 +160,7 @@ function snapshotToSummary(summary: SnapshotSummary, sessionProviders: string[] 
     type: summary.type,
     status: 'completed',
     outcome: summary.summary,
+    userVisibleChange: summary.userVisibleChange,
     snapshot: summary.gitState,
     commitCount: summary.commitCount ?? 0,
     decisionCount: summary.decisionCount ?? 0,

@@ -26,7 +26,7 @@ export function EvolutionDetailPage() {
       {detail.data ? (
         <div className="min-h-[calc(100dvh-76px)] xl:pr-[460px]">
           <main className="min-w-0 px-5 sm:px-7 lg:px-9">
-            <EvolutionHero detail={detail.data} snapshot={snapshot.data} />
+            <EvolutionHero detail={detail.data} snapshot={snapshot.data} evolutions={rows} />
             <BehaviorSummarySection behavior={detail.data.evolution.behavior} />
             <VerificationSummarySection values={detail.data.evolution.verification} evolutionId={detail.data.summary.id} />
             <DetailActionTiles detail={detail.data} />

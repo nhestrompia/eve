@@ -3,7 +3,8 @@ import { CalendarDays, Download, Tag, Users } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "../api";
 import { humanDate } from "../format";
-import type { DetailResponse, SnapshotResponse } from "../types";
+import type { DetailResponse, EvolutionSummary, SnapshotResponse } from "../types";
+import { SnapshotChangelogDialog } from "./snapshot-changelog-dialog";
 import { StatusBadge } from "./status-badge";
 import { SnapshotRelationshipStrip } from "./snapshot-relationship-strip";
 import {
@@ -22,9 +23,11 @@ import { Button } from "./ui/button";
 export function EvolutionHero({
   detail,
   snapshot,
+  evolutions = [],
 }: {
   detail: DetailResponse;
   snapshot?: SnapshotResponse;
+  evolutions?: EvolutionSummary[];
 }) {
   const queryClient = useQueryClient();
   const checkout = useMutation({
@@ -97,7 +100,8 @@ export function EvolutionHero({
               </span>
             </span>
           </div>
-          <div className="order-first min-[860px]:order-none min-[860px]:shrink-0">
+          <div className="order-first flex flex-col gap-2 min-[860px]:order-none min-[860px]:shrink-0">
+            <SnapshotChangelogDialog detail={detail} evolutions={evolutions} />
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button className="h-12 w-full justify-center gap-3 rounded-lg bg-slate-950 px-5 text-white shadow-[0_8px_18px_-14px_rgba(15,23,42,0.7)] hover:bg-slate-900 sm:w-auto sm:min-w-[220px]">

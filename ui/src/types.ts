@@ -107,6 +107,7 @@ export type EvolutionSummary = {
   type: string;
   status: string;
   outcome: string;
+  userVisibleChange?: string;
   snapshot: string;
   commitCount: number;
   decisionCount: number;
