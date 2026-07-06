@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 37,
-  "commitCount": 41,
-  "decisionCount": 71,
-  "riskCount": 26,
+  "snapshotCount": 38,
+  "commitCount": 42,
+  "decisionCount": 73,
+  "riskCount": 27,
   "artifactCount": 33,
-  "latestAt": "2026-07-06T01:05:04Z",
-  "latestSnapshot": "snap_a7242680b3e63f4e",
-  "latestTitle": "Fix comparison snapshot picker",
+  "latestAt": "2026-07-06T11:12:24Z",
+  "latestSnapshot": "snap_fb6eef8f327a580e",
+  "latestTitle": "Align compare timeline with snapshot timeline",
   "branch": "main",
-  "head": "06a2b19bb5f798081df9795871fe852fb10bde21",
+  "head": "0508b1a5f64c9054f01460baa42ec320b593f447",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "06a2b19bb5f798081df9795871fe852fb10bde21"
+  "latestGitState": "0508b1a5f64c9054f01460baa42ec320b593f447"
 }
