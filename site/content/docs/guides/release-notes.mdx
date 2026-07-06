@@ -1,0 +1,51 @@
+---
+title: Release Notes
+description: Use eve snapshots to draft product-facing release notes.
+---
+
+eve can turn product snapshots into release-note style summaries. This is useful when you want to explain what changed for users without reconstructing the release from commits or chat history.
+
+## Pick a range
+
+Choose the snapshots that bound the release or review period.
+
+```sh
+eve changelog --since <previous-release-snapshot-id> --markdown
+```
+
+You can also use a date or an explicit snapshot range:
+
+```sh
+eve changelog --since 2026-07-01 --markdown
+eve changelog --from <from-snapshot-id> --to <to-snapshot-id> --markdown
+```
+
+`--since <snapshot-id>` starts after the boundary snapshot. Date ranges include snapshots created on or after the provided UTC date.
+
+## What the changelog includes
+
+The changelog is built from snapshot fields, not Git commit messages.
+
+It groups completed product work by snapshot type and uses each snapshot's `userVisibleChange` when present. If a snapshot does not have a user-visible change, eve falls back to the snapshot title.
+
+This keeps release notes focused on product behavior and evidence instead of implementation detail.
+
+## Compare before publishing
+
+For a richer review, compare the same endpoints:
+
+```sh
+eve compare <from-snapshot-id> <to-snapshot-id> --markdown
+```
+
+Comparison output includes product changes, decisions, risks, validation, and timeline entries. Use it to check whether release notes are missing important context.
+
+## Good release-note snapshots
+
+Release notes are only as clear as the snapshots behind them. Before using `eve changelog`, make sure important snapshots include:
+
+- a clear product summary
+- `userVisibleChange` when behavior changed for users
+- validation commands and outcomes
+- artifacts when screenshots, URLs, or logs prove the result
+- risks or decisions that release reviewers should know
