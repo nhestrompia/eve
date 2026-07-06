@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { ErrorState } from '../components/error-state';
 import { EvolutionShell } from '../components/evolution-shell';
 import { LoadingState } from '../components/loading-state';
+import { SnapshotRelationshipStrip } from '../components/snapshot-relationship-strip';
 import { SnapshotTimeline } from '../components/snapshot-timeline';
 import { VerificationCard } from '../components/verification-card';
 import { compactDate } from '../format';
@@ -33,6 +34,13 @@ export function SnapshotPage() {
                 <p className="font-mono text-sm font-semibold text-blue-700">{snapshot.data.id}</p>
                 <h1 className="mt-3 text-3xl font-semibold text-balance">{snapshot.data.title}</h1>
                 <p className="mt-4 max-w-3xl text-muted-foreground text-pretty">{snapshot.data.outcome}</p>
+                {detail.data ? (
+                  <SnapshotRelationshipStrip
+                    relationships={detail.data.evolution.relationships}
+                    snapshotId={snapshot.data.id}
+                    className="mt-5"
+                  />
+                ) : null}
                 <div className="mt-8 rounded-lg border bg-slate-50 p-5">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">

@@ -6,6 +6,12 @@ export type DisplayRecord = {
   meta?: Array<{ label: string; value: string }>;
 };
 
+export type RelationshipEntry = {
+  kind: string;
+  label: string;
+  value: string;
+};
+
 export function behaviorClaims(behavior: Behavior): BehaviorClaim[] {
   return [
     ...(behavior.added ?? []),
@@ -69,8 +75,40 @@ export function activityEntries(evolution: Evolution) {
   ];
 }
 
+export function relationshipEntries(relationships: Evolution['relationships']): RelationshipEntry[] {
+  return Object.entries(relationships).flatMap(([kind, values]) =>
+    (values ?? [])
+      .filter((value) => value.trim().length > 0)
+      .map((value) => ({
+        kind,
+        label: relationshipLabel(kind),
+        value
+      }))
+  );
+}
+
+export function relationshipLabel(kind: string): string {
+  const labels: Record<string, string> = {
+    corrects: 'Corrects',
+    supersedes: 'Supersedes',
+    reverts: 'Reverts',
+    dependsOn: 'Depends on',
+    related: 'Related to'
+  };
+  return labels[kind] ?? titleCase(kind);
+}
+
+export function relationshipSummary(relationships: Evolution['relationships'], maxItems = 2): string {
+  const entries = relationshipEntries(relationships);
+  if (entries.length === 0) return 'No relationships';
+  const visible = entries.slice(0, maxItems).map((entry) => `${entry.label} ${entry.value}`);
+  const hiddenCount = entries.length - visible.length;
+  return hiddenCount > 0 ? `${visible.join(' · ')} · +${hiddenCount} more` : visible.join(' · ');
+}
+
 export function titleCase(value: string): string {
   return value
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
     .replaceAll('_', ' ')
     .split(' ')
     .filter(Boolean)

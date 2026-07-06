@@ -4,16 +4,13 @@ import { api } from '../api';
 import { ErrorState } from '../components/error-state';
 import { EvolutionShell } from '../components/evolution-shell';
 import { LoadingState } from '../components/loading-state';
-import { EmptyPanel, Header } from './verification-page';
+import { SnapshotRelationshipList } from '../components/snapshot-relationship-list';
+import { Header } from './verification-page';
 
 export function RelationshipsPage() {
   const { id } = useParams({ from: '/snapshots/$id/relationships' });
   const evolutions = useQuery({ queryKey: ['snapshots'], queryFn: api.snapshots });
   const detail = useQuery({ queryKey: ['snapshot-detail', id], queryFn: () => api.snapshotDetail(id) });
-
-  const entries = Object.entries(detail.data?.evolution.relationships ?? {}).flatMap(([kind, values]) =>
-    (values ?? []).map((value) => ({ kind, value }))
-  );
 
   return (
     <EvolutionShell evolutions={evolutions.data ?? []} selectedId={id}>
@@ -22,15 +19,7 @@ export function RelationshipsPage() {
       {detail.data ? (
         <section className="space-y-6">
           <Header eyebrow={id} title="Relationships" subtitle="How this Snapshot connects to other product states." />
-          {entries.length === 0 ? <EmptyPanel text="No relationships are recorded in this Snapshot." /> : null}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {entries.map((entry) => (
-              <article key={`${entry.kind}-${entry.value}`} className="rounded-lg border bg-white p-5">
-                <p className="text-sm capitalize text-muted-foreground">{entry.kind.replaceAll('_', ' ')}</p>
-                <p className="mt-2 break-all font-mono text-lg font-semibold">{entry.value}</p>
-              </article>
-            ))}
-          </div>
+          <SnapshotRelationshipList relationships={detail.data.evolution.relationships} />
         </section>
       ) : null}
     </EvolutionShell>

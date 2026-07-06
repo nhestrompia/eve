@@ -5,6 +5,7 @@ import { api } from "../api";
 import { humanDate } from "../format";
 import type { DetailResponse, SnapshotResponse } from "../types";
 import { StatusBadge } from "./status-badge";
+import { SnapshotRelationshipStrip } from "./snapshot-relationship-strip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -68,6 +69,11 @@ export function EvolutionHero({
               detail.evolution.intent ||
               "No outcome recorded."}
           </p>
+          <SnapshotRelationshipStrip
+            relationships={detail.evolution.relationships}
+            snapshotId={detail.summary.id}
+            className="mt-5 max-w-[760px]"
+          />
         </div>
 
         <div className="flex flex-col gap-4 border-y py-4 min-[860px]:flex-row min-[860px]:items-center min-[860px]:justify-between">

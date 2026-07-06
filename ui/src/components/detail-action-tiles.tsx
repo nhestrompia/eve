@@ -2,8 +2,9 @@ import { CheckCircle2, Clock3, Code2, FileText, GitFork, Scale } from 'lucide-re
 import type * as React from 'react';
 import type { DetailResponse } from '../types';
 import { compactDate, humanDate } from '../format';
-import { activityEntries, displayDecision, displayRisk, titleCase } from '../lib/evolution-display';
+import { activityEntries, displayDecision, displayRisk, relationshipSummary, titleCase } from '../lib/evolution-display';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { SnapshotRelationshipList } from './snapshot-relationship-list';
 
 export function DetailActionTiles({ detail }: { detail: DetailResponse }) {
   const tiles = [
@@ -23,7 +24,7 @@ export function DetailActionTiles({ detail }: { detail: DetailResponse }) {
     },
     {
       title: 'Related Snapshots',
-      subtitle: relationshipSummary(detail),
+      subtitle: relationshipSummary(detail.evolution.relationships),
       icon: GitFork,
       description: 'How this Snapshot connects to other product states.',
       content: <RelationshipsDialogContent detail={detail} />
@@ -68,12 +69,6 @@ export function DetailActionTiles({ detail }: { detail: DetailResponse }) {
       </div>
     </section>
   );
-}
-
-function relationshipSummary(detail: DetailResponse): string {
-  const entries = Object.entries(detail.evolution.relationships)
-    .flatMap(([kind, values]) => (values ?? []).map((value) => `${kind.replaceAll('_', ' ')} ${value}`));
-  return entries.length > 0 ? entries.slice(0, 2).join(' · ') : 'No relationships';
 }
 
 function ImplementationDialogContent({ detail }: { detail: DetailResponse }) {
@@ -157,24 +152,7 @@ function DecisionsRisksDialogContent({ detail }: { detail: DetailResponse }) {
 }
 
 function RelationshipsDialogContent({ detail }: { detail: DetailResponse }) {
-  const entries = Object.entries(detail.evolution.relationships).flatMap(([kind, values]) =>
-    (values ?? []).map((value) => ({ kind, value }))
-  );
-
-  if (entries.length === 0) {
-    return <EmptyDialogState text="No relationships are recorded in this Snapshot." />;
-  }
-
-  return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      {entries.map((entry) => (
-        <article key={`${entry.kind}-${entry.value}`} className="rounded-lg bg-white p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.08)]">
-          <p className="text-sm capitalize text-muted-foreground">{entry.kind.replaceAll('_', ' ')}</p>
-          <p className="mt-2 break-all font-mono text-lg font-semibold">{entry.value}</p>
-        </article>
-      ))}
-    </div>
-  );
+  return <SnapshotRelationshipList relationships={detail.evolution.relationships} />;
 }
 
 function ActivityDialogContent({ detail }: { detail: DetailResponse }) {
