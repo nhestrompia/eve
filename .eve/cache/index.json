@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 33,
-  "commitCount": 37,
-  "decisionCount": 64,
-  "riskCount": 22,
+  "snapshotCount": 34,
+  "commitCount": 38,
+  "decisionCount": 65,
+  "riskCount": 23,
   "artifactCount": 33,
-  "latestAt": "2026-07-06T00:07:02Z",
-  "latestSnapshot": "snap_d34262fb447bfc8a",
-  "latestTitle": "Snapshot changelog and comparison",
+  "latestAt": "2026-07-06T00:24:21Z",
+  "latestSnapshot": "snap_5b52eac10de0232a",
+  "latestTitle": "Move comparison into repository page",
   "branch": "main",
-  "head": "03ee9849f0c19486983746c7ba94512125a7f383",
+  "head": "9b77b459af782fe564c0f42308b318d359b4b5e5",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "03ee9849f0c19486983746c7ba94512125a7f383"
+  "latestGitState": "9b77b459af782fe564c0f42308b318d359b4b5e5"
 }
