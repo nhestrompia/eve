@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 38,
-  "commitCount": 42,
-  "decisionCount": 73,
-  "riskCount": 27,
+  "snapshotCount": 39,
+  "commitCount": 43,
+  "decisionCount": 75,
+  "riskCount": 28,
   "artifactCount": 33,
-  "latestAt": "2026-07-06T11:12:24Z",
-  "latestSnapshot": "snap_fb6eef8f327a580e",
-  "latestTitle": "Align compare timeline with snapshot timeline",
+  "latestAt": "2026-07-06T12:02:59Z",
+  "latestSnapshot": "snap_a064270d9848bfaa",
+  "latestTitle": "Document comparison and changelog workflows",
   "branch": "main",
-  "head": "0508b1a5f64c9054f01460baa42ec320b593f447",
+  "head": "967edb70dea0132eb8b2b132a60a4cdc4c784918",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "0508b1a5f64c9054f01460baa42ec320b593f447"
+  "latestGitState": "967edb70dea0132eb8b2b132a60a4cdc4c784918"
 }
