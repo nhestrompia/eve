@@ -303,6 +303,27 @@ export type ConfigResponse = {
   currentDirty: boolean;
   latestSnapshot?: string;
   latestGitState?: string;
+  pendingSnapshot?: PendingSnapshot;
+};
+
+export type PendingSnapshot = {
+  repoId: string;
+  branch: string;
+  trunkBranch: string;
+  lastResolvedGitState: string;
+  pendingSince?: string;
+  trigger?: 'idle' | 'merge' | string;
+  idleThreshold?: string;
+  range: {
+    from: string;
+    to: string;
+    commits: string[];
+  };
+};
+
+export type PendingSnapshotResponse = {
+  pending: boolean;
+  pendingSnapshot?: PendingSnapshot;
 };
 
 export type RepositorySummary = {
@@ -328,6 +349,7 @@ export type RepositorySummary = {
   latestSnapshot?: string;
   latestTitle: string;
   latestGitState?: string;
+  pendingSnapshot?: PendingSnapshot;
   sessionProviders: string[];
 };
 

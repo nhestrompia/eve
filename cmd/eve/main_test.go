@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/nhestrompia/eve"
 )
@@ -19,9 +20,16 @@ func TestMain(m *testing.M) {
 	if err == nil {
 		_ = os.Setenv("EVE_REPOSITORY_REGISTRY", filepath.Join(registryDir, "repositories.json"))
 	}
+	pendingDir, pendingErr := os.MkdirTemp("", "eve-test-pending-*")
+	if pendingErr == nil {
+		_ = os.Setenv("EVE_PENDING_STATE", filepath.Join(pendingDir, "pending-state.json"))
+	}
 	code := m.Run()
 	if registryDir != "" {
 		_ = os.RemoveAll(registryDir)
+	}
+	if pendingDir != "" {
+		_ = os.RemoveAll(pendingDir)
 	}
 	os.Exit(code)
 }
@@ -150,6 +158,7 @@ func TestInitCreatesSnapshotStructure(t *testing.T) {
 	for _, path := range []string{
 		filepath.Join(repo, ".eve", "config.json"),
 		filepath.Join(repo, ".eve", "snapshots"),
+		filepath.Join(repo, ".eve", "skips"),
 		filepath.Join(repo, ".eve", "artifacts"),
 		filepath.Join(repo, ".eve", "cache"),
 	} {
@@ -338,6 +347,124 @@ func TestRuntimeAPIAndMCP(t *testing.T) {
 	}
 	if len(snapshots) != 2 {
 		t.Fatalf("snapshot count = %d, want 2", len(snapshots))
+	}
+}
+
+func TestPendingSnapshotIdleTriggerAndSkipResolution(t *testing.T) {
+	repo := initTempGitRepo(t)
+	t.Chdir(repo)
+	mustRun(t, []string{"init"})
+	gitRun(t, repo, "add", ".eve/config.json")
+	gitRun(t, repo, "commit", "-m", "initialize eve")
+	gitRun(t, repo, "checkout", "-b", "feature")
+
+	handler := newRuntimeServer(repoFromRoot(repo), "localhost:0").routes()
+	var initial pendingSnapshotResponse
+	requestJSON(t, handler, http.MethodGet, "/api/repos/"+filepath.Base(repo)+"/pending", nil, &initial)
+	if initial.Pending {
+		t.Fatalf("initial pending = %#v, want no pending on first observation", initial)
+	}
+
+	commitProductChangeAt(t, repo, "product.txt", "product\nidle feature\n", "idle feature", time.Now().UTC().Add(-3*time.Hour))
+
+	var pending pendingSnapshotResponse
+	requestJSON(t, handler, http.MethodGet, "/api/repos/"+filepath.Base(repo)+"/pending", nil, &pending)
+	if !pending.Pending || pending.PendingSnapshot == nil || pending.PendingSnapshot.Trigger != pendingTriggerIdle {
+		t.Fatalf("pending = %#v, want idle pending snapshot", pending)
+	}
+	if got := len(pending.PendingSnapshot.Range.Commits); got != 1 {
+		t.Fatalf("pending commits = %d, want 1", got)
+	}
+
+	response := mcpCall(t, handler, `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"skip_snapshot","arguments":{"reason":""}}}`)
+	if !strings.Contains(response, "isError") || !strings.Contains(response, "skip reason is required") {
+		t.Fatalf("skip empty reason response = %s, want error", response)
+	}
+
+	response = mcpCall(t, handler, `{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"skip_snapshot","arguments":{"reason":"Internal-only cleanup."}}}`)
+	if !strings.Contains(response, "Internal-only cleanup.") || !strings.Contains(response, "skip_") {
+		t.Fatalf("skip response = %s, want durable skip record", response)
+	}
+	skips, err := repoFromRoot(repo).listSkips()
+	if err != nil {
+		t.Fatalf("list skips: %v", err)
+	}
+	if len(skips) != 1 || skips[0].Reason != "Internal-only cleanup." {
+		t.Fatalf("skips = %#v, want one skip record", skips)
+	}
+	snapshots, err := repoFromRoot(repo).listSnapshots("")
+	if err != nil {
+		t.Fatalf("list snapshots: %v", err)
+	}
+	if len(snapshots) != 0 {
+		t.Fatalf("snapshot count = %d, want skip excluded from product history", len(snapshots))
+	}
+	var resolved pendingSnapshotResponse
+	requestJSON(t, handler, http.MethodGet, "/api/repos/"+filepath.Base(repo)+"/pending", nil, &resolved)
+	if resolved.Pending {
+		t.Fatalf("resolved pending = %#v, want no pending after skip", resolved)
+	}
+}
+
+func TestPendingSnapshotMergeTriggerAndCompleteResolution(t *testing.T) {
+	repo := initTempGitRepo(t)
+	t.Chdir(repo)
+	mustRun(t, []string{"init"})
+	gitRun(t, repo, "add", ".eve/config.json")
+	gitRun(t, repo, "commit", "-m", "initialize eve")
+
+	handler := newRuntimeServer(repoFromRoot(repo), "localhost:0").routes()
+	var initial pendingSnapshotResponse
+	requestJSON(t, handler, http.MethodGet, "/api/repos/"+filepath.Base(repo)+"/pending", nil, &initial)
+	if initial.Pending {
+		t.Fatalf("initial pending = %#v, want no pending on first observation", initial)
+	}
+
+	commitProductChangeAt(t, repo, "product.txt", "product\ntrunk merge\n", "trunk merge", time.Now().UTC())
+	var config configResponse
+	requestJSON(t, handler, http.MethodGet, "/api/config", nil, &config)
+	if config.PendingSnapshot == nil || config.PendingSnapshot.Trigger != pendingTriggerMerge {
+		t.Fatalf("config pending = %#v, want merge-trigger pending", config.PendingSnapshot)
+	}
+
+	response := mcpCall(t, handler, `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"pending_snapshot","arguments":{}}}`)
+	if !strings.Contains(response, `"pending":true`) || !strings.Contains(response, pendingTriggerMerge) {
+		t.Fatalf("pending_snapshot response = %s, want merge pending", response)
+	}
+	response = mcpCall(t, handler, `{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"complete_snapshot","arguments":{"title":"Trunk Snapshot","type":"feature","summary":"Completed trunk work.","validation":[{"command":"go test ./...","status":"passed"}]}}}`)
+	if !strings.Contains(response, "Trunk Snapshot") {
+		t.Fatalf("complete response = %s, want snapshot", response)
+	}
+	var resolved pendingSnapshotResponse
+	requestJSON(t, handler, http.MethodGet, "/api/repos/"+filepath.Base(repo)+"/pending", nil, &resolved)
+	if resolved.Pending {
+		t.Fatalf("resolved pending = %#v, want no pending after complete snapshot", resolved)
+	}
+}
+
+func TestTrunkBranchDetection(t *testing.T) {
+	repo := initTempGitRepo(t)
+	t.Chdir(repo)
+	mustRun(t, []string{"init"})
+	store := repoFromRoot(repo)
+	config := readTextFile(t, store.configPath())
+	config = strings.TrimSuffix(config, "\n")
+	config = strings.TrimSuffix(config, "}") + `,` + "\n" + `  "trunkBranch": "release"` + "\n" + `}` + "\n"
+	if err := os.WriteFile(store.configPath(), []byte(config), 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	if got := store.trunkBranch(); got != "release" {
+		t.Fatalf("configured trunk = %q, want release", got)
+	}
+
+	mustRun(t, []string{"init"})
+	if err := os.WriteFile(store.configPath(), []byte(`{"schemaVersion":2,"snapshotSchema":"0.1.0","createdAt":"2026-07-01T00:00:00Z"}`+"\n"), 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	gitRun(t, repo, "update-ref", "refs/remotes/origin/release", "HEAD")
+	gitRun(t, repo, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/release")
+	if got := store.trunkBranch(); got != "release" {
+		t.Fatalf("origin trunk = %q, want release", got)
 	}
 }
 
@@ -748,6 +875,21 @@ func gitRun(t *testing.T, repo string, args ...string) {
 	cmd.Dir = repo
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("git %v: %v\n%s", args, err, output)
+	}
+}
+
+func commitProductChangeAt(t *testing.T, repo string, path string, content string, message string, committedAt time.Time) {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(repo, path), []byte(content), 0o644); err != nil {
+		t.Fatalf("write %s: %v", path, err)
+	}
+	gitRun(t, repo, "add", path)
+	cmd := exec.Command("git", "commit", "-m", message)
+	cmd.Dir = repo
+	gitDate := committedAt.UTC().Format(time.RFC3339)
+	cmd.Env = append(os.Environ(), "GIT_AUTHOR_DATE="+gitDate, "GIT_COMMITTER_DATE="+gitDate)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git commit %q: %v\n%s", message, err, output)
 	}
 }
 

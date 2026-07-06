@@ -15,6 +15,7 @@ GET  /api/snapshots
 GET  /api/snapshots/{snapshotId}
 GET  /api/repos
 GET  /api/repos/{repoId}
+GET  /api/repos/{repoId}/pending
 POST /api/repos/{repoId}/open-editor
 GET  /api/repos/{repoId}/snapshots
 GET  /api/repos/{repoId}/snapshots/{snapshotId}
@@ -31,6 +32,8 @@ The local API supports the bundled eve UI and local development tooling. For age
 `/api/compare` returns the same product-state comparison used by the repository Compare tab. Both snapshot ids must belong to the same repository.
 
 `/api/search` and the global `/api/snapshots` endpoints support the local UI's cross-repository snapshot lookup. Repository-scoped endpoints remain available under `/api/repos/{repoId}`.
+
+`/api/repos/{repoId}/pending` reports committed work that has not yet been resolved by a Snapshot or Skip. Pending state is advisory; Snapshots remain the only user-facing product-history records.
 
 ## Security
 

@@ -112,7 +112,7 @@ func runInit(args []string, stdout io.Writer, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "%v\n", err)
 		return 1
 	}
-	for _, dir := range []string{repo.eveDir, repo.snapshotsDir(), repo.artifactsDir(), repo.cacheDir()} {
+	for _, dir := range []string{repo.eveDir, repo.snapshotsDir(), repo.skipsDir(), repo.artifactsDir(), repo.cacheDir()} {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			fmt.Fprintf(stderr, "create %s: %v\n", dir, err)
 			return 1
@@ -568,21 +568,22 @@ type repository struct {
 }
 
 type repoSummary struct {
-	ID             string `json:"id"`
-	Root           string `json:"root"`
-	SnapshotCount  int    `json:"snapshotCount"`
-	CommitCount    int    `json:"commitCount"`
-	DecisionCount  int    `json:"decisionCount"`
-	RiskCount      int    `json:"riskCount"`
-	ArtifactCount  int    `json:"artifactCount"`
-	LatestAt       string `json:"latestAt"`
-	LatestSnapshot string `json:"latestSnapshot"`
-	LatestTitle    string `json:"latestTitle"`
-	Branch         string `json:"branch,omitempty"`
-	Head           string `json:"head,omitempty"`
-	Dirty          bool   `json:"dirty"`
-	RemoteURL      string `json:"remoteUrl,omitempty"`
-	LatestGitState string `json:"latestGitState,omitempty"`
+	ID              string           `json:"id"`
+	Root            string           `json:"root"`
+	SnapshotCount   int              `json:"snapshotCount"`
+	CommitCount     int              `json:"commitCount"`
+	DecisionCount   int              `json:"decisionCount"`
+	RiskCount       int              `json:"riskCount"`
+	ArtifactCount   int              `json:"artifactCount"`
+	LatestAt        string           `json:"latestAt"`
+	LatestSnapshot  string           `json:"latestSnapshot"`
+	LatestTitle     string           `json:"latestTitle"`
+	Branch          string           `json:"branch,omitempty"`
+	Head            string           `json:"head,omitempty"`
+	Dirty           bool             `json:"dirty"`
+	RemoteURL       string           `json:"remoteUrl,omitempty"`
+	LatestGitState  string           `json:"latestGitState,omitempty"`
+	PendingSnapshot *pendingSnapshot `json:"pendingSnapshot,omitempty"`
 }
 
 type repoDetail struct {
@@ -657,7 +658,7 @@ func (repo repository) cacheDir() string     { return filepath.Join(repo.eveDir,
 func (repo repository) stagedDir() string    { return filepath.Join(repo.eveDir, "staged") }
 
 func (repo repository) ensureDirs() error {
-	for _, dir := range []string{repo.snapshotsDir(), repo.artifactsDir(), repo.cacheDir()} {
+	for _, dir := range []string{repo.snapshotsDir(), repo.skipsDir(), repo.artifactsDir(), repo.cacheDir()} {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return fmt.Errorf("create %s: %w", dir, err)
 		}
@@ -788,6 +789,9 @@ func (repo repository) summary() (repoSummary, error) {
 		summary.LatestSnapshot = snapshots[0].ID
 		summary.LatestTitle = snapshots[0].Title
 		summary.LatestGitState = snapshots[0].Implementation.GitState
+	}
+	if pending, err := repo.detectPending(pendingOptions{Initialize: true, Now: time.Now().UTC()}); err == nil {
+		summary.PendingSnapshot = pending
 	}
 	return summary, nil
 }
@@ -1028,6 +1032,9 @@ func completeSnapshot(repo repository, input completeSnapshotInput, ignoredStatu
 		CreatedAt: nowUTC(),
 	}
 	if err := repo.saveSnapshot(snapshot); err != nil {
+		return nil, err
+	}
+	if err := repo.resolvePendingBranch(facts.Branch, facts.GitState); err != nil {
 		return nil, err
 	}
 	return snapshot, nil

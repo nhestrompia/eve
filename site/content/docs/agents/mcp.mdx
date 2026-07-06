@@ -39,9 +39,14 @@ eve://repos/{repoId}/snapshots/{snapshotId}
 - `list_repos`
 - `list_snapshots`
 - `get_snapshot`
+- `pending_snapshot`
 - `complete_snapshot`
 - `skip_snapshot`
 - `checkout_snapshot`
+
+`skip_snapshot` requires a non-empty reason and writes a durable `.eve/skips/`
+record. Skips resolve reviewed committed ranges without appearing in Snapshot
+timelines, changelogs, counts, or search.
 
 ## Recommended setup
 

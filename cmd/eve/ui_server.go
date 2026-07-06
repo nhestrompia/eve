@@ -35,17 +35,18 @@ type apiError struct {
 }
 
 type configResponse struct {
-	SnapshotSchemaVersion string `json:"snapshotSchemaVersion"`
-	CLIVersion            string `json:"cliVersion"`
-	Repository            string `json:"repository"`
-	Addr                  string `json:"addr"`
-	EveDir                string `json:"eveDir"`
-	Initialized           bool   `json:"initialized"`
-	CurrentGitState       string `json:"currentGitState,omitempty"`
-	CurrentBranch         string `json:"currentBranch,omitempty"`
-	CurrentDirty          bool   `json:"currentDirty"`
-	LatestSnapshot        string `json:"latestSnapshot,omitempty"`
-	LatestGitState        string `json:"latestGitState,omitempty"`
+	SnapshotSchemaVersion string           `json:"snapshotSchemaVersion"`
+	CLIVersion            string           `json:"cliVersion"`
+	Repository            string           `json:"repository"`
+	Addr                  string           `json:"addr"`
+	EveDir                string           `json:"eveDir"`
+	Initialized           bool             `json:"initialized"`
+	CurrentGitState       string           `json:"currentGitState,omitempty"`
+	CurrentBranch         string           `json:"currentBranch,omitempty"`
+	CurrentDirty          bool             `json:"currentDirty"`
+	LatestSnapshot        string           `json:"latestSnapshot,omitempty"`
+	LatestGitState        string           `json:"latestGitState,omitempty"`
+	PendingSnapshot       *pendingSnapshot `json:"pendingSnapshot,omitempty"`
 }
 
 type snapshotSummary struct {
@@ -340,6 +341,7 @@ func (server runtimeServer) handleConfig(w http.ResponseWriter, r *http.Request)
 		CurrentDirty:          facts.Dirty,
 		LatestSnapshot:        summary.LatestSnapshot,
 		LatestGitState:        summary.LatestGitState,
+		PendingSnapshot:       summary.PendingSnapshot,
 	})
 }
 
@@ -385,6 +387,8 @@ func (server runtimeServer) handleRepoRoutes(w http.ResponseWriter, r *http.Requ
 			return
 		}
 		writeJSON(w, http.StatusOK, detail)
+	case len(parts) == 2 && parts[1] == "pending" && r.Method == http.MethodGet:
+		server.handlePendingSnapshot(w, r, repo)
 	case len(parts) == 2 && parts[1] == "open-editor" && r.Method == http.MethodPost:
 		writeJSON(w, http.StatusOK, openRepositoryInEditor(repo))
 	case len(parts) >= 3 && parts[1] == "artifacts" && r.Method == http.MethodGet:
@@ -402,6 +406,18 @@ func (server runtimeServer) handleRepoRoutes(w http.ResponseWriter, r *http.Requ
 	default:
 		writeAPIError(w, http.StatusNotFound, fmt.Errorf("repo route not found"))
 	}
+}
+
+func (server runtimeServer) handlePendingSnapshot(w http.ResponseWriter, r *http.Request, repo repository) {
+	pending, err := repo.detectPending(pendingOptions{Initialize: true, Now: time.Now().UTC()})
+	if err != nil {
+		writeAPIError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, pendingSnapshotResponse{
+		Pending:         pending != nil,
+		PendingSnapshot: pending,
+	})
 }
 
 func (server runtimeServer) repositories() []repository {
@@ -1162,6 +1178,7 @@ func mcpTools() []map[string]any {
 		{"name": "list_repos", "description": "List repositories known to the local EVE runtime.", "inputSchema": objectSchema(nil, nil)},
 		{"name": "list_snapshots", "description": "List snapshots for a repository.", "inputSchema": objectSchema(map[string]any{"cwd": stringSchema(), "repoId": stringSchema(), "type": enumSchema("feature", "bugfix", "experiment", "refactor", "release")}, nil)},
 		{"name": "get_snapshot", "description": "Get one snapshot by id.", "inputSchema": objectSchema(map[string]any{"cwd": stringSchema(), "repoId": stringSchema(), "snapshotId": stringSchema()}, []string{"snapshotId"})},
+		{"name": "pending_snapshot", "description": "Report unresolved committed work that needs a Snapshot or Skip.", "inputSchema": objectSchema(map[string]any{"cwd": stringSchema(), "repoId": stringSchema()}, nil)},
 		{"name": "complete_snapshot", "description": "Create a completed product Snapshot after implementation changes are committed. This writes .eve files only; after it succeeds, stage and Git commit the generated .eve record separately.", "inputSchema": completeSnapshotSchema()},
 		{"name": "skip_snapshot", "description": "Record that the current task does not deserve product history.", "inputSchema": objectSchema(map[string]any{"cwd": stringSchema(), "repoId": stringSchema(), "reason": stringSchema()}, []string{"reason"})},
 		{"name": "checkout_snapshot", "description": "Checkout the Git state for a Snapshot.", "inputSchema": objectSchema(map[string]any{"cwd": stringSchema(), "repoId": stringSchema(), "snapshotId": stringSchema(), "force": map[string]string{"type": "boolean"}}, []string{"snapshotId"})},
@@ -1302,14 +1319,48 @@ func (server runtimeServer) callMCPTool(ctx context.Context, params json.RawMess
 			return toolError(err.Error()), nil
 		}
 		return toolResult(snapshot), nil
+	case "pending_snapshot":
+		var input struct {
+			CWD    string `json:"cwd"`
+			RepoID string `json:"repoId"`
+		}
+		if err := json.Unmarshal(call.Arguments, &input); err != nil {
+			return nil, &mcpError{Code: -32602, Message: err.Error()}
+		}
+		repo, err := server.resolveToolRepo(input.CWD, input.RepoID)
+		if err != nil {
+			return toolError(err.Error()), nil
+		}
+		pending, err := repo.detectPending(pendingOptions{Initialize: true, Now: time.Now().UTC()})
+		if err != nil {
+			return toolError(err.Error()), nil
+		}
+		return toolResult(pendingSnapshotResponse{Pending: pending != nil, PendingSnapshot: pending}), nil
 	case "complete_snapshot":
 		return server.completeSnapshotTool(ctx, call.Arguments)
 	case "skip_snapshot":
 		var input struct {
-			Reason string `json:"reason"`
+			CWD      string `json:"cwd"`
+			RepoID   string `json:"repoId"`
+			Reason   string `json:"reason"`
+			Provider string `json:"provider"`
+			AgentID  string `json:"agentId"`
 		}
-		_ = json.Unmarshal(call.Arguments, &input)
-		return toolResult(map[string]string{"status": "skipped", "reason": input.Reason}), nil
+		if err := json.Unmarshal(call.Arguments, &input); err != nil {
+			return nil, &mcpError{Code: -32602, Message: err.Error()}
+		}
+		if strings.TrimSpace(input.Reason) == "" {
+			return toolError("skip reason is required"), nil
+		}
+		repo, err := server.resolveToolRepo(input.CWD, input.RepoID)
+		if err != nil {
+			return toolError(err.Error()), nil
+		}
+		record, err := repo.createSkip(input.Reason, skipAgent{Provider: input.Provider, ID: input.AgentID})
+		if err != nil {
+			return toolError(err.Error()), nil
+		}
+		return toolResult(record), nil
 	case "checkout_snapshot":
 		var input struct {
 			CWD        string `json:"cwd"`

@@ -6,6 +6,7 @@ import type {
   Evolution,
   EvolutionSummary,
   OpenEditorResponse,
+  PendingSnapshotResponse,
   RepositorySummary,
   SearchResponse,
   SessionRecord,
@@ -31,6 +32,7 @@ type RepoAPI = {
   branch?: string;
   head?: string;
   dirty?: boolean;
+  pendingSnapshot?: RepositorySummary['pendingSnapshot'];
   remoteUrl?: string;
   readme?: string;
   primaryLanguage?: string;
@@ -103,6 +105,7 @@ function adaptRepo(repo: RepoAPI): RepositorySummary {
     latestSnapshot: repo.latestSnapshot,
     latestTitle: repo.latestTitle,
     latestGitState: repo.latestGitState,
+    pendingSnapshot: repo.pendingSnapshot,
     sessionProviders: []
   };
 }
@@ -285,6 +288,7 @@ function localArtifactHref(repo: string, artifactPath?: string) {
 
 export const api = {
   config: () => request<ConfigResponse>('/api/config'),
+  pendingSnapshot: (repo: string) => request<PendingSnapshotResponse>(`/api/repos/${encodeURIComponent(repo)}/pending`),
   repositories: async () => (await repositoriesRaw()).map(adaptRepo),
   repository,
   snapshots,

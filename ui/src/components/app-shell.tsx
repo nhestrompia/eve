@@ -3,6 +3,7 @@ import { Toaster } from 'sonner';
 import { useEffect, useState } from 'react';
 import { SearchCommand } from './search-command';
 import { Sidebar } from './sidebar';
+import { PendingSnapshotBanner } from './pending-snapshot-banner';
 import { TopBar } from './top-bar';
 
 export function AppShell() {
@@ -30,6 +31,7 @@ export function AppShell() {
       <Sidebar onSearch={openSearch} />
       <div className="min-w-0">
         <TopBar onSearch={() => openSearch()} />
+        <PendingSnapshotBanner />
         <Outlet />
       </div>
       <SearchCommand open={searchOpen} initialQuery={searchQuery} onOpenChange={setSearchOpen} />

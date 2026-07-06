@@ -214,6 +214,7 @@ GET  /api/snapshots
 GET  /api/snapshots/{snapshotId}
 GET  /api/repos
 GET  /api/repos/{repoId}
+GET  /api/repos/{repoId}/pending
 POST /api/repos/{repoId}/open-editor
 GET  /api/repos/{repoId}/snapshots
 GET  /api/repos/{repoId}/snapshots/{snapshotId}
@@ -239,6 +240,7 @@ And MCP tools:
 - `list_repos`
 - `list_snapshots`
 - `get_snapshot`
+- `pending_snapshot`
 - `complete_snapshot`
 - `skip_snapshot`
 - `checkout_snapshot`
@@ -257,6 +259,10 @@ eve commit
 `eve add` writes a draft under `.eve/staged/`; `eve commit` validates it,
 derives Git facts from the repository, writes `.eve/snapshots/<id>.json`, and
 removes the draft. The implementation working tree must be clean by default.
+
+`skip_snapshot` requires a non-empty reason and writes `.eve/skips/<id>.json`.
+Skip records resolve committed work that was reviewed but intentionally not
+snapshotted; they are not shown as product-history Snapshots.
 
 From this checkout, the recommended setup is one command:
 
