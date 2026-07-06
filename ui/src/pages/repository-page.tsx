@@ -44,13 +44,9 @@ import {
   compareEvolutionOrder,
   defaultComparisonPair,
   orderedComparisonPair,
-  updateComparisonRange,
 } from "../lib/comparison";
 import type {
-  ComparisonChange,
-  ComparisonCheck,
-  ComparisonDecision,
-  ComparisonRisk,
+  ComparisonResponse,
   ComparisonTimelineItem,
   DetailResponse,
   EvolutionSummary,
@@ -545,11 +541,6 @@ function RepositoryComparePanel({ evolutions }: { evolutions: EvolutionSummary[]
     () => [...evolutions].sort(compareEvolutionOrder),
     [evolutions],
   );
-  const displayRows = useMemo(
-    () => [...chronological].reverse(),
-    [chronological],
-  );
-
   useEffect(() => {
     if (chronological.length < 2) {
       setFromId("");
@@ -584,13 +575,13 @@ function RepositoryComparePanel({ evolutions }: { evolutions: EvolutionSummary[]
   const toIndex = chronological.findIndex(
     (evolution) => evolution.id === comparisonToId,
   );
+  const includedSnapshots =
+    fromIndex >= 0 && toIndex >= 0
+      ? chronological.slice(fromIndex, toIndex + 1)
+      : [];
 
-  const chooseSnapshot = (id: string) => {
-    const next = updateComparisonRange(
-      chronological,
-      { from: comparisonFromId || fromId, to: comparisonToId || toId },
-      id,
-    );
+  const setComparisonPair = (firstId: string, secondId: string) => {
+    const next = orderedComparisonPair(chronological, firstId, secondId);
     if (!next) return;
     setFromId(next.from);
     setToId(next.to);
@@ -619,57 +610,69 @@ function RepositoryComparePanel({ evolutions }: { evolutions: EvolutionSummary[]
   }
 
   return (
-    <section className="space-y-5">
+    <section className="space-y-4">
       <section className="overflow-hidden rounded-lg bg-white shadow-[0_0_0_1px_rgba(15,23,42,0.1)]">
-        <div className="p-5 sm:p-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="max-w-[68ch]">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Product range
-              </p>
-              <h2 className="mt-2 flex items-center gap-2 text-xl font-semibold text-balance">
-                <GitCompareArrows className="size-5 text-blue-600" />
-                Compare snapshots
-              </h2>
-              <p className="mt-3 text-sm leading-6 text-muted-foreground text-pretty">
-                Click snapshots in the timeline to widen or tighten the range.
-                EVE keeps the earlier snapshot on the left and the later
-                snapshot on the right.
-              </p>
+        <div className="grid gap-0 xl:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="p-5 sm:p-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="max-w-[64ch]">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Product range
+                </p>
+                <h2 className="mt-2 flex items-center gap-2 text-xl font-semibold text-balance">
+                  <GitCompareArrows className="size-5 text-blue-600" />
+                  Compare snapshots
+                </h2>
+                <p className="mt-3 text-sm leading-6 text-muted-foreground text-pretty">
+                  Pick two saved product states. EVE orders the endpoints and
+                  summarizes the delta without making you scan the full timeline
+                  first.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="min-h-10 shrink-0 gap-2 transition-[scale,background-color,box-shadow] active:scale-[0.96]"
+                onClick={resetToLatestRange}
+              >
+                <RotateCcw className="size-3.5" />
+                Latest range
+              </Button>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="min-h-10 shrink-0 gap-2 transition-[scale,background-color,box-shadow] active:scale-[0.96]"
-              onClick={resetToLatestRange}
-            >
-              <RotateCcw className="size-3.5" />
-              Latest range
-            </Button>
+
+            <ComparisonRangeControls
+              evolutions={chronological}
+              fromId={comparisonFromId}
+              toId={comparisonToId}
+              includedSnapshots={includedSnapshots}
+              onPick={setComparisonPair}
+              onPreset={(count) => {
+                const pair = comparisonPairByCount(chronological, count);
+                if (pair) {
+                  setFromId(pair.from);
+                  setToId(pair.to);
+                }
+              }}
+            />
           </div>
 
-          <div className="mt-6 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-stretch">
-            <ComparisonEndpointCard label="Earlier" snapshot={fromSnapshot} />
-            <div className="hidden min-h-full items-center px-1 text-muted-foreground lg:flex">
-              <ArrowRight className="size-5" />
+          <div className="border-t bg-slate-950 p-5 text-white sm:p-6 xl:border-t-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+              Selected span
+            </p>
+            <div className="mt-4 space-y-4">
+              <ComparisonEndpointCard label="Earlier" snapshot={fromSnapshot} />
+              <div className="flex justify-center text-slate-400">
+                <ArrowRight className="size-4 rotate-90 xl:rotate-0" />
+              </div>
+              <ComparisonEndpointCard label="Later" snapshot={toSnapshot} dark />
             </div>
-            <ComparisonEndpointCard label="Later" snapshot={toSnapshot} />
           </div>
         </div>
-
-        <ComparisonRangePicker
-          evolutions={displayRows}
-          fromId={comparisonFromId}
-          toId={comparisonToId}
-          fromIndex={fromIndex}
-          toIndex={toIndex}
-          chronological={chronological}
-          onChoose={chooseSnapshot}
-        />
       </section>
 
-      <div className="min-w-0 space-y-5">
+      <div className="min-w-0">
         {!orderedPair ? (
           <div className="rounded-lg bg-white p-5 text-sm text-muted-foreground shadow-[0_0_0_1px_rgba(15,23,42,0.1)]">
             Choose two different snapshots to compare.
@@ -678,58 +681,7 @@ function RepositoryComparePanel({ evolutions }: { evolutions: EvolutionSummary[]
         {comparison.isLoading ? <LoadingState label="Comparing Snapshots" /> : null}
         {comparison.error ? <ComparisonInlineError error={comparison.error} /> : null}
         {comparison.data ? (
-          <>
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
-              <div className="rounded-lg bg-white p-5 shadow-[0_0_0_1px_rgba(15,23,42,0.1)]">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Range summary
-                    </p>
-                    <h3 className="mt-1 text-base font-semibold text-balance">
-                      {comparison.data.from.title} to {comparison.data.to.title}
-                    </h3>
-                  </div>
-                  <span className="rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 tabular-nums">
-                    {comparison.data.range.length}{" "}
-                    {comparison.data.range.length === 1
-                      ? "snapshot"
-                      : "snapshots"}
-                  </span>
-                </div>
-                <p className="mt-3 max-w-[72ch] text-sm leading-6 text-muted-foreground text-pretty">
-                  This summary uses snapshot metadata only: user-visible
-                  changes, decisions, risks, validation, and timeline entries.
-                </p>
-              </div>
-              <div className="rounded-lg bg-slate-950 p-5 text-white shadow-[0_0_0_1px_rgba(15,23,42,0.1)]">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">
-                  Product changes
-                </p>
-                <div className="mt-3 grid grid-cols-3 gap-3">
-                  <RangeMetric
-                    label="Added"
-                    value={comparison.data.added.length}
-                  />
-                  <RangeMetric
-                    label="Changed"
-                    value={comparison.data.changed.length}
-                  />
-                  <RangeMetric
-                    label="Fixed"
-                    value={comparison.data.fixed.length}
-                  />
-                </div>
-              </div>
-            </div>
-            <ComparisonChangeSection title="Added" items={comparison.data.added} />
-            <ComparisonChangeSection title="Changed" items={comparison.data.changed} />
-            <ComparisonChangeSection title="Fixed" items={comparison.data.fixed} />
-            <ComparisonDecisionSection items={comparison.data.decisions} />
-            <ComparisonRiskSection items={comparison.data.risks} />
-            <ComparisonValidationSection items={comparison.data.validation} />
-            <ComparisonTimelineSection items={comparison.data.timeline} />
-          </>
+          <ComparisonBoard comparison={comparison.data} />
         ) : null}
       </div>
     </section>
@@ -739,133 +691,410 @@ function RepositoryComparePanel({ evolutions }: { evolutions: EvolutionSummary[]
 function ComparisonEndpointCard({
   label,
   snapshot,
+  dark = false,
 }: {
   label: string;
   snapshot?: EvolutionSummary;
+  dark?: boolean;
 }) {
   return (
-    <div className="rounded-lg bg-slate-50/70 p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.08)]">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+    <div
+      className={`rounded-lg p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.08)] ${
+        dark ? "bg-slate-900 text-white" : "bg-slate-50/70 text-slate-950"
+      }`}
+    >
+      <p
+        className={`text-xs font-semibold uppercase tracking-wide ${
+          dark ? "text-slate-400" : "text-muted-foreground"
+        }`}
+      >
         {label}
       </p>
       <h3 className="mt-2 truncate text-base font-semibold">
         {snapshot?.title ?? "Select snapshot"}
       </h3>
-      <p className="mt-1 text-sm text-muted-foreground">
+      <p className={`mt-1 text-sm ${dark ? "text-slate-400" : "text-muted-foreground"}`}>
         {snapshot
           ? `${statusLabel(snapshot.type)} · ${humanDate(snapshot.createdAt)}`
-          : "Click a timeline row"}
+          : "Choose a snapshot"}
       </p>
     </div>
   );
 }
 
-function ComparisonRangePicker({
+function ComparisonRangeControls({
   evolutions,
   fromId,
   toId,
-  fromIndex,
-  toIndex,
-  chronological,
-  onChoose,
+  includedSnapshots,
+  onPick,
+  onPreset,
 }: {
   evolutions: EvolutionSummary[];
   fromId: string;
   toId: string;
-  fromIndex: number;
-  toIndex: number;
-  chronological: EvolutionSummary[];
-  onChoose: (id: string) => void;
+  includedSnapshots: EvolutionSummary[];
+  onPick: (firstId: string, secondId: string) => void;
+  onPreset: (count: number) => void;
+}) {
+  const newestFirst = [...evolutions].reverse();
+
+  return (
+    <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.7fr)]">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <ComparisonSnapshotSelect
+          label="Earlier snapshot"
+          value={fromId}
+          options={newestFirst}
+          onChange={(value) => onPick(value, toId)}
+        />
+        <ComparisonSnapshotSelect
+          label="Later snapshot"
+          value={toId}
+          options={newestFirst}
+          onChange={(value) => onPick(fromId, value)}
+        />
+      </div>
+      <div className="rounded-lg bg-slate-50/80 p-3 shadow-[0_0_0_1px_rgba(15,23,42,0.08)]">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Quick ranges
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {includedSnapshots.length} included
+          </span>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <RangePresetButton onClick={() => onPreset(2)}>
+            Latest pair
+          </RangePresetButton>
+          <RangePresetButton onClick={() => onPreset(3)}>Last 3</RangePresetButton>
+          <RangePresetButton onClick={() => onPreset(5)}>Last 5</RangePresetButton>
+          <RangePresetButton onClick={() => onPreset(evolutions.length)}>
+            All
+          </RangePresetButton>
+        </div>
+      </div>
+      <ComparisonIncludedStrip snapshots={includedSnapshots} />
+    </div>
+  );
+}
+
+function ComparisonSnapshotSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: EvolutionSummary[];
+  onChange: (value: string) => void;
 }) {
   return (
-    <div className="border-t bg-slate-50/45 p-3 sm:p-4">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3 px-1">
-        <div>
-          <h3 className="text-sm font-semibold">Snapshot timeline</h3>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Newest first. Selected rows between Earlier and Later are included.
-          </p>
+    <label className="grid gap-2 rounded-lg bg-slate-50/80 p-3 shadow-[0_0_0_1px_rgba(15,23,42,0.08)]">
+      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="min-h-10 w-full rounded-md bg-white px-3 text-sm font-medium text-slate-950 shadow-[0_0_0_1px_rgba(15,23,42,0.12)] outline-none transition-[box-shadow] focus:shadow-[0_0_0_2px_rgba(37,99,235,0.45)]"
+      >
+        {options.map((evolution) => (
+          <option key={evolution.id} value={evolution.id}>
+            {compactDate(evolution.createdAt)} · {evolution.title}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function RangePresetButton({
+  children,
+  onClick,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-md bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-[0_0_0_1px_rgba(15,23,42,0.1)] transition-[scale,background-color,box-shadow] hover:bg-blue-50 hover:text-blue-700 active:scale-[0.97]"
+    >
+      {children}
+    </button>
+  );
+}
+
+function ComparisonIncludedStrip({
+  snapshots,
+}: {
+  snapshots: EvolutionSummary[];
+}) {
+  return (
+    <div className="lg:col-span-2">
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {snapshots.map((snapshot, index) => (
+          <Link
+            key={snapshot.id}
+            to="/snapshots/$id"
+            params={{ id: snapshot.id }}
+            className="min-w-[180px] rounded-lg bg-white px-3 py-2 shadow-[0_0_0_1px_rgba(15,23,42,0.08)] transition-[background-color,box-shadow] hover:bg-slate-50"
+          >
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-blue-700">
+              {index + 1}
+            </span>
+            <span className="mt-1 block truncate text-xs font-semibold text-slate-950">
+              {snapshot.title}
+            </span>
+            <span className="mt-1 block text-[11px] text-muted-foreground">
+              {snapshot.type} · {compactDate(snapshot.createdAt)}
+            </span>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function comparisonPairByCount(
+  evolutions: EvolutionSummary[],
+  count: number,
+) {
+  if (evolutions.length < 2) return undefined;
+  const size = Math.max(2, Math.min(count, evolutions.length));
+  const to = evolutions[evolutions.length - 1];
+  const from = evolutions[evolutions.length - size];
+  return { from: from.id, to: to.id };
+}
+
+type ComparisonPanelItem = {
+  key: string;
+  snapshotId: string;
+  title: string;
+  meta?: string;
+};
+
+function ComparisonBoard({ comparison }: { comparison: ComparisonResponse }) {
+  const totalChanges =
+    comparison.added.length + comparison.changed.length + comparison.fixed.length;
+  const selectedSnapshotCount = comparison.range.length + 1;
+
+  return (
+    <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="space-y-4">
+        <div className="rounded-lg bg-white p-5 shadow-[0_0_0_1px_rgba(15,23,42,0.1)]">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-[68ch]">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Comparison summary
+              </p>
+              <h3 className="mt-1 text-xl font-semibold text-balance">
+                {comparison.from.title} to {comparison.to.title}
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground text-pretty">
+                Product changes, decisions, risks, validation, and timeline
+                entries are grouped so the delta is visible without reading the
+                full record stream.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <ComparisonStat label="Selected" value={selectedSnapshotCount} />
+              <ComparisonStat label="Changes" value={totalChanges} />
+              <ComparisonStat label="Decisions" value={comparison.decisions.length} />
+              <ComparisonStat label="Risks" value={comparison.risks.length} />
+            </div>
+          </div>
         </div>
-        <span className="rounded-md bg-white px-2 py-1 text-xs font-medium text-muted-foreground shadow-[0_0_0_1px_rgba(15,23,42,0.08)]">
-          {evolutions.length} snapshots
+
+        <div className="grid gap-4 lg:grid-cols-3">
+          <ComparisonListPanel
+            title="Added"
+            count={comparison.added.length}
+            empty="No added product changes."
+            items={comparison.added.map((item) => ({
+              key: `${item.snapshotId}-${item.text}`,
+              snapshotId: item.snapshotId,
+              title: item.text,
+              meta: `${item.snapshotTitle} · ${humanDate(item.createdAt)}`,
+            }))}
+          />
+          <ComparisonListPanel
+            title="Changed"
+            count={comparison.changed.length}
+            empty="No changed product behavior."
+            items={comparison.changed.map((item) => ({
+              key: `${item.snapshotId}-${item.text}`,
+              snapshotId: item.snapshotId,
+              title: item.text,
+              meta: `${item.snapshotTitle} · ${humanDate(item.createdAt)}`,
+            }))}
+          />
+          <ComparisonListPanel
+            title="Fixed"
+            count={comparison.fixed.length}
+            empty="No fixes in this span."
+            items={comparison.fixed.map((item) => ({
+              key: `${item.snapshotId}-${item.text}`,
+              snapshotId: item.snapshotId,
+              title: item.text,
+              meta: `${item.snapshotTitle} · ${humanDate(item.createdAt)}`,
+            }))}
+          />
+        </div>
+
+        <ComparisonTimelineCompact items={comparison.timeline} />
+      </div>
+
+      <aside className="space-y-4">
+        <ComparisonListPanel
+          title="Decisions"
+          count={comparison.decisions.length}
+          empty="No decisions recorded."
+          compact
+          items={comparison.decisions.map((item) => ({
+            key: `${item.snapshotId}-${item.title}`,
+            snapshotId: item.snapshotId,
+            title: item.title,
+            meta: item.rationale || item.snapshotTitle,
+          }))}
+        />
+        <ComparisonListPanel
+          title="Risks"
+          count={comparison.risks.length}
+          empty="No risks recorded."
+          compact
+          items={comparison.risks.map((item) => ({
+            key: `${item.snapshotId}-${item.title}`,
+            snapshotId: item.snapshotId,
+            title: item.title,
+            meta: `${statusLabel(item.severity)}${item.mitigation ? ` · ${item.mitigation}` : ""}`,
+          }))}
+        />
+        <ComparisonListPanel
+          title="Validation"
+          count={comparison.validation.length}
+          empty="No validation recorded."
+          compact
+          items={comparison.validation.map((item) => ({
+            key: `${item.snapshotId}-${item.command}`,
+            snapshotId: item.snapshotId,
+            title: item.command,
+            meta: `${item.snapshotTitle} · ${statusLabel(item.status)}`,
+          }))}
+        />
+      </aside>
+    </section>
+  );
+}
+
+function ComparisonStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="min-w-20 rounded-lg bg-slate-50 px-3 py-2 text-right shadow-[0_0_0_1px_rgba(15,23,42,0.08)]">
+      <div className="text-lg font-semibold tabular-nums">{value}</div>
+      <div className="text-[11px] font-medium text-muted-foreground">{label}</div>
+    </div>
+  );
+}
+
+function ComparisonListPanel({
+  title,
+  count,
+  empty,
+  items,
+  compact = false,
+}: {
+  title: string;
+  count: number;
+  empty: string;
+  items: ComparisonPanelItem[];
+  compact?: boolean;
+}) {
+  return (
+    <section className="overflow-hidden rounded-lg bg-white shadow-[0_0_0_1px_rgba(15,23,42,0.1)]">
+      <div className="flex min-h-12 items-center justify-between gap-3 border-b px-4">
+        <h3 className="text-sm font-semibold">{title}</h3>
+        <span className="rounded-md bg-secondary px-2 py-1 text-xs font-medium text-muted-foreground tabular-nums">
+          {count}
         </span>
       </div>
-      <div className="max-h-[420px] space-y-2 overflow-y-auto overscroll-contain pr-1">
-        {evolutions.map((evolution) => {
-          const index = chronological.findIndex(
-            (row) => row.id === evolution.id,
-          );
-          const isEarlier = evolution.id === fromId;
-          const isLater = evolution.id === toId;
-          const inRange =
-            fromIndex >= 0 &&
-            toIndex >= 0 &&
-            index >= fromIndex &&
-            index <= toIndex;
-          const rowStateClass = inRange
-            ? "bg-blue-50 shadow-[0_0_0_1px_rgba(37,99,235,0.18)]"
-            : "bg-white hover:bg-slate-50";
-          return (
-            <button
-              key={evolution.id}
-              type="button"
-              onClick={() => onChoose(evolution.id)}
-              aria-pressed={inRange}
-              className={`grid min-h-14 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-lg px-4 py-3 text-left shadow-[0_0_0_1px_rgba(15,23,42,0.08)] transition-[scale,background-color,box-shadow] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 active:scale-[0.96] ${rowStateClass}`}
-            >
-              <span className="min-w-0">
-                <span className="block truncate text-sm font-semibold">
-                  {evolution.title}
-                </span>
-                <span className="mt-1 block text-xs text-muted-foreground">
-                  {evolution.type} · {compactDate(evolution.createdAt)}
-                </span>
-              </span>
-              <span className="flex min-w-[88px] justify-end">
-                {isLater ? (
-                  <RangeBadge tone="dark">Later</RangeBadge>
-                ) : isEarlier ? (
-                  <RangeBadge tone="blue">Earlier</RangeBadge>
-                ) : inRange ? (
-                  <RangeBadge tone="soft">Included</RangeBadge>
-                ) : (
-                  <span className="text-xs text-muted-foreground">Pick</span>
-                )}
-              </span>
-            </button>
-          );
-        })}
+      <div className={`${compact ? "max-h-[224px]" : "max-h-[300px]"} overflow-y-auto`}>
+        {items.length === 0 ? (
+          <p className="p-4 text-sm text-muted-foreground">{empty}</p>
+        ) : (
+          <div className="divide-y">
+            {items.map((item) => (
+              <ComparisonCompactItem key={item.key} item={item} />
+            ))}
+          </div>
+        )}
       </div>
-    </div>
+    </section>
   );
 }
 
-function RangeBadge({
-  tone,
-  children,
+function ComparisonCompactItem({ item }: { item: ComparisonPanelItem }) {
+  return (
+    <Link
+      to="/snapshots/$id"
+      params={{ id: item.snapshotId }}
+      className="block px-4 py-3 transition-[background-color] hover:bg-slate-50"
+    >
+      <p className="line-clamp-3 text-sm font-medium leading-5 text-slate-950">
+        {item.title}
+      </p>
+      {item.meta ? (
+        <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">
+          {item.meta}
+        </p>
+      ) : null}
+    </Link>
+  );
+}
+
+function ComparisonTimelineCompact({
+  items,
 }: {
-  tone: "blue" | "dark" | "soft";
-  children: React.ReactNode;
+  items: ComparisonTimelineItem[];
 }) {
-  const classes =
-    tone === "blue"
-      ? "bg-blue-600 text-white"
-      : tone === "dark"
-        ? "bg-slate-950 text-white"
-        : "bg-white text-blue-700 shadow-[0_0_0_1px_rgba(37,99,235,0.16)]";
   return (
-    <span className={`rounded-md px-2 py-1 text-xs font-semibold ${classes}`}>
-      {children}
-    </span>
-  );
-}
-
-function RangeMetric({ label, value }: { label: string; value: number }) {
-  return (
-    <div>
-      <div className="text-2xl font-semibold tabular-nums">{value}</div>
-      <div className="mt-1 text-xs text-slate-300">{label}</div>
-    </div>
+    <section className="rounded-lg bg-white p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.1)]">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold">Timeline</h3>
+        <span className="rounded-md bg-secondary px-2 py-1 text-xs font-medium text-muted-foreground tabular-nums">
+          {items.length}
+        </span>
+      </div>
+      {items.length === 0 ? (
+        <p className="mt-3 text-sm text-muted-foreground">
+          No timeline entries recorded.
+        </p>
+      ) : (
+        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+          {items.map((item) => (
+            <Link
+              key={`${item.snapshotId}-${item.phase}-${item.title}-${item.occurredAt}`}
+              to="/snapshots/$id"
+              params={{ id: item.snapshotId }}
+              className="min-w-[220px] rounded-lg bg-slate-50 px-3 py-3 shadow-[0_0_0_1px_rgba(15,23,42,0.08)] transition-[background-color] hover:bg-blue-50"
+            >
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-blue-700">
+                {statusLabel(item.phase)}
+              </span>
+              <span className="mt-1 block line-clamp-2 text-sm font-semibold leading-5 text-slate-950">
+                {item.title}
+              </span>
+              <span className="mt-1 block text-xs text-muted-foreground">
+                {item.snapshotTitle} · {compactDate(item.occurredAt)}
+              </span>
+            </Link>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -880,157 +1109,6 @@ function ComparisonInlineError({ error }: { error: unknown }) {
         {message}
       </p>
     </div>
-  );
-}
-
-function ComparisonChangeSection({
-  title,
-  items,
-}: {
-  title: string;
-  items: ComparisonChange[];
-}) {
-  return (
-    <ComparisonSection title={title} count={items.length} empty={`No ${title.toLowerCase()} product changes in this range.`}>
-      {items.map((item) => (
-        <ComparisonLinkedItem
-          key={`${title}-${item.snapshotId}-${item.text}`}
-          snapshotId={item.snapshotId}
-          snapshotTitle={item.snapshotTitle}
-          meta={humanDate(item.createdAt)}
-        >
-          {item.text}
-        </ComparisonLinkedItem>
-      ))}
-    </ComparisonSection>
-  );
-}
-
-function ComparisonDecisionSection({ items }: { items: ComparisonDecision[] }) {
-  return (
-    <ComparisonSection title="Decisions" count={items.length} empty="No decisions were recorded in this range.">
-      {items.map((item) => (
-        <ComparisonLinkedItem
-          key={`${item.snapshotId}-${item.title}`}
-          snapshotId={item.snapshotId}
-          snapshotTitle={item.snapshotTitle}
-          meta={item.rationale}
-        >
-          {item.title}
-        </ComparisonLinkedItem>
-      ))}
-    </ComparisonSection>
-  );
-}
-
-function ComparisonRiskSection({ items }: { items: ComparisonRisk[] }) {
-  return (
-    <ComparisonSection title="Risks" count={items.length} empty="No risks were recorded in this range.">
-      {items.map((item) => (
-        <ComparisonLinkedItem
-          key={`${item.snapshotId}-${item.title}`}
-          snapshotId={item.snapshotId}
-          snapshotTitle={item.snapshotTitle}
-          meta={`${statusLabel(item.severity)}${item.mitigation ? ` · ${item.mitigation}` : ""}`}
-        >
-          {item.title}
-        </ComparisonLinkedItem>
-      ))}
-    </ComparisonSection>
-  );
-}
-
-function ComparisonValidationSection({ items }: { items: ComparisonCheck[] }) {
-  return (
-    <ComparisonSection title="Validation" count={items.length} empty="No validation was recorded in this range.">
-      {items.map((item) => (
-        <ComparisonLinkedItem
-          key={`${item.snapshotId}-${item.command}`}
-          snapshotId={item.snapshotId}
-          snapshotTitle={item.snapshotTitle}
-          meta={statusLabel(item.status)}
-        >
-          {item.command}
-        </ComparisonLinkedItem>
-      ))}
-    </ComparisonSection>
-  );
-}
-
-function ComparisonTimelineSection({
-  items,
-}: {
-  items: ComparisonTimelineItem[];
-}) {
-  return (
-    <ComparisonSection title="Timeline" count={items.length} empty="No timeline entries were recorded in this range.">
-      {items.map((item) => (
-        <ComparisonLinkedItem
-          key={`${item.snapshotId}-${item.phase}-${item.title}-${item.occurredAt}`}
-          snapshotId={item.snapshotId}
-          snapshotTitle={item.snapshotTitle}
-          meta={`${statusLabel(item.phase)} · ${humanDate(item.occurredAt)}`}
-        >
-          {item.title}
-        </ComparisonLinkedItem>
-      ))}
-    </ComparisonSection>
-  );
-}
-
-function ComparisonSection({
-  title,
-  count,
-  empty,
-  children,
-}: {
-  title: string;
-  count: number;
-  empty: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="overflow-hidden rounded-lg bg-white shadow-[0_0_0_1px_rgba(15,23,42,0.1)]">
-      <div className="flex min-h-14 items-center justify-between gap-3 border-b px-5">
-        <h3 className="text-base font-semibold">{title}</h3>
-        <span className="rounded-md bg-secondary px-2 py-1 text-xs font-medium text-muted-foreground">
-          {count}
-        </span>
-      </div>
-      <div className="divide-y">
-        {count === 0 ? (
-          <p className="p-5 text-sm text-muted-foreground">{empty}</p>
-        ) : (
-          children
-        )}
-      </div>
-    </section>
-  );
-}
-
-function ComparisonLinkedItem({
-  snapshotId,
-  snapshotTitle,
-  meta,
-  children,
-}: {
-  snapshotId: string;
-  snapshotTitle: string;
-  meta?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <Link
-      to="/snapshots/$id"
-      params={{ id: snapshotId }}
-      className="block px-5 py-4 transition-colors hover:bg-slate-50"
-    >
-      <p className="text-sm font-medium text-slate-950 text-pretty">{children}</p>
-      <p className="mt-1 text-xs leading-5 text-muted-foreground">
-        {snapshotTitle} · {snapshotId}
-        {meta ? ` · ${meta}` : ""}
-      </p>
-    </Link>
   );
 }
 
