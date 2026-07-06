@@ -83,6 +83,8 @@ Useful commands:
 go run ./cmd/eve add --title "Add GitHub OAuth" --type feature --summary "Users can now sign in with GitHub." --validation "go test ./..."
 go run ./cmd/eve commit
 go run ./cmd/eve snapshot <snapshot-id>
+go run ./cmd/eve changelog --since <snapshot-id> --markdown
+go run ./cmd/eve compare <from-snapshot-id> <to-snapshot-id> --markdown
 go run ./cmd/eve checkout <snapshot-id>
 go run ./cmd/eve checkout --force <snapshot-id>
 go run ./cmd/eve validate .eve/snapshots/<snapshot-id>.json
@@ -206,6 +208,10 @@ snapshot is completed.
 
 ```text
 GET  /api/config
+GET  /api/compare?from={snapshotId}&to={snapshotId}
+GET  /api/search
+GET  /api/snapshots
+GET  /api/snapshots/{snapshotId}
 GET  /api/repos
 GET  /api/repos/{repoId}
 POST /api/repos/{repoId}/open-editor

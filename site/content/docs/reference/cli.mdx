@@ -100,6 +100,8 @@ eve changelog
 eve changelog --since <snapshot-id>
 eve changelog --since 2026-07-01
 eve changelog --from <snapshot-id> --to <snapshot-id>
+eve changelog --repo-id <repo-id>
+eve changelog --cwd /path/to/repo
 eve changelog --markdown
 ```
 
@@ -112,6 +114,8 @@ Compare two product states using snapshot history.
 ```sh
 eve compare <from-snapshot-id> <to-snapshot-id>
 eve compare <from-snapshot-id> <to-snapshot-id> --markdown
+eve compare --repo-id <repo-id> <from-snapshot-id> <to-snapshot-id>
+eve compare --cwd /path/to/repo <from-snapshot-id> <to-snapshot-id>
 ```
 
 Comparison output focuses on product changes, decisions, risks, validation, and timeline entries. It does not produce a Git diff.

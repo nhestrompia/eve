@@ -9,6 +9,10 @@ description: HTTP endpoints served by the trusted local eve runtime.
 
 ```text
 GET  /api/config
+GET  /api/compare?from={snapshotId}&to={snapshotId}
+GET  /api/search
+GET  /api/snapshots
+GET  /api/snapshots/{snapshotId}
 GET  /api/repos
 GET  /api/repos/{repoId}
 POST /api/repos/{repoId}/open-editor
@@ -23,6 +27,10 @@ POST /mcp
 ## Intended use
 
 The local API supports the bundled eve UI and local development tooling. For agent integration, prefer MCP resources and tools because they expose product-history operations directly.
+
+`/api/compare` returns the same product-state comparison used by the repository Compare tab. Both snapshot ids must belong to the same repository.
+
+`/api/search` and the global `/api/snapshots` endpoints support the local UI's cross-repository snapshot lookup. Repository-scoped endpoints remain available under `/api/repos/{repoId}`.
 
 ## Security
 

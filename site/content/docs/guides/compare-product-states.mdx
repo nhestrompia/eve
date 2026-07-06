@@ -1,0 +1,80 @@
+---
+title: Compare Product States
+description: Use snapshots to generate changelogs and compare repository states.
+---
+
+eve can answer two product-history questions that Git diffs do not try to answer:
+
+- What changed in the product since a previous snapshot?
+- What changed between two recorded product states?
+
+Use changelogs when you need release-note style output. Use comparison when you need to inspect the product delta between two snapshots.
+
+## Generate a changelog
+
+`eve changelog` groups snapshots into product-facing release notes.
+
+```sh
+eve changelog
+eve changelog --since <snapshot-id>
+eve changelog --since 2026-07-01
+eve changelog --from <from-snapshot-id> --to <to-snapshot-id>
+eve changelog --markdown
+```
+
+`--since <snapshot-id>` starts after the boundary snapshot. Date ranges include snapshots created on or after the provided UTC date.
+
+Use `--markdown` when drafting release notes for a GitHub release, changelog entry, or pull request.
+
+## Compare snapshots from the CLI
+
+`eve compare` compares two snapshots from the same repository.
+
+```sh
+eve compare <from-snapshot-id> <to-snapshot-id>
+eve compare <from-snapshot-id> <to-snapshot-id> --markdown
+```
+
+The comparison output groups product history into:
+
+- added, changed, and fixed behavior
+- decisions
+- risks
+- validation
+- timeline entries
+
+The comparison is product-level. It complements Git diffs; it does not replace them.
+
+## Compare in the local UI
+
+Start the local runtime:
+
+```sh
+eve dev
+```
+
+Open a repository page and choose the **Compare** tab.
+
+The Compare tab lets you:
+
+- choose Earlier and Later endpoints
+- search snapshots by title, type, date, or id
+- use quick ranges such as Latest pair, Last 3, Last 5, and All
+- review selected snapshots in chronological order
+- scan a compact comparison board for changes, evidence, validation, decisions, risks, and timeline entries
+
+eve keeps the final range in chronological order, so selecting endpoints in the wrong order does not produce a reversed comparison.
+
+## API support
+
+The local runtime exposes the same comparison model at:
+
+```text
+GET /api/compare?from=<snapshot-id>&to=<snapshot-id>
+```
+
+Both snapshots must belong to the same repository. The response is designed for the local UI and includes the selected range plus grouped product-history sections.
+
+## When to use it
+
+Use comparison when reviewing a release span, checking what changed since a stable snapshot, or helping an agent understand the product delta before making another change.

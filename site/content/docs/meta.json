@@ -10,6 +10,7 @@
     "guides/get-started",
     "guides/record-a-change",
     "guides/review-history",
+    "guides/compare-product-states",
     "guides/release-workflow",
     "---Agents---",
     "agents/agent-guide",
