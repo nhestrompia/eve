@@ -1,11 +1,21 @@
 import { Link } from '@tanstack/react-router';
-import { CheckCircle2, ListFilter } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { CheckCircle2, ExternalLink, ListFilter } from 'lucide-react';
+import { type Ref, useEffect, useMemo, useRef, useState } from 'react';
 import { compactDate, monthYear } from '../format';
 import type { EvolutionSummary } from '../types';
 import { Button } from './ui/button';
 
-export function EvolutionList({ evolutions, selectedId }: { evolutions: EvolutionSummary[]; selectedId?: string }) {
+export function EvolutionList({
+  evolutions,
+  selectedId,
+  linkTarget = 'snapshot',
+  showSnapshotLink = false
+}: {
+  evolutions: EvolutionSummary[];
+  selectedId?: string;
+  linkTarget?: 'snapshot' | 'code';
+  showSnapshotLink?: boolean;
+}) {
   const [ascending, setAscending] = useState(false);
   const selectedRef = useRef<HTMLAnchorElement | null>(null);
   const sorted = useMemo(() => {
@@ -35,34 +45,88 @@ export function EvolutionList({ evolutions, selectedId }: { evolutions: Evolutio
           </Button>
         </div>
         {selected ? (
-          <p className="mt-2 truncate text-xs text-muted-foreground">
-            Selected: <span className="font-medium text-foreground">{selected.title || selected.id}</span>
-          </p>
+          <div className="mt-2 space-y-2">
+            <p className="truncate text-xs text-muted-foreground">
+              Selected: <span className="font-medium text-foreground">{selected.title || selected.id}</span>
+            </p>
+            {showSnapshotLink ? (
+              <Link
+                to="/snapshots/$id"
+                params={{ id: selected.id }}
+                className="inline-flex h-8 items-center gap-1.5 rounded-md border bg-card px-2.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
+              >
+                <ExternalLink className="size-3.5" />
+                Open Snapshot
+              </Link>
+            ) : null}
+          </div>
         ) : null}
       </div>
       <div className="max-h-72 overflow-auto px-3 py-4 lg:h-[calc(100%-92px)] lg:max-h-none lg:px-4 lg:py-5">
         <p className="mb-4 px-3 text-xs font-medium text-muted-foreground">{groupLabel}</p>
         <div className="space-y-2">
           {sorted.map((evolution) => (
-            <Link
+            <SnapshotListLink
               key={evolution.id}
-              to="/snapshots/$id"
-              params={{ id: evolution.id }}
-              aria-current={selectedId === evolution.id ? 'page' : undefined}
-              ref={selectedId === evolution.id ? selectedRef : undefined}
-              className={`snapshot-list-link grid grid-cols-[24px_minmax(0,1fr)] items-center gap-3 rounded-lg px-3 py-4 ${
-                selectedId === evolution.id ? 'is-active bg-blue-50 shadow-sm ring-1 ring-blue-100' : 'hover:bg-slate-50'
-              }`}
-            >
-              <CheckCircle2 className="size-4 text-emerald-600" />
-              <span className="min-w-0">
-                <span className="block truncate font-semibold">{evolution.title || 'Untitled Snapshot'}</span>
-                <span className="block text-sm text-muted-foreground">{compactDate(evolution.updatedAt || evolution.createdAt)}</span>
-              </span>
-            </Link>
+              evolution={evolution}
+              selected={selectedId === evolution.id}
+              linkTarget={linkTarget}
+              selectedRef={selectedId === evolution.id ? selectedRef : undefined}
+            />
           ))}
         </div>
       </div>
     </aside>
+  );
+}
+
+function SnapshotListLink({
+  evolution,
+  selected,
+  linkTarget,
+  selectedRef
+}: {
+  evolution: EvolutionSummary;
+  selected: boolean;
+  linkTarget: 'snapshot' | 'code';
+  selectedRef?: Ref<HTMLAnchorElement>;
+}) {
+  const className = `snapshot-list-link grid grid-cols-[24px_minmax(0,1fr)] items-center gap-3 rounded-lg px-3 py-4 ${
+    selected ? 'is-active bg-blue-50 shadow-sm ring-1 ring-blue-100' : 'hover:bg-slate-50'
+  }`;
+  const content = (
+    <>
+      <CheckCircle2 className="size-4 text-emerald-600" />
+      <span className="min-w-0">
+        <span className="block truncate font-semibold">{evolution.title || 'Untitled Snapshot'}</span>
+        <span className="block text-sm text-muted-foreground">{compactDate(evolution.updatedAt || evolution.createdAt)}</span>
+      </span>
+    </>
+  );
+
+  if (linkTarget === 'code') {
+    return (
+      <Link
+        to="/snapshots/$id/code"
+        params={{ id: evolution.id }}
+        aria-current={selected ? 'page' : undefined}
+        ref={selectedRef}
+        className={className}
+      >
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <Link
+      to="/snapshots/$id"
+      params={{ id: evolution.id }}
+      aria-current={selected ? 'page' : undefined}
+      ref={selectedRef}
+      className={className}
+    >
+      {content}
+    </Link>
   );
 }
