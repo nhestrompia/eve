@@ -1,4 +1,5 @@
-import { CheckCircle2, Clock3, Code2, FileText, GitFork, Scale } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
+import { CheckCircle2, Clock3, Code2, FileCode2, FileText, GitFork, Scale, type LucideIcon } from 'lucide-react';
 import type * as React from 'react';
 import type { DetailResponse } from '../types';
 import { compactDate, humanDate } from '../format';
@@ -7,12 +8,35 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { SnapshotRelationshipList } from './snapshot-relationship-list';
 
 export function DetailActionTiles({ detail }: { detail: DetailResponse }) {
-  const tiles = [
+  type DialogTile = {
+    title: string;
+    subtitle: string;
+    icon: LucideIcon;
+    description: string;
+    kind: 'dialog';
+    content: React.ReactNode;
+  };
+  type LinkTile = {
+    title: string;
+    subtitle: string;
+    icon: LucideIcon;
+    description: string;
+    kind: 'code-link';
+  };
+  const tiles: Array<DialogTile | LinkTile> = [
+    {
+      title: 'Code',
+      subtitle: 'Curated files · inline viewer',
+      icon: FileCode2,
+      description: 'Relevant code behind this Snapshot.',
+      kind: 'code-link'
+    },
     {
       title: 'Implementation',
       subtitle: `${detail.commits.length} commits · ${detail.snapshot.artifacts.length} artifacts`,
       icon: Code2,
       description: 'Git state, contributed commits, and Snapshot artifacts.',
+      kind: 'dialog',
       content: <ImplementationDialogContent detail={detail} />
     },
     {
@@ -20,6 +44,7 @@ export function DetailActionTiles({ detail }: { detail: DetailResponse }) {
       subtitle: `${detail.evolution.decisions.length} decisions · ${detail.evolution.risks.length} risks`,
       icon: Scale,
       description: 'Recorded product decisions and known risks for this Snapshot.',
+      kind: 'dialog',
       content: <DecisionsRisksDialogContent detail={detail} />
     },
     {
@@ -27,6 +52,7 @@ export function DetailActionTiles({ detail }: { detail: DetailResponse }) {
       subtitle: relationshipSummary(detail.evolution.relationships),
       icon: GitFork,
       description: 'How this Snapshot connects to other product states.',
+      kind: 'dialog',
       content: <RelationshipsDialogContent detail={detail} />
     },
     {
@@ -34,6 +60,7 @@ export function DetailActionTiles({ detail }: { detail: DetailResponse }) {
       subtitle: `${activityEntries(detail.evolution).length} events`,
       icon: Clock3,
       description: 'Recorded lifecycle events for this product state.',
+      kind: 'dialog',
       content: <ActivityDialogContent detail={detail} />
     }
   ];
@@ -43,18 +70,27 @@ export function DetailActionTiles({ detail }: { detail: DetailResponse }) {
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {tiles.map((tile, index) => {
           const Icon = tile.icon;
+          const tileClass = `group grid min-h-[74px] grid-cols-[28px_minmax(0,1fr)] items-center gap-3 rounded-lg bg-white px-4 py-3 text-left transition-[background-color,box-shadow,scale] duration-150 hover:bg-slate-50 hover:shadow-[0_0_0_1px_rgba(15,23,42,0.16),0_10px_22px_-18px_rgba(15,23,42,0.45)] active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${index === 0 ? 'shadow-[0_0_0_1px_rgba(15,23,42,0.28)]' : 'shadow-[0_0_0_1px_rgba(15,23,42,0.1)]'}`;
+          const tileBody = (
+            <>
+              <Icon className="size-5 text-slate-600" />
+              <span className="min-w-0">
+                <span className="block truncate text-xs font-semibold leading-4">{tile.title}</span>
+                <span className="mt-0.5 block truncate text-[11px] leading-4 text-muted-foreground">{tile.subtitle}</span>
+              </span>
+            </>
+          );
+          if (tile.kind === 'code-link') {
+            return (
+              <Link key={tile.title} to="/snapshots/$id/code" params={{ id: detail.summary.id }} className={tileClass}>
+                {tileBody}
+              </Link>
+            );
+          }
           return (
             <Dialog key={tile.title}>
               <DialogTrigger asChild>
-                <button
-                  className={`group grid min-h-[74px] grid-cols-[28px_minmax(0,1fr)] items-center gap-3 rounded-lg bg-white px-4 py-3 text-left transition-[background-color,box-shadow,scale] duration-150 hover:bg-slate-50 hover:shadow-[0_0_0_1px_rgba(15,23,42,0.16),0_10px_22px_-18px_rgba(15,23,42,0.45)] active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${index === 0 ? 'shadow-[0_0_0_1px_rgba(15,23,42,0.28)]' : 'shadow-[0_0_0_1px_rgba(15,23,42,0.1)]'}`}
-                >
-                  <Icon className="size-5 text-slate-600" />
-                  <span className="min-w-0">
-                    <span className="block truncate text-xs font-semibold leading-4">{tile.title}</span>
-                    <span className="mt-0.5 block truncate text-[11px] leading-4 text-muted-foreground">{tile.subtitle}</span>
-                  </span>
-                </button>
+                <button className={tileClass}>{tileBody}</button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>

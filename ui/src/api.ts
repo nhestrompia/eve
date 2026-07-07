@@ -13,6 +13,9 @@ import type {
   SessionListResponse,
   SessionTranscriptResponse,
   Snapshot,
+  SnapshotCodeFileMode,
+  SnapshotCodeFileResponse,
+  SnapshotCodeFilesResponse,
   SnapshotResponse,
   SnapshotSummary,
   Verification
@@ -318,6 +321,16 @@ export const api = {
   checkout: async (id: string, repo?: string) => {
     const repoId = repo || (await snapshotDetail(id)).repository || (await defaultRepoId());
     return request<CheckoutResponse>(`/api/repos/${encodeURIComponent(repoId)}/snapshots/${encodeURIComponent(id)}/checkout`, { method: 'POST' });
+  },
+  snapshotCodeFiles: async (id: string, repo?: string) => {
+    const repoId = repo || (await snapshotDetail(id)).repository || (await defaultRepoId());
+    return request<SnapshotCodeFilesResponse>(`/api/repos/${encodeURIComponent(repoId)}/snapshots/${encodeURIComponent(id)}/code/files`);
+  },
+  snapshotCodeFile: async (id: string, path: string, mode: SnapshotCodeFileMode, repo?: string) => {
+    const repoId = repo || (await snapshotDetail(id)).repository || (await defaultRepoId());
+    return request<SnapshotCodeFileResponse>(
+      `/api/repos/${encodeURIComponent(repoId)}/snapshots/${encodeURIComponent(id)}/code/file?path=${encodeURIComponent(path)}&mode=${encodeURIComponent(mode)}`
+    );
   },
   openRepositoryInEditor: (repo: string) =>
     request<OpenEditorResponse>(`/api/repos/${encodeURIComponent(repo)}/open-editor`, { method: 'POST' })

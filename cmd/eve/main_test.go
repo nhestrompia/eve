@@ -505,6 +505,136 @@ func TestRuntimeAPIDerivesDisplayCommitsFromSnapshotBoundary(t *testing.T) {
 	}
 }
 
+func TestSnapshotCodeAPIListsAndLoadsFiles(t *testing.T) {
+	repo := initTempGitRepo(t)
+	t.Chdir(repo)
+	mustRun(t, []string{"init"})
+	gitRun(t, repo, "add", ".eve/config.json")
+	gitRun(t, repo, "commit", "-m", "initialize eve")
+	base := gitOutputForTest(t, repo, "rev-parse", "HEAD")
+
+	if err := os.WriteFile(filepath.Join(repo, "auth.go"), []byte("package main\n\nfunc login() string {\n\treturn \"github\"\n}\n"), 0o644); err != nil {
+		t.Fatalf("write auth.go: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(repo, "login.tsx"), []byte("export function Login() {\n  return <button>Sign in</button>;\n}\n"), 0o644); err != nil {
+		t.Fatalf("write login.tsx: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(repo, "unmentioned.css"), []byte(".login { color: blue; }\n"), 0o644); err != nil {
+		t.Fatalf("write css: %v", err)
+	}
+	gitRun(t, repo, "add", "auth.go", "login.tsx", "unmentioned.css")
+	gitRun(t, repo, "commit", "-m", "add github login")
+	head := gitOutputForTest(t, repo, "rev-parse", "HEAD")
+
+	snapshot := sampleSnapshot("snap_code", "GitHub authentication added", head)
+	snapshot.Summary = "GitHub authentication added in auth.go."
+	snapshot.UserVisibleChange = "GitHub authentication added"
+	snapshot.Validation = []eve.Validation{{Command: "npm test login.tsx", Status: "passed"}}
+	snapshot.Implementation.BaseCommit = base
+	snapshot.Implementation.Commits = []string{head}
+	writeSnapshot(t, repo, snapshot)
+
+	handler := newRuntimeServer(repoFromRoot(repo), "localhost:0").routes()
+	var files snapshotCodeFilesResponse
+	requestJSON(t, handler, http.MethodGet, "/api/repos/"+filepath.Base(repo)+"/snapshots/snap_code/code/files", nil, &files)
+	if files.Repository != filepath.Base(repo) || files.SnapshotID != "snap_code" || files.Base != base || files.Head != head {
+		t.Fatalf("files metadata = %#v, want repo snapshot range", files)
+	}
+	if len(files.Files) != 3 {
+		t.Fatalf("files = %#v, want three changed files", files.Files)
+	}
+	if files.Files[0].Path != "auth.go" || !files.Files[0].Curated || files.Files[0].Language != "go" {
+		t.Fatalf("first file = %#v, want curated auth.go", files.Files[0])
+	}
+	if files.Files[1].Path != "login.tsx" || !files.Files[1].Curated {
+		t.Fatalf("second file = %#v, want curated login.tsx", files.Files[1])
+	}
+	if files.Files[2].Path != "unmentioned.css" || files.Files[2].Curated {
+		t.Fatalf("third file = %#v, want uncurated css", files.Files[2])
+	}
+
+	var diff snapshotCodeFileResponse
+	requestJSON(t, handler, http.MethodGet, "/api/repos/"+filepath.Base(repo)+"/snapshots/snap_code/code/file?path=auth.go&mode=diff", nil, &diff)
+	if diff.Mode != "diff" || diff.Language != "go" || !strings.Contains(diff.Content, "@@") || !strings.Contains(diff.Content, "+func login() string") {
+		t.Fatalf("diff response = %#v, want highlighted hunk source", diff)
+	}
+	if strings.Contains(diff.Content, "diff --git") {
+		t.Fatalf("diff content includes file header: %q", diff.Content)
+	}
+
+	var full snapshotCodeFileResponse
+	requestJSON(t, handler, http.MethodGet, "/api/repos/"+filepath.Base(repo)+"/snapshots/snap_code/code/file?path=auth.go&mode=full", nil, &full)
+	if full.Mode != "full" || !strings.Contains(full.Content, "package main") || !strings.Contains(full.Content, "return \"github\"") {
+		t.Fatalf("full response = %#v, want file at snapshot git state", full)
+	}
+
+	assertRequestStatus(t, handler, http.MethodGet, "/api/repos/"+filepath.Base(repo)+"/snapshots/snap_code/code/file?path=auth.go&mode=review", http.StatusBadRequest, "mode must be diff or full")
+	assertRequestStatus(t, handler, http.MethodGet, "/api/repos/"+filepath.Base(repo)+"/snapshots/snap_code/code/file?path=../auth.go&mode=diff", http.StatusBadRequest, "invalid path")
+	assertRequestStatus(t, handler, http.MethodGet, "/api/repos/"+filepath.Base(repo)+"/snapshots/snap_code/code/file?path=missing.go&mode=diff", http.StatusNotFound, "not changed")
+}
+
+func TestSnapshotCodeAPIHandlesLargeBinaryAndDeletedFiles(t *testing.T) {
+	repo := initTempGitRepo(t)
+	t.Chdir(repo)
+	mustRun(t, []string{"init"})
+	gitRun(t, repo, "add", ".eve/config.json")
+	gitRun(t, repo, "commit", "-m", "initialize eve")
+	base := gitOutputForTest(t, repo, "rev-parse", "HEAD")
+
+	large := strings.Repeat("a", snapshotCodePreviewLimit+1)
+	if err := os.WriteFile(filepath.Join(repo, "large.txt"), []byte(large), 0o644); err != nil {
+		t.Fatalf("write large file: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(repo, "binary.dat"), []byte{0x00, 0x01, 0x02}, 0o644); err != nil {
+		t.Fatalf("write binary file: %v", err)
+	}
+	if err := os.Remove(filepath.Join(repo, "product.txt")); err != nil {
+		t.Fatalf("remove product: %v", err)
+	}
+	gitRun(t, repo, "add", "large.txt", "binary.dat")
+	gitRun(t, repo, "rm", "product.txt")
+	gitRun(t, repo, "commit", "-m", "large binary deleted")
+	head := gitOutputForTest(t, repo, "rev-parse", "HEAD")
+
+	snapshot := sampleSnapshot("snap_limits", "Preview boundaries", head)
+	snapshot.Implementation.BaseCommit = base
+	snapshot.Implementation.Commits = []string{head}
+	writeSnapshot(t, repo, snapshot)
+
+	handler := newRuntimeServer(repoFromRoot(repo), "localhost:0").routes()
+	var files snapshotCodeFilesResponse
+	requestJSON(t, handler, http.MethodGet, "/api/repos/"+filepath.Base(repo)+"/snapshots/snap_limits/code/files", nil, &files)
+	byPath := map[string]snapshotCodeFile{}
+	for _, file := range files.Files {
+		byPath[file.Path] = file
+	}
+	for path, want := range map[string]string{
+		"large.txt":   "too large",
+		"binary.dat":  "Binary file",
+		"product.txt": "deleted",
+	} {
+		file, ok := byPath[path]
+		if !ok {
+			t.Fatalf("files = %#v, missing %s", files.Files, path)
+		}
+		if file.Previewable || !strings.Contains(file.Reason, want) {
+			t.Fatalf("%s = %#v, want non-previewable reason containing %q", path, file, want)
+		}
+	}
+
+	var largeFile snapshotCodeFileResponse
+	requestJSON(t, handler, http.MethodGet, "/api/repos/"+filepath.Base(repo)+"/snapshots/snap_limits/code/file?path=large.txt&mode=full", nil, &largeFile)
+	if largeFile.Previewable || largeFile.Content != "" || !strings.Contains(largeFile.Reason, "too large") {
+		t.Fatalf("large file response = %#v, want non-previewable large state", largeFile)
+	}
+
+	var deletedFile snapshotCodeFileResponse
+	requestJSON(t, handler, http.MethodGet, "/api/repos/"+filepath.Base(repo)+"/snapshots/snap_limits/code/file?path=product.txt&mode=full", nil, &deletedFile)
+	if deletedFile.Previewable || deletedFile.Content != "" || !strings.Contains(deletedFile.Reason, "deleted") {
+		t.Fatalf("deleted file response = %#v, want non-previewable deleted state", deletedFile)
+	}
+}
+
 func TestAddAndCommitSnapshotCLI(t *testing.T) {
 	repo := initTempGitRepo(t)
 	t.Chdir(repo)

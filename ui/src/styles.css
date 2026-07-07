@@ -242,3 +242,25 @@ input {
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
+.code-viewer pre {
+  min-height: 540px;
+  margin: 0;
+  padding: 20px;
+  overflow: visible;
+  background: transparent;
+  font-family: "SFMono-Regular", "Cascadia Code", "Liberation Mono", ui-monospace, monospace;
+  font-size: 12px;
+  line-height: 1.65;
+  tab-size: 2;
+}
+
+.code-viewer code {
+  display: block;
+  min-width: max-content;
+}
+
+.code-fallback {
+  color: var(--foreground);
+  white-space: pre;
+}

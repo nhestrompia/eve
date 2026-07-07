@@ -17,6 +17,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/nhestrompia/eve"
 )
@@ -176,6 +177,39 @@ type uiGitCommit struct {
 	AuthorName  string `json:"authorName"`
 	AuthoredAt  string `json:"authoredAt"`
 	CommittedAt string `json:"committedAt"`
+}
+
+const snapshotCodePreviewLimit = 200 * 1024
+
+type snapshotCodeFilesResponse struct {
+	Repository string             `json:"repository"`
+	SnapshotID string             `json:"snapshotId"`
+	Base       string             `json:"base,omitempty"`
+	Head       string             `json:"head"`
+	Files      []snapshotCodeFile `json:"files"`
+}
+
+type snapshotCodeFile struct {
+	Path        string `json:"path"`
+	OldPath     string `json:"oldPath,omitempty"`
+	Status      string `json:"status"`
+	Language    string `json:"language"`
+	Curated     bool   `json:"curated"`
+	Evidence    string `json:"evidence,omitempty"`
+	SizeBytes   int64  `json:"sizeBytes"`
+	Previewable bool   `json:"previewable"`
+	Reason      string `json:"reason,omitempty"`
+}
+
+type snapshotCodeFileResponse struct {
+	Path            string `json:"path"`
+	Language        string `json:"language"`
+	Mode            string `json:"mode"`
+	Content         string `json:"content"`
+	HighlightedHTML string `json:"highlightedHtml,omitempty"`
+	SizeBytes       int64  `json:"sizeBytes"`
+	Previewable     bool   `json:"previewable"`
+	Reason          string `json:"reason,omitempty"`
 }
 
 type legacyEvolution struct {
@@ -397,6 +431,10 @@ func (server runtimeServer) handleRepoRoutes(w http.ResponseWriter, r *http.Requ
 		server.handleSnapshots(w, r, repo)
 	case len(parts) == 3 && parts[1] == "snapshots" && r.Method == http.MethodGet:
 		server.handleSnapshotDetail(w, r, repo, parts[2])
+	case len(parts) == 5 && parts[1] == "snapshots" && parts[3] == "code" && parts[4] == "files" && r.Method == http.MethodGet:
+		server.handleSnapshotCodeFiles(w, r, repo, parts[2])
+	case len(parts) == 5 && parts[1] == "snapshots" && parts[3] == "code" && parts[4] == "file" && r.Method == http.MethodGet:
+		server.handleSnapshotCodeFile(w, r, repo, parts[2])
 	case len(parts) == 4 && parts[1] == "snapshots" && parts[3] == "checkout" && r.Method == http.MethodPost:
 		server.handleCheckout(w, r, repo, parts[2])
 	case len(parts) == 4 && parts[1] == "snapshots" && parts[3] == "sessions" && r.Method == http.MethodGet:
@@ -545,6 +583,118 @@ func (server runtimeServer) handleCheckout(w http.ResponseWriter, r *http.Reques
 	}
 	force := r.URL.Query().Get("force") == "true"
 	writeJSON(w, http.StatusOK, checkoutSnapshot(repo, snapshot, force))
+}
+
+func (server runtimeServer) handleSnapshotCodeFiles(w http.ResponseWriter, r *http.Request, repo repository, id string) {
+	snapshot, err := repo.loadSnapshot(id)
+	if err != nil {
+		writeAPIError(w, http.StatusNotFound, err)
+		return
+	}
+	base, head := snapshotCodeRange(repo, snapshot)
+	files, err := snapshotChangedCodeFiles(repo, snapshot, base, head)
+	if err != nil {
+		writeAPIError(w, http.StatusBadRequest, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, snapshotCodeFilesResponse{
+		Repository: repo.ID,
+		SnapshotID: snapshot.ID,
+		Base:       base,
+		Head:       head,
+		Files:      files,
+	})
+}
+
+func (server runtimeServer) handleSnapshotCodeFile(w http.ResponseWriter, r *http.Request, repo repository, id string) {
+	snapshot, err := repo.loadSnapshot(id)
+	if err != nil {
+		writeAPIError(w, http.StatusNotFound, err)
+		return
+	}
+	filePath, err := cleanSnapshotCodePath(r.URL.Query().Get("path"))
+	if err != nil {
+		writeAPIError(w, http.StatusBadRequest, err)
+		return
+	}
+	mode := strings.TrimSpace(r.URL.Query().Get("mode"))
+	if mode == "" {
+		mode = "diff"
+	}
+	if mode != "diff" && mode != "full" {
+		writeAPIError(w, http.StatusBadRequest, fmt.Errorf("mode must be diff or full"))
+		return
+	}
+
+	base, head := snapshotCodeRange(repo, snapshot)
+	files, err := snapshotChangedCodeFiles(repo, snapshot, base, head)
+	if err != nil {
+		writeAPIError(w, http.StatusBadRequest, err)
+		return
+	}
+	var selected snapshotCodeFile
+	found := false
+	for _, file := range files {
+		if file.Path == filePath {
+			selected = file
+			found = true
+			break
+		}
+	}
+	if !found {
+		writeAPIError(w, http.StatusNotFound, fmt.Errorf("file %s is not changed in snapshot %s", filePath, snapshot.ID))
+		return
+	}
+
+	response := snapshotCodeFileResponse{
+		Path:        selected.Path,
+		Language:    languageFromPath(selected.Path),
+		Mode:        mode,
+		SizeBytes:   selected.SizeBytes,
+		Previewable: true,
+	}
+	if selected.Reason != "" {
+		response.Previewable = false
+		response.Reason = selected.Reason
+		writeJSON(w, http.StatusOK, response)
+		return
+	}
+
+	switch mode {
+	case "diff":
+		content, err := snapshotFileDiff(repo, base, head, selected.Path)
+		if err != nil {
+			writeAPIError(w, http.StatusBadRequest, err)
+			return
+		}
+		if int64(len(content)) > snapshotCodePreviewLimit {
+			response.Previewable = false
+			response.Reason = "File diff is too large to preview."
+			writeJSON(w, http.StatusOK, response)
+			return
+		}
+		response.Content = content
+	case "full":
+		if selected.Status == "D" {
+			response.Previewable = false
+			response.Reason = "File was deleted in this Snapshot."
+			writeJSON(w, http.StatusOK, response)
+			return
+		}
+		if selected.SizeBytes > snapshotCodePreviewLimit {
+			response.Previewable = false
+			response.Reason = "File too large to preview. Open in editor or GitHub."
+			writeJSON(w, http.StatusOK, response)
+			return
+		}
+		content, err := snapshotFileAtGitState(repo, head, selected.Path)
+		if err != nil {
+			writeAPIError(w, http.StatusNotFound, err)
+			return
+		}
+		response.Content = content
+	}
+	writeJSON(w, http.StatusOK, response)
 }
 
 func (server runtimeServer) loadSnapshotWithRaw(repo repository, id string) (*eve.Snapshot, json.RawMessage, error) {
@@ -867,6 +1017,303 @@ func (server runtimeServer) gitCommits(repo repository, commits []string) []uiGi
 		})
 	}
 	return out
+}
+
+func snapshotCodeRange(repo repository, snapshot *eve.Snapshot) (string, string) {
+	if snapshot == nil {
+		return "", ""
+	}
+	head := strings.TrimSpace(snapshot.Implementation.GitState)
+	base := strings.TrimSpace(snapshot.Implementation.BaseCommit)
+	if base == "" {
+		base = latestCommittedEVEChangeBefore(repo, head)
+	}
+	if base == "" && head != "" {
+		base = firstParentCommit(repo, head)
+	}
+	if base == "" {
+		base = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+	}
+	return base, head
+}
+
+func firstParentCommit(repo repository, ref string) string {
+	commit, err := gitOutput(repo.Root, "rev-parse", ref+"^")
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(commit)
+}
+
+func snapshotChangedCodeFiles(repo repository, snapshot *eve.Snapshot, base string, head string) ([]snapshotCodeFile, error) {
+	if strings.TrimSpace(head) == "" {
+		return nil, fmt.Errorf("snapshot git state is not recorded")
+	}
+	output, err := gitOutput(repo.Root, "diff", "--name-status", "--find-renames", base, head, "--")
+	if err != nil {
+		return nil, fmt.Errorf("git diff name-status: %w", err)
+	}
+	haystack, evidenceLabel := snapshotCodeEvidence(snapshot)
+	files := make([]snapshotCodeFile, 0)
+	for _, line := range strings.Split(output, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		file, ok := parseSnapshotCodeNameStatus(line)
+		if !ok {
+			continue
+		}
+		size := snapshotCodeFileSize(repo, head, file.Path)
+		binary := snapshotCodeFileIsBinary(repo, base, head, file.Path)
+		file.Language = languageFromPath(file.Path)
+		file.SizeBytes = size
+		file.Previewable = true
+		if file.Status == "D" {
+			file.Previewable = false
+			file.Reason = "File was deleted in this Snapshot."
+		} else if binary {
+			file.Previewable = false
+			file.Reason = "Binary file preview is not available."
+		} else if size > snapshotCodePreviewLimit {
+			file.Previewable = false
+			file.Reason = "File too large to preview. Open in editor or GitHub."
+		}
+		if snapshotCodePathReferenced(haystack, file.Path) || (file.OldPath != "" && snapshotCodePathReferenced(haystack, file.OldPath)) {
+			file.Curated = true
+			file.Evidence = "Evidence for: " + evidenceLabel
+		}
+		files = append(files, file)
+	}
+	sort.SliceStable(files, func(i, j int) bool {
+		if files[i].Curated != files[j].Curated {
+			return files[i].Curated
+		}
+		return files[i].Path < files[j].Path
+	})
+	return files, nil
+}
+
+func parseSnapshotCodeNameStatus(line string) (snapshotCodeFile, bool) {
+	fields := strings.Split(line, "\t")
+	if len(fields) < 2 {
+		return snapshotCodeFile{}, false
+	}
+	status := fields[0]
+	code := status[:1]
+	file := snapshotCodeFile{Status: code}
+	if code == "R" || code == "C" {
+		if len(fields) < 3 {
+			return snapshotCodeFile{}, false
+		}
+		oldPath, err := cleanSnapshotCodePath(fields[1])
+		if err != nil {
+			return snapshotCodeFile{}, false
+		}
+		newPath, err := cleanSnapshotCodePath(fields[2])
+		if err != nil {
+			return snapshotCodeFile{}, false
+		}
+		file.OldPath = oldPath
+		file.Path = newPath
+		return file, true
+	}
+	cleaned, err := cleanSnapshotCodePath(fields[1])
+	if err != nil {
+		return snapshotCodeFile{}, false
+	}
+	file.Path = cleaned
+	return file, true
+}
+
+func cleanSnapshotCodePath(value string) (string, error) {
+	trimmed := strings.TrimSpace(filepath.ToSlash(value))
+	if trimmed == "" {
+		return "", fmt.Errorf("path is required")
+	}
+	if strings.HasPrefix(trimmed, "/") || strings.Contains(trimmed, "\x00") {
+		return "", fmt.Errorf("invalid path")
+	}
+	for _, segment := range strings.Split(trimmed, "/") {
+		if segment == ".." {
+			return "", fmt.Errorf("invalid path")
+		}
+	}
+	cleaned := strings.TrimPrefix(path.Clean("/"+trimmed), "/")
+	if cleaned == "." || cleaned == ".." || strings.HasPrefix(cleaned, "../") {
+		return "", fmt.Errorf("invalid path")
+	}
+	return cleaned, nil
+}
+
+func snapshotCodeEvidence(snapshot *eve.Snapshot) (string, string) {
+	if snapshot == nil {
+		return "", "Snapshot evidence"
+	}
+	values := []string{snapshot.Title, snapshot.Summary, snapshot.UserVisibleChange}
+	for _, validation := range snapshot.Validation {
+		values = append(values, validation.Command, validation.Output)
+	}
+	for _, decision := range snapshot.Decisions {
+		values = append(values, decision.Title, decision.Rationale)
+	}
+	for _, risk := range snapshot.Risks {
+		values = append(values, risk.Title, risk.Mitigation)
+	}
+	for _, entry := range snapshot.Timeline {
+		values = append(values, entry.Title, entry.Summary)
+	}
+	for _, artifact := range snapshot.Artifacts {
+		values = append(values, artifact.Path, artifact.URI, artifact.URL, artifact.Description)
+	}
+	label := firstNonEmpty(snapshot.UserVisibleChange, snapshot.Summary, snapshot.Title)
+	if label == "" {
+		label = "Snapshot evidence"
+	}
+	return strings.Join(values, "\n"), label
+}
+
+func snapshotCodePathReferenced(haystack string, filePath string) bool {
+	if strings.TrimSpace(haystack) == "" {
+		return false
+	}
+	return strings.Contains(haystack, filePath) || strings.Contains(haystack, filepath.Base(filePath))
+}
+
+func snapshotCodeFileSize(repo repository, head string, filePath string) int64 {
+	output, err := gitOutput(repo.Root, "cat-file", "-s", head+":"+filePath)
+	if err != nil {
+		return 0
+	}
+	size, err := strconv.ParseInt(strings.TrimSpace(output), 10, 64)
+	if err != nil {
+		return 0
+	}
+	return size
+}
+
+func snapshotCodeFileIsBinary(repo repository, base string, head string, filePath string) bool {
+	output, err := gitOutput(repo.Root, "diff", "--numstat", base, head, "--", filePath)
+	if err == nil {
+		for _, line := range strings.Split(output, "\n") {
+			fields := strings.Fields(line)
+			if len(fields) >= 2 && fields[0] == "-" && fields[1] == "-" {
+				return true
+			}
+		}
+	}
+	data, err := gitBinaryOutput(repo.Root, "show", head+":"+filePath)
+	if err != nil {
+		return false
+	}
+	return bytesLookBinary(data)
+}
+
+func snapshotFileDiff(repo repository, base string, head string, filePath string) (string, error) {
+	output, err := gitOutput(repo.Root, "diff", "--unified=3", "--no-ext-diff", base, head, "--", filePath)
+	if err != nil {
+		return "", fmt.Errorf("git diff file: %w", err)
+	}
+	return diffHunksOnly(output), nil
+}
+
+func snapshotFileAtGitState(repo repository, head string, filePath string) (string, error) {
+	data, err := gitBinaryOutput(repo.Root, "show", head+":"+filePath)
+	if err != nil {
+		return "", fmt.Errorf("read file at snapshot git state: %w", err)
+	}
+	if bytesLookBinary(data) {
+		return "", fmt.Errorf("binary file preview is not available")
+	}
+	return string(data), nil
+}
+
+func gitBinaryOutput(dir string, args ...string) ([]byte, error) {
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	return cmd.Output()
+}
+
+func bytesLookBinary(data []byte) bool {
+	if len(data) == 0 {
+		return false
+	}
+	sample := data
+	if len(sample) > 8000 {
+		sample = sample[:8000]
+	}
+	if strings.Contains(string(sample), "\x00") {
+		return true
+	}
+	return !utf8.Valid(sample)
+}
+
+func diffHunksOnly(diff string) string {
+	lines := strings.Split(diff, "\n")
+	hunks := make([]string, 0, len(lines))
+	inHunk := false
+	for _, line := range lines {
+		if strings.HasPrefix(line, "@@") {
+			inHunk = true
+		}
+		if inHunk {
+			hunks = append(hunks, line)
+		}
+	}
+	return strings.TrimRight(strings.Join(hunks, "\n"), "\n")
+}
+
+func languageFromPath(filePath string) string {
+	ext := strings.ToLower(filepath.Ext(filePath))
+	base := strings.ToLower(filepath.Base(filePath))
+	switch base {
+	case "dockerfile":
+		return "dockerfile"
+	case "makefile":
+		return "makefile"
+	case "go.mod", "go.sum":
+		return "go"
+	case "package.json", "tsconfig.json":
+		return "json"
+	}
+	switch ext {
+	case ".go":
+		return "go"
+	case ".ts", ".tsx":
+		return "tsx"
+	case ".js", ".jsx", ".mjs", ".cjs":
+		return "javascript"
+	case ".json":
+		return "json"
+	case ".css":
+		return "css"
+	case ".html":
+		return "html"
+	case ".md", ".mdx":
+		return "markdown"
+	case ".yml", ".yaml":
+		return "yaml"
+	case ".sh", ".bash", ".zsh":
+		return "bash"
+	case ".py":
+		return "python"
+	case ".rb":
+		return "ruby"
+	case ".rs":
+		return "rust"
+	case ".java":
+		return "java"
+	case ".c", ".h":
+		return "c"
+	case ".cpp", ".cc", ".cxx", ".hpp":
+		return "cpp"
+	case ".sql":
+		return "sql"
+	case ".xml":
+		return "xml"
+	default:
+		return "text"
+	}
 }
 
 func snapshotImplementationCommits(repo repository, snapshot *eve.Snapshot) []string {

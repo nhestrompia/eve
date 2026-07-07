@@ -264,6 +264,39 @@ export type GitCommit = {
   committedAt: string;
 };
 
+export type SnapshotCodeFileSummary = {
+  path: string;
+  oldPath?: string;
+  status: string;
+  language: string;
+  curated: boolean;
+  evidence?: string;
+  sizeBytes: number;
+  previewable: boolean;
+  reason?: string;
+};
+
+export type SnapshotCodeFilesResponse = {
+  repository: string;
+  snapshotId: string;
+  base?: string;
+  head: string;
+  files: SnapshotCodeFileSummary[];
+};
+
+export type SnapshotCodeFileMode = 'diff' | 'full';
+
+export type SnapshotCodeFileResponse = {
+  path: string;
+  language: string;
+  mode: SnapshotCodeFileMode;
+  content: string;
+  highlightedHtml?: string;
+  sizeBytes?: number;
+  previewable?: boolean;
+  reason?: string;
+};
+
 export type SessionListResponse = {
   evolutionId: string;
   sessions: SessionRecord[];

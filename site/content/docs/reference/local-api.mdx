@@ -19,6 +19,8 @@ GET  /api/repos/{repoId}/pending
 POST /api/repos/{repoId}/open-editor
 GET  /api/repos/{repoId}/snapshots
 GET  /api/repos/{repoId}/snapshots/{snapshotId}
+GET  /api/repos/{repoId}/snapshots/{snapshotId}/code/files
+GET  /api/repos/{repoId}/snapshots/{snapshotId}/code/file?path={path}&mode=diff|full
 GET  /api/repos/{repoId}/snapshots/{snapshotId}/sessions
 GET  /api/repos/{repoId}/snapshots/{snapshotId}/sessions/{sessionKey}
 POST /api/repos/{repoId}/snapshots/{snapshotId}/checkout
@@ -30,6 +32,8 @@ POST /mcp
 The local API supports the bundled eve UI and local development tooling. For agent integration, prefer MCP resources and tools because they expose product-history operations directly.
 
 `/api/compare` returns the same product-state comparison used by the repository Compare tab. Both snapshot ids must belong to the same repository.
+
+The Snapshot code endpoints expose the relevant code behind a Snapshot without turning the record into code review. `code/files` derives curated files from existing Snapshot evidence and includes all changed files with preview metadata. `code/file` returns raw diff hunks or full file content at the Snapshot Git state; the UI performs client-side Shiki highlighting.
 
 `/api/search` and the global `/api/snapshots` endpoints support the local UI's cross-repository snapshot lookup. Repository-scoped endpoints remain available under `/api/repos/{repoId}`.
 

@@ -1,6 +1,7 @@
 import { createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
 import { AppShell } from './components/app-shell';
 import { ActivityPage } from './pages/activity-page';
+import { CodePage } from './pages/code-page';
 import { ConfigPage } from './pages/config-page';
 import { DecisionsPage } from './pages/decisions-page';
 import { EvolutionDetailPage } from './pages/evolution-detail-page';
@@ -63,6 +64,12 @@ const implementationRoute = createRoute({
   component: ImplementationPage
 });
 
+const codeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/snapshots/$id/code',
+  component: CodePage
+});
+
 const relationshipsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/snapshots/$id/relationships',
@@ -96,6 +103,7 @@ const routeTree = rootRoute.addChildren([
   decisionsRoute,
   risksRoute,
   implementationRoute,
+  codeRoute,
   relationshipsRoute,
   activityRoute,
   jsonRoute,

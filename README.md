@@ -218,11 +218,15 @@ GET  /api/repos/{repoId}/pending
 POST /api/repos/{repoId}/open-editor
 GET  /api/repos/{repoId}/snapshots
 GET  /api/repos/{repoId}/snapshots/{snapshotId}
+GET  /api/repos/{repoId}/snapshots/{snapshotId}/code/files
+GET  /api/repos/{repoId}/snapshots/{snapshotId}/code/file?path={path}&mode=diff|full
 GET  /api/repos/{repoId}/snapshots/{snapshotId}/sessions
 GET  /api/repos/{repoId}/snapshots/{snapshotId}/sessions/{sessionKey}
 POST /api/repos/{repoId}/snapshots/{snapshotId}/checkout
 POST /mcp
 ```
+
+The Snapshot code endpoints expose the Git-backed files behind a recorded product state. `code/files` returns curated files first, then all changed files, with preview metadata such as language, size, and large/binary/deleted-file reasons. `code/file` returns raw diff hunks or full file content at the Snapshot Git state; syntax highlighting is owned by the UI.
 
 ## MCP
 
