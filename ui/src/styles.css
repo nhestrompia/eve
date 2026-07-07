@@ -48,6 +48,19 @@
     0 0 0 1px rgba(15, 23, 42, 0.06),
     0 1px 2px -1px rgba(15, 23, 42, 0.08),
     0 2px 4px 0 rgba(15, 23, 42, 0.04);
+  --pending-bg: oklch(0.965 0.035 74);
+  --pending-text: oklch(0.31 0.075 55);
+  --pending-muted: oklch(0.39 0.08 55);
+  --pending-icon: oklch(0.58 0.13 60);
+  --code-bg: oklch(0.985 0.003 247);
+  --code-gutter: oklch(0.55 0.022 264);
+  --code-line-hover: oklch(0.955 0.012 247);
+  --diff-add-bg: oklch(0.94 0.035 153);
+  --diff-add-mark: oklch(0.48 0.13 150);
+  --diff-remove-bg: oklch(0.945 0.032 24);
+  --diff-remove-mark: oklch(0.54 0.17 24);
+  --diff-hunk-bg: oklch(0.94 0.03 270);
+  --diff-hunk-text: oklch(0.44 0.16 270);
 }
 
 :root.dark-preview {
@@ -72,6 +85,19 @@
     0 0 0 1px rgba(255, 255, 255, 0.08),
     0 1px 2px -1px rgba(0, 0, 0, 0.45),
     0 2px 4px 0 rgba(0, 0, 0, 0.28);
+  --pending-bg: oklch(0.35 0.045 74);
+  --pending-text: oklch(0.91 0.07 82);
+  --pending-muted: oklch(0.84 0.06 78);
+  --pending-icon: oklch(0.78 0.12 72);
+  --code-bg: oklch(0.19 0.018 264);
+  --code-gutter: oklch(0.66 0.018 247);
+  --code-line-hover: oklch(0.25 0.018 264);
+  --diff-add-bg: oklch(0.26 0.055 154);
+  --diff-add-mark: oklch(0.73 0.14 151);
+  --diff-remove-bg: oklch(0.25 0.055 24);
+  --diff-remove-mark: oklch(0.76 0.12 22);
+  --diff-hunk-bg: oklch(0.28 0.055 276);
+  --diff-hunk-text: oklch(0.78 0.1 284);
 }
 
 :root.dark-preview {
@@ -243,6 +269,45 @@ input {
   display: none;
 }
 
+.pending-snapshot-banner {
+  background: var(--pending-bg);
+  color: var(--pending-text);
+}
+
+.pending-snapshot-copy,
+.pending-snapshot-meta {
+  color: var(--pending-muted);
+}
+
+.pending-snapshot-icon {
+  color: var(--pending-icon);
+}
+
+.snapshot-list-link.is-active {
+  color: var(--foreground);
+}
+
+:root.dark-preview .snapshot-list-link.is-active {
+  background-color: color-mix(in oklch, var(--primary) 20%, var(--card));
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--primary) 42%, transparent),
+    inset 3px 0 0 var(--primary);
+}
+
+:root.dark-preview .snapshot-list-link.is-active .text-emerald-600 {
+  color: var(--primary);
+}
+
+.code-tab-shell {
+  box-shadow: var(--shadow-border);
+}
+
+:root.dark-preview .code-file-selected {
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--primary) 48%, transparent),
+    inset 3px 0 0 var(--primary);
+}
+
 .code-viewer pre {
   min-height: 540px;
   margin: 0;
@@ -255,9 +320,84 @@ input {
   tab-size: 2;
 }
 
+.code-viewer pre.shiki {
+  background: var(--code-bg) !important;
+}
+
 .code-viewer code {
   display: block;
   min-width: max-content;
+}
+
+.code-viewer .line {
+  display: block;
+  min-height: 1.65em;
+}
+
+.code-viewer-diff pre {
+  padding: 0;
+}
+
+.code-viewer-diff code {
+  padding: 14px 0;
+}
+
+.code-viewer-diff .diff-line {
+  position: relative;
+  padding: 0 20px 0 72px;
+}
+
+.code-viewer-diff .diff-line::before {
+  content: attr(data-line);
+  position: absolute;
+  left: 0;
+  width: 48px;
+  padding-right: 12px;
+  color: var(--code-gutter);
+  text-align: right;
+  user-select: none;
+}
+
+.code-viewer-diff .diff-line::after {
+  position: absolute;
+  left: 52px;
+  width: 14px;
+  color: var(--code-gutter);
+  text-align: center;
+  user-select: none;
+}
+
+.code-viewer-diff .diff-line:hover {
+  background: var(--code-line-hover);
+}
+
+.code-viewer-diff .diff-add {
+  background: var(--diff-add-bg);
+}
+
+.code-viewer-diff .diff-add::after {
+  content: "+";
+  color: var(--diff-add-mark);
+}
+
+.code-viewer-diff .diff-remove {
+  background: var(--diff-remove-bg);
+}
+
+.code-viewer-diff .diff-remove::after {
+  content: "-";
+  color: var(--diff-remove-mark);
+}
+
+.code-viewer-diff .diff-hunk {
+  background: var(--diff-hunk-bg);
+  color: var(--diff-hunk-text);
+  font-weight: 700;
+}
+
+.code-viewer-diff .diff-hunk::after {
+  content: "@";
+  color: var(--diff-hunk-text);
 }
 
 .code-fallback {

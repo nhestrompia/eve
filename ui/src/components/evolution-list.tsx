@@ -1,16 +1,21 @@
 import { Link } from '@tanstack/react-router';
 import { CheckCircle2, ListFilter } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { compactDate, monthYear } from '../format';
 import type { EvolutionSummary } from '../types';
 import { Button } from './ui/button';
 
 export function EvolutionList({ evolutions, selectedId }: { evolutions: EvolutionSummary[]; selectedId?: string }) {
   const [ascending, setAscending] = useState(false);
+  const selectedRef = useRef<HTMLAnchorElement | null>(null);
   const sorted = useMemo(() => {
     return [...evolutions].sort((left, right) => (ascending ? left.id.localeCompare(right.id) : right.id.localeCompare(left.id)));
   }, [ascending, evolutions]);
   const groupLabel = monthYear(sorted[0]?.updatedAt || sorted[0]?.createdAt);
+
+  useEffect(() => {
+    selectedRef.current?.scrollIntoView({ block: 'center' });
+  }, [selectedId, sorted.length]);
 
   return (
     <aside className="border-b bg-white/72 lg:sticky lg:top-[76px] lg:h-[calc(100dvh-76px)] lg:overflow-hidden lg:border-b-0 lg:border-r">
@@ -35,8 +40,10 @@ export function EvolutionList({ evolutions, selectedId }: { evolutions: Evolutio
               key={evolution.id}
               to="/snapshots/$id"
               params={{ id: evolution.id }}
-              className={`grid grid-cols-[24px_minmax(0,1fr)] items-center gap-3 rounded-lg px-3 py-4 ${
-                selectedId === evolution.id ? 'bg-blue-50 shadow-sm ring-1 ring-blue-100' : 'hover:bg-slate-50'
+              aria-current={selectedId === evolution.id ? 'page' : undefined}
+              ref={selectedId === evolution.id ? selectedRef : undefined}
+              className={`snapshot-list-link grid grid-cols-[24px_minmax(0,1fr)] items-center gap-3 rounded-lg px-3 py-4 ${
+                selectedId === evolution.id ? 'is-active bg-blue-50 shadow-sm ring-1 ring-blue-100' : 'hover:bg-slate-50'
               }`}
             >
               <CheckCircle2 className="size-4 text-emerald-600" />

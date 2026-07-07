@@ -56,11 +56,15 @@ export function CodePage() {
       {files.error ? <ErrorState error={files.error} /> : null}
       {detail.data && files.data ? (
         <section className="space-y-6">
-          <Header eyebrow={id} title="Code" subtitle="Relevant code behind this Snapshot, shown from the recorded Git state." />
+          <Header
+            eyebrow={detail.data.summary.title || detail.data.snapshot.title || id}
+            title="Code"
+            subtitle="Relevant code behind this Snapshot, shown from the recorded Git state."
+          />
           {allFiles.length === 0 ? (
             <EmptyPanel text="No changed files were found for this Snapshot." />
           ) : (
-            <div className="grid min-h-[620px] grid-cols-1 overflow-hidden rounded-lg border bg-white lg:grid-cols-[340px_minmax(0,1fr)]">
+            <div className="code-tab-shell grid min-h-[620px] grid-cols-1 overflow-hidden rounded-lg border bg-card lg:grid-cols-[340px_minmax(0,1fr)]">
               <CodeFileList
                 curatedFiles={curatedFiles}
                 changedFiles={changedFiles}
@@ -101,8 +105,8 @@ function CodeFileList({
   onSelect: (path: string) => void;
 }) {
   return (
-    <aside className="border-b bg-slate-50/45 lg:border-b-0 lg:border-r">
-      <div className="border-b bg-white px-4 py-4">
+    <aside className="border-b bg-secondary lg:border-b-0 lg:border-r">
+      <div className="border-b bg-card px-4 py-4">
         <div className="flex items-center gap-2">
           <Code2 className="size-4 text-blue-700" />
           <h2 className="font-semibold">Code</h2>
@@ -122,7 +126,7 @@ function CodeFileList({
 
         <button
           type="button"
-          className="flex w-full items-center justify-between rounded-md px-2 py-2 text-left text-sm font-semibold hover:bg-white"
+          className="flex w-full items-center justify-between rounded-md px-2 py-2 text-left text-sm font-semibold hover:bg-card"
           onClick={onToggleChanged}
           aria-expanded={showChanged}
         >
@@ -159,7 +163,7 @@ function CodeFileButton({
       type="button"
       onClick={() => onSelect(file.path)}
       className={`grid w-full grid-cols-[18px_minmax(0,1fr)] gap-2 rounded-lg px-2.5 py-2.5 text-left transition-colors ${
-        selected ? 'bg-white shadow-[0_0_0_1px_rgba(37,99,235,0.22)]' : 'hover:bg-white'
+        selected ? 'code-file-selected bg-card shadow-[0_0_0_1px_rgba(37,99,235,0.26)]' : 'hover:bg-card'
       }`}
     >
       <FileCode2 className="mt-0.5 size-4 text-slate-600" />
@@ -189,14 +193,14 @@ function CodeViewer({
   const unavailable = file && !file.previewable;
 
   return (
-    <section className="min-w-0 bg-white">
+    <section className="min-w-0 bg-card">
       <div className="flex min-h-16 flex-col gap-3 border-b px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <h2 className="truncate font-mono text-sm font-semibold">{file?.path ?? 'Code viewer'}</h2>
           {file ? <p className="mt-1 text-xs text-muted-foreground">{fileStatusLabel(file)}</p> : null}
         </div>
         {file ? (
-          <div className="flex w-fit rounded-md border bg-slate-50 p-1">
+          <div className="flex w-fit rounded-md border bg-secondary p-1">
             <Button type="button" variant={mode === 'full' ? 'secondary' : 'ghost'} size="sm" onClick={() => onModeChange('full')}>
               Full file
             </Button>
@@ -221,6 +225,7 @@ function CodeViewer({
 function HighlightedCode({ response, path, mode }: { response: SnapshotCodeFileResponse; path: string; mode: SnapshotCodeFileMode }) {
   const [html, setHtml] = useState('');
   const language = useMemo(() => shikiLanguage(response.language, path, mode), [mode, path, response.language]);
+  const theme = useCodeTheme();
 
   useEffect(() => {
     let cancelled = false;
@@ -230,8 +235,8 @@ function HighlightedCode({ response, path, mode }: { response: SnapshotCodeFileR
         return;
       }
       try {
-        const rendered = await highlightCodeToHtml(response.content || '', language, shikiTheme());
-        if (!cancelled) setHtml(rendered);
+        const rendered = await highlightCodeToHtml(response.content || '', language, theme);
+        if (!cancelled) setHtml(mode === 'diff' ? decorateDiffHtml(rendered, response.content || '') : rendered);
       } catch {
         if (!cancelled) {
           setHtml(`<pre class="code-fallback"><code>${escapeHtml(response.content || '')}</code></pre>`);
@@ -242,12 +247,17 @@ function HighlightedCode({ response, path, mode }: { response: SnapshotCodeFileR
     return () => {
       cancelled = true;
     };
-  }, [language, response.content, response.previewable]);
+  }, [language, mode, response.content, response.previewable, theme]);
 
   if (response.previewable === false) {
     return <UnavailableViewer reason={response.reason || 'File preview is not available.'} />;
   }
-  return <div className="code-viewer max-h-[calc(100dvh-220px)] min-h-[540px] overflow-auto p-0" dangerouslySetInnerHTML={{ __html: html }} />;
+  return (
+    <div
+      className={`code-viewer ${mode === 'diff' ? 'code-viewer-diff' : 'code-viewer-full'} max-h-[calc(100dvh-220px)] min-h-[540px] overflow-auto p-0`}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
 }
 
 function EmptyViewer({ text }: { text: string }) {
@@ -272,4 +282,35 @@ function fileStatusLabel(file: SnapshotCodeFileSummary) {
 
 function escapeHtml(value: string) {
   return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
+}
+
+function useCodeTheme() {
+  const [theme, setTheme] = useState(shikiTheme);
+
+  useEffect(() => {
+    const update = () => setTheme(shikiTheme());
+    update();
+    const observer = new MutationObserver(update);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
+
+  return theme;
+}
+
+function decorateDiffHtml(html: string, content: string) {
+  const lines = content.split('\n');
+  let index = 0;
+  return html.replace(/<span class="line">/g, () => {
+    const rawLine = lines[index] ?? '';
+    index += 1;
+    const kind = rawLine.startsWith('@@')
+      ? 'diff-hunk'
+      : rawLine.startsWith('+')
+        ? 'diff-add'
+        : rawLine.startsWith('-')
+          ? 'diff-remove'
+          : 'diff-context';
+    return `<span class="line diff-line ${kind}" data-line="${index}">`;
+  });
 }
