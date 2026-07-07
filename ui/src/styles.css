@@ -289,9 +289,7 @@ input {
 
 :root.dark-preview .snapshot-list-link.is-active {
   background-color: color-mix(in oklch, var(--primary) 20%, var(--card));
-  box-shadow:
-    0 0 0 1px color-mix(in oklch, var(--primary) 42%, transparent),
-    inset 3px 0 0 var(--primary);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary) 42%, transparent);
 }
 
 :root.dark-preview .snapshot-list-link.is-active .text-emerald-600 {
@@ -303,20 +301,53 @@ input {
 }
 
 :root.dark-preview .code-file-selected {
-  box-shadow:
-    0 0 0 1px color-mix(in oklch, var(--primary) 48%, transparent),
-    inset 3px 0 0 var(--primary);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary) 48%, transparent);
+}
+
+.code-mode-toggle {
+  display: flex;
+  width: fit-content;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--secondary);
+  padding: 3px;
+}
+
+.code-mode-button {
+  min-height: 32px;
+  border: 0;
+  border-radius: calc(var(--radius) - 2px);
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0 12px;
+}
+
+.code-mode-button:hover {
+  background: color-mix(in oklch, var(--foreground) 6%, transparent);
+  color: var(--foreground);
+}
+
+.code-mode-button.is-active {
+  background: var(--card);
+  color: var(--foreground);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary) 34%, transparent);
 }
 
 .code-viewer pre {
   min-height: 540px;
   margin: 0;
-  padding: 20px;
+  padding: 14px 16px;
   overflow: visible;
   background: transparent;
   font-family: "SFMono-Regular", "Cascadia Code", "Liberation Mono", ui-monospace, monospace;
   font-size: 12px;
-  line-height: 1.65;
+  line-height: 1.38;
   tab-size: 2;
 }
 
@@ -331,7 +362,7 @@ input {
 
 .code-viewer .line {
   display: block;
-  min-height: 1.65em;
+  min-height: 1.38em;
 }
 
 .code-viewer-diff pre {
@@ -339,20 +370,20 @@ input {
 }
 
 .code-viewer-diff code {
-  padding: 14px 0;
+  padding: 8px 0;
 }
 
 .code-viewer-diff .diff-line {
   position: relative;
-  padding: 0 20px 0 72px;
+  padding: 0 16px 0 64px;
 }
 
 .code-viewer-diff .diff-line::before {
   content: attr(data-line);
   position: absolute;
   left: 0;
-  width: 48px;
-  padding-right: 12px;
+  width: 42px;
+  padding-right: 10px;
   color: var(--code-gutter);
   text-align: right;
   user-select: none;
@@ -360,7 +391,7 @@ input {
 
 .code-viewer-diff .diff-line::after {
   position: absolute;
-  left: 52px;
+  left: 46px;
   width: 14px;
   color: var(--code-gutter);
   text-align: center;

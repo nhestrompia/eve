@@ -6,7 +6,6 @@ import { api } from '../api';
 import { ErrorState } from '../components/error-state';
 import { EvolutionShell } from '../components/evolution-shell';
 import { LoadingState } from '../components/loading-state';
-import { Button } from '../components/ui/button';
 import { formatBytes, shikiLanguage, shikiTheme } from '../lib/code-viewer';
 import { highlightCodeToHtml } from '../lib/shiki';
 import type { SnapshotCodeFileMode, SnapshotCodeFileResponse, SnapshotCodeFileSummary } from '../types';
@@ -57,8 +56,8 @@ export function CodePage() {
       {detail.data && files.data ? (
         <section className="space-y-6">
           <Header
-            eyebrow={detail.data.summary.title || detail.data.snapshot.title || id}
-            title="Code"
+            eyebrow="Code"
+            title={detail.data.summary.title || detail.data.snapshot.title || id}
             subtitle="Relevant code behind this Snapshot, shown from the recorded Git state."
           />
           {allFiles.length === 0 ? (
@@ -200,13 +199,25 @@ function CodeViewer({
           {file ? <p className="mt-1 text-xs text-muted-foreground">{fileStatusLabel(file)}</p> : null}
         </div>
         {file ? (
-          <div className="flex w-fit rounded-md border bg-secondary p-1">
-            <Button type="button" variant={mode === 'full' ? 'secondary' : 'ghost'} size="sm" onClick={() => onModeChange('full')}>
+          <div className="code-mode-toggle" role="tablist" aria-label="Code viewer mode">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === 'full'}
+              className={`code-mode-button ${mode === 'full' ? 'is-active' : ''}`}
+              onClick={() => onModeChange('full')}
+            >
               Full file
-            </Button>
-            <Button type="button" variant={mode === 'diff' ? 'secondary' : 'ghost'} size="sm" onClick={() => onModeChange('diff')}>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === 'diff'}
+              className={`code-mode-button ${mode === 'diff' ? 'is-active' : ''}`}
+              onClick={() => onModeChange('diff')}
+            >
               Diff
-            </Button>
+            </button>
           </div>
         ) : null}
       </div>

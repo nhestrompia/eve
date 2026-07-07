@@ -11,6 +11,7 @@ export function EvolutionList({ evolutions, selectedId }: { evolutions: Evolutio
   const sorted = useMemo(() => {
     return [...evolutions].sort((left, right) => (ascending ? left.id.localeCompare(right.id) : right.id.localeCompare(left.id)));
   }, [ascending, evolutions]);
+  const selected = selectedId ? evolutions.find((evolution) => evolution.id === selectedId) : undefined;
   const groupLabel = monthYear(sorted[0]?.updatedAt || sorted[0]?.createdAt);
 
   useEffect(() => {
@@ -19,20 +20,27 @@ export function EvolutionList({ evolutions, selectedId }: { evolutions: Evolutio
 
   return (
     <aside className="border-b bg-white/72 lg:sticky lg:top-[76px] lg:h-[calc(100dvh-76px)] lg:overflow-hidden lg:border-b-0 lg:border-r">
-      <div className="flex h-14 items-center justify-between border-b px-5 lg:h-16 lg:px-7">
-        <h2 className="font-semibold">{evolutions.length} {evolutions.length === 1 ? 'Evolution' : 'Evolutions'}</h2>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label={ascending ? 'Show newest Evolutions first' : 'Show oldest Evolutions first'}
-          title={ascending ? 'Newest first' : 'Oldest first'}
-          aria-pressed={ascending}
-          onClick={() => setAscending((value) => !value)}
-        >
-          <ListFilter className="size-4" />
-        </Button>
+      <div className="border-b px-5 py-4 lg:px-7">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-semibold">{evolutions.length} {evolutions.length === 1 ? 'Snapshot' : 'Snapshots'}</h2>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={ascending ? 'Show newest Snapshots first' : 'Show oldest Snapshots first'}
+            title={ascending ? 'Newest first' : 'Oldest first'}
+            aria-pressed={ascending}
+            onClick={() => setAscending((value) => !value)}
+          >
+            <ListFilter className="size-4" />
+          </Button>
+        </div>
+        {selected ? (
+          <p className="mt-2 truncate text-xs text-muted-foreground">
+            Selected: <span className="font-medium text-foreground">{selected.title || selected.id}</span>
+          </p>
+        ) : null}
       </div>
-      <div className="max-h-72 overflow-auto px-3 py-4 lg:h-[calc(100%-64px)] lg:max-h-none lg:px-4 lg:py-5">
+      <div className="max-h-72 overflow-auto px-3 py-4 lg:h-[calc(100%-92px)] lg:max-h-none lg:px-4 lg:py-5">
         <p className="mb-4 px-3 text-xs font-medium text-muted-foreground">{groupLabel}</p>
         <div className="space-y-2">
           {sorted.map((evolution) => (
