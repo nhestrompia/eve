@@ -91,6 +91,7 @@ function SnapshotListLink({
   linkTarget: 'snapshot' | 'code';
   selectedRef?: Ref<HTMLAnchorElement>;
 }) {
+  const route = snapshotRailRouteForTarget(linkTarget);
   const className = `snapshot-list-link grid grid-cols-[24px_minmax(0,1fr)] items-center gap-3 rounded-lg px-3 py-4 ${
     selected ? 'is-active bg-blue-50 shadow-sm ring-1 ring-blue-100' : 'hover:bg-slate-50'
   }`;
@@ -104,7 +105,7 @@ function SnapshotListLink({
     </>
   );
 
-  if (linkTarget === 'code') {
+  if (route === '/snapshots/$id/code') {
     return (
       <Link
         to="/snapshots/$id/code"
@@ -129,4 +130,8 @@ function SnapshotListLink({
       {content}
     </Link>
   );
+}
+
+export function snapshotRailRouteForTarget(linkTarget: 'snapshot' | 'code') {
+  return linkTarget === 'code' ? '/snapshots/$id/code' : '/snapshots/$id';
 }

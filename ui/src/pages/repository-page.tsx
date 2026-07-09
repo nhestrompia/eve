@@ -244,7 +244,7 @@ type RepositoryTab =
   | "artifacts"
   | "settings";
 
-function repositoryTabs(
+export function repositoryTabs(
   snapshotCount: number,
 ): Array<{ id: RepositoryTab; label: string; count?: number }> {
   return [
