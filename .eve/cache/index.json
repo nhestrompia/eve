@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 46,
-  "commitCount": 51,
-  "decisionCount": 86,
-  "riskCount": 33,
+  "snapshotCount": 47,
+  "commitCount": 53,
+  "decisionCount": 87,
+  "riskCount": 34,
   "artifactCount": 33,
-  "latestAt": "2026-07-07T08:04:24Z",
-  "latestSnapshot": "snap_9aca3ebbb6bb6920",
-  "latestTitle": "Repository code inspection tab",
+  "latestAt": "2026-07-10T20:56:33Z",
+  "latestSnapshot": "snap_a3038d84bb575585",
+  "latestTitle": "Bootstrap agent instructions and diagnostics",
   "branch": "main",
-  "head": "0c329e0957ae88daa014b1bebd335aaa6521f39d",
+  "head": "dd55e4a1873aaffbc8d62f08229a0f5c3b2cf842",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "0c329e0957ae88daa014b1bebd335aaa6521f39d"
+  "latestGitState": "dd55e4a1873aaffbc8d62f08229a0f5c3b2cf842"
 }
