@@ -20,6 +20,11 @@ go run ./cmd/eve init
 go run ./cmd/eve dev
 ```
 
+Initialization creates `.eve/` and installs a managed EVE guidance block in
+both `AGENTS.md` and `CLAUDE.md`. Existing instructions remain untouched
+outside the EVE markers. Review and commit these repository-level files with
+the rest of your setup.
+
 Open `http://localhost:4317`.
 
 You do not need to run the docs site for normal local use. The docs site is only for documentation edits.
@@ -33,6 +38,13 @@ go run ./cmd/eve install-mcp --install
 ```
 
 This installs `eve`, finds the installed binary, and configures Codex, Claude Code, and opencode MCP settings with an absolute command path.
+
+Verify repository storage, MCP configuration, instruction files, and Snapshot
+activity:
+
+```sh
+eve doctor
+```
 
 ## Confirm the version
 

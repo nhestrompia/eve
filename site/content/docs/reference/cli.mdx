@@ -13,11 +13,47 @@ eve <command>
 
 ### init
 
-Initialize eve storage in the current Git repository.
+Initialize eve storage in the current Git repository and install EVE's managed
+agent guidance in `AGENTS.md` and `CLAUDE.md`.
 
 ```sh
 eve init
+eve init --no-agent-instructions
+eve init --instructions-only
 ```
+
+Existing content outside the EVE markers is preserved. `--instructions-only`
+does not create or update `.eve/` state.
+
+### instructions
+
+Install, inspect, and compare the repository's managed EVE instruction blocks.
+
+```sh
+eve instructions install
+eve instructions install --target agents
+eve instructions install --target claude
+eve instructions install --force
+eve instructions status
+eve instructions diff
+```
+
+Missing and exact older canonical blocks can be installed safely. A modified
+block requires `--force`; malformed or duplicate markers must be repaired
+manually. `status` returns a non-zero exit code unless both files are current.
+
+### doctor
+
+Check repository storage, MCP setup, agent instructions, required Snapshot
+tools, and Snapshot activity.
+
+```sh
+eve doctor
+```
+
+Missing MCP configuration or a first Snapshot is reported as an onboarding
+warning. Invalid repository state or non-current instruction files return a
+non-zero exit code.
 
 ### add
 

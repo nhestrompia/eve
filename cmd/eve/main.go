@@ -41,6 +41,10 @@ func runWithIO(args []string, stdin io.Reader, stdout io.Writer, stderr io.Write
 	switch args[0] {
 	case "init":
 		return runInit(args[1:], stdout, stderr)
+	case "instructions":
+		return runInstructions(args[1:], stdout, stderr)
+	case "doctor":
+		return runDoctor(args[1:], stdout, stderr)
 	case "add":
 		return runAdd(args[1:], stdin, stdout, stderr)
 	case "commit":
@@ -81,7 +85,9 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage: eve <command>")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Commands:")
-	fmt.Fprintln(w, "  init")
+	fmt.Fprintln(w, "  init [--no-agent-instructions | --instructions-only]")
+	fmt.Fprintln(w, "  instructions <install|status|diff>")
+	fmt.Fprintln(w, "  doctor")
 	fmt.Fprintln(w, "  add --title <title> --summary <summary> [--type feature] [--validation <command>]")
 	fmt.Fprintln(w, "  commit [--allow-dirty]")
 	fmt.Fprintln(w, "  dev [--addr localhost:4317]")
@@ -99,11 +105,17 @@ func printUsage(w io.Writer) {
 func runInit(args []string, stdout io.Writer, stderr io.Writer) int {
 	fs := flag.NewFlagSet("init", flag.ContinueOnError)
 	fs.SetOutput(stderr)
+	noAgentInstructions := fs.Bool("no-agent-instructions", false, "skip AGENTS.md and CLAUDE.md setup")
+	instructionsOnly := fs.Bool("instructions-only", false, "install agent instructions without changing .eve state")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
 	if fs.NArg() != 0 {
 		fmt.Fprintln(stderr, "eve init takes no arguments")
+		return 2
+	}
+	if *noAgentInstructions && *instructionsOnly {
+		fmt.Fprintln(stderr, "--no-agent-instructions cannot be combined with --instructions-only")
 		return 2
 	}
 
@@ -112,30 +124,46 @@ func runInit(args []string, stdout io.Writer, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "%v\n", err)
 		return 1
 	}
-	for _, dir := range []string{repo.eveDir, repo.snapshotsDir(), repo.skipsDir(), repo.artifactsDir(), repo.cacheDir()} {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			fmt.Fprintf(stderr, "create %s: %v\n", dir, err)
-			return 1
+	if !*instructionsOnly {
+		for _, dir := range []string{repo.eveDir, repo.snapshotsDir(), repo.skipsDir(), repo.artifactsDir(), repo.cacheDir()} {
+			if err := os.MkdirAll(dir, 0o755); err != nil {
+				fmt.Fprintf(stderr, "create %s: %v\n", dir, err)
+				return 1
+			}
 		}
-	}
-	config := map[string]any{
-		"schemaVersion":  configFileVersion,
-		"snapshotSchema": eve.SnapshotSchemaVersion,
-		"createdAt":      nowUTC(),
-	}
-	if _, err := os.Stat(repo.configPath()); errors.Is(err, os.ErrNotExist) {
-		data, marshalErr := json.MarshalIndent(config, "", "  ")
-		if marshalErr != nil {
-			fmt.Fprintf(stderr, "marshal config: %v\n", marshalErr)
-			return 1
+		config := map[string]any{
+			"schemaVersion":  configFileVersion,
+			"snapshotSchema": eve.SnapshotSchemaVersion,
+			"createdAt":      nowUTC(),
 		}
-		if err := os.WriteFile(repo.configPath(), append(data, '\n'), 0o644); err != nil {
-			fmt.Fprintf(stderr, "write config: %v\n", err)
-			return 1
+		if _, err := os.Stat(repo.configPath()); errors.Is(err, os.ErrNotExist) {
+			data, marshalErr := json.MarshalIndent(config, "", "  ")
+			if marshalErr != nil {
+				fmt.Fprintf(stderr, "marshal config: %v\n", marshalErr)
+				return 1
+			}
+			if err := os.WriteFile(repo.configPath(), append(data, '\n'), 0o644); err != nil {
+				fmt.Fprintf(stderr, "write config: %v\n", err)
+				return 1
+			}
 		}
+		rememberRepository(repo)
+		fmt.Fprintf(stdout, "Initialized EVE snapshots in %s\n", repo.eveDir)
 	}
-	rememberRepository(repo)
-	fmt.Fprintf(stdout, "Initialized EVE snapshots in %s\n", repo.eveDir)
+	if *noAgentInstructions {
+		fmt.Fprintln(stdout, "Agent instruction installation skipped.")
+		return 0
+	}
+	results, failed := installInstructionTargets(repo, instructionTargets, false, true)
+	printInstructionInstallResults(stdout, stderr, results)
+	if failed {
+		fmt.Fprintln(stderr, "EVE initialization completed, but agent instructions were not fully installed.")
+		return 1
+	}
+	fmt.Fprintln(stdout, "\nNext steps:")
+	fmt.Fprintln(stdout, "  1. Connect your agent to the EVE MCP server.")
+	fmt.Fprintln(stdout, "  2. Start a coding task normally.")
+	fmt.Fprintln(stdout, "  3. Run `eve doctor` to verify the setup.")
 	return 0
 }
 

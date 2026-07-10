@@ -169,6 +169,24 @@ func TestInitCreatesSnapshotStructure(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(repo, ".eve", "evolutions")); !os.IsNotExist(err) {
 		t.Fatalf(".eve/evolutions should not be created, err = %v", err)
 	}
+	before := map[string]string{}
+	for _, name := range []string{"AGENTS.md", "CLAUDE.md"} {
+		path := filepath.Join(repo, name)
+		before[name] = readTextFile(t, path)
+		if strings.Count(before[name], "<!-- eve:instructions:start") != 1 || !strings.Contains(before[name], "`complete_snapshot`") || !strings.Contains(before[name], "`skip_snapshot`") {
+			t.Fatalf("%s = %q, want one canonical EVE block", name, before[name])
+		}
+	}
+	stdout.Reset()
+	stderr.Reset()
+	if code := run([]string{"init"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("second init exit code = %d, stderr = %s", code, stderr.String())
+	}
+	for name, want := range before {
+		if got := readTextFile(t, filepath.Join(repo, name)); got != want {
+			t.Fatalf("second init changed %s", name)
+		}
+	}
 }
 
 func TestSnapshotValidateCanonicalizeAndCleanBreakList(t *testing.T) {
@@ -354,7 +372,7 @@ func TestPendingSnapshotIdleTriggerAndSkipResolution(t *testing.T) {
 	repo := initTempGitRepo(t)
 	t.Chdir(repo)
 	mustRun(t, []string{"init"})
-	gitRun(t, repo, "add", ".eve/config.json")
+	gitRun(t, repo, "add", ".eve/config.json", "AGENTS.md", "CLAUDE.md")
 	gitRun(t, repo, "commit", "-m", "initialize eve")
 	gitRun(t, repo, "checkout", "-b", "feature")
 
@@ -410,7 +428,7 @@ func TestPendingSnapshotMergeTriggerAndCompleteResolution(t *testing.T) {
 	repo := initTempGitRepo(t)
 	t.Chdir(repo)
 	mustRun(t, []string{"init"})
-	gitRun(t, repo, "add", ".eve/config.json")
+	gitRun(t, repo, "add", ".eve/config.json", "AGENTS.md", "CLAUDE.md")
 	gitRun(t, repo, "commit", "-m", "initialize eve")
 
 	handler := newRuntimeServer(repoFromRoot(repo), "localhost:0").routes()
@@ -472,7 +490,7 @@ func TestRuntimeAPIDerivesDisplayCommitsFromSnapshotBoundary(t *testing.T) {
 	repo := initTempGitRepo(t)
 	t.Chdir(repo)
 	mustRun(t, []string{"init"})
-	gitRun(t, repo, "add", ".eve/config.json")
+	gitRun(t, repo, "add", ".eve/config.json", "AGENTS.md", "CLAUDE.md")
 	gitRun(t, repo, "commit", "-m", "initialize eve")
 
 	productPath := filepath.Join(repo, "product.txt")
@@ -509,7 +527,7 @@ func TestSnapshotCodeAPIListsAndLoadsFiles(t *testing.T) {
 	repo := initTempGitRepo(t)
 	t.Chdir(repo)
 	mustRun(t, []string{"init"})
-	gitRun(t, repo, "add", ".eve/config.json")
+	gitRun(t, repo, "add", ".eve/config.json", "AGENTS.md", "CLAUDE.md")
 	gitRun(t, repo, "commit", "-m", "initialize eve")
 	base := gitOutputForTest(t, repo, "rev-parse", "HEAD")
 
@@ -577,7 +595,7 @@ func TestSnapshotCodeAPIHandlesLargeBinaryAndDeletedFiles(t *testing.T) {
 	repo := initTempGitRepo(t)
 	t.Chdir(repo)
 	mustRun(t, []string{"init"})
-	gitRun(t, repo, "add", ".eve/config.json")
+	gitRun(t, repo, "add", ".eve/config.json", "AGENTS.md", "CLAUDE.md")
 	gitRun(t, repo, "commit", "-m", "initialize eve")
 	base := gitOutputForTest(t, repo, "rev-parse", "HEAD")
 
@@ -639,7 +657,7 @@ func TestAddAndCommitSnapshotCLI(t *testing.T) {
 	repo := initTempGitRepo(t)
 	t.Chdir(repo)
 	mustRun(t, []string{"init"})
-	gitRun(t, repo, "add", ".eve/config.json")
+	gitRun(t, repo, "add", ".eve/config.json", "AGENTS.md", "CLAUDE.md")
 	gitRun(t, repo, "commit", "-m", "initialize eve")
 
 	productPath := filepath.Join(repo, "product.txt")
@@ -694,7 +712,7 @@ func TestCommitSnapshotCLIRejectsDirtyImplementationFiles(t *testing.T) {
 	repo := initTempGitRepo(t)
 	t.Chdir(repo)
 	mustRun(t, []string{"init"})
-	gitRun(t, repo, "add", ".eve/config.json")
+	gitRun(t, repo, "add", ".eve/config.json", "AGENTS.md", "CLAUDE.md")
 	gitRun(t, repo, "commit", "-m", "initialize eve")
 
 	mustRun(t, []string{
@@ -814,6 +832,8 @@ func TestCheckoutSnapshotWithMultipleCommitsUsesGitState(t *testing.T) {
 	repo := initTempGitRepo(t)
 	t.Chdir(repo)
 	mustRun(t, []string{"init"})
+	gitRun(t, repo, "add", ".eve/config.json", "AGENTS.md", "CLAUDE.md")
+	gitRun(t, repo, "commit", "-m", "initialize eve")
 
 	productPath := filepath.Join(repo, "product.txt")
 	if err := os.WriteFile(productPath, []byte("product\nfirst\n"), 0o644); err != nil {

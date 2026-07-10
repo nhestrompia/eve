@@ -72,6 +72,8 @@ From this checkout:
 npm --prefix ui ci
 npm --prefix ui run build
 go run ./cmd/eve init
+go run ./cmd/eve instructions status
+go run ./cmd/eve doctor
 go run ./cmd/eve dev
 ```
 
@@ -104,6 +106,28 @@ path. GUI apps and agent hosts often do not inherit the same `PATH` as your
 interactive shell, so `command = "eve"` can fail even after a successful
 install.
 
+`eve init` also installs a concise, versioned EVE instruction block in
+`AGENTS.md` and `CLAUDE.md`. Existing repository guidance is preserved outside
+the managed markers. Use `eve init --no-agent-instructions` to opt out, or
+`eve init --instructions-only` to install the guidance without changing
+`.eve/` state.
+
+Manage and diagnose the instruction files explicitly with:
+
+```sh
+eve instructions install
+eve instructions install --target agents
+eve instructions install --target claude
+eve instructions status
+eve instructions diff
+eve doctor
+```
+
+Modified managed blocks are never overwritten automatically. Inspect them with
+`eve instructions diff`, then use `eve instructions install --force` only when
+you intend to restore the canonical template. Malformed or duplicate markers
+must be resolved manually.
+
 Useful installed commands:
 
 ```sh
@@ -112,6 +136,7 @@ EVE_BIN_DIR="$(go env GOBIN)"
 EVE_BIN="$EVE_BIN_DIR/eve"
 "$EVE_BIN" version
 "$EVE_BIN" install-mcp
+"$EVE_BIN" doctor
 "$EVE_BIN" dev
 ```
 

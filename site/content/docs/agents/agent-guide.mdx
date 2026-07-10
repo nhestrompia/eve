@@ -7,6 +7,12 @@ Agents should treat eve as durable repository memory, not as another place to du
 
 Before changing behavior, read relevant snapshots to understand previous product decisions and validation expectations. After completing and verifying behavior, write a new snapshot that records the product meaning and evidence.
 
+`eve init` installs the same concise EVE guidance in `AGENTS.md` for Codex and
+compatible harnesses and in `CLAUDE.md` for Claude Code. EVE owns only the
+content between its managed markers; other repository instructions remain
+user-authored. Run `eve instructions status` or `eve doctor` to detect missing,
+stale, modified, or malformed guidance.
+
 ## Agent workflow
 
 1. Inspect the repository and recent snapshots.
@@ -39,6 +45,10 @@ Avoid:
 ## Prefer MCP when available
 
 When the MCP server is available, prefer the structured MCP tools over shell-only flows. MCP lets an agent complete snapshots without relying on fragile text parsing.
+
+Call `complete_snapshot` after a coherent, completed unit of product work. If
+the work is trivial or incomplete and should not enter product history, call
+`skip_snapshot` with a short reason.
 
 Use the CLI fallback when MCP is not connected.
 
