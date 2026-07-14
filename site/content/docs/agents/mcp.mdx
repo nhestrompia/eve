@@ -51,16 +51,16 @@ timelines, changelogs, counts, or search.
 ## Recommended setup
 
 ```sh
-eve install-mcp
+npx @nhestrompia/eve@latest install
 ```
 
-From this repository, install and configure in one command:
+This installs the platform-specific EVE binary and configures Codex, Claude
+Code, and opencode with its absolute path. To reconfigure MCP after EVE is
+installed:
 
 ```sh
-go run ./cmd/eve install-mcp --install
+eve install-mcp
 ```
-
-This configures Codex, Claude Code, and opencode by default.
 
 ## Security model
 

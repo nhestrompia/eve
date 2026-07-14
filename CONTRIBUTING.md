@@ -12,6 +12,8 @@ For normal product or CLI development:
 go test ./...
 npm --prefix ui test
 npm --prefix ui run build
+npm --prefix npm/eve test
+npm --prefix npm/eve run pack:check
 ```
 
 Use `npm --prefix ui ci` before the first local UI build.
@@ -32,6 +34,9 @@ For completed product changes in this repository:
 3. Commit the generated `.eve/` record to Git.
 
 Include the verification command and result in the eve record.
+
+Tag releases also publish `@nhestrompia/eve` to npm. Maintainers must configure
+the npm automation token as the `NPM_TOKEN` GitHub Actions secret.
 
 ## Pull Requests
 

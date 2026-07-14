@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   release:
@@ -27,6 +28,8 @@ jobs:
             goarch: arm64
           - goos: windows
             goarch: amd64
+          - goos: windows
+            goarch: arm64
 
     steps:
       - name: Checkout
@@ -56,19 +59,44 @@ jobs:
           path: dist/*
 
   publish:
-    name: Publish GitHub release
+    name: Publish release and npm installer
     needs: release
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
       - name: Download artifacts
         uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true
 
+      - name: Generate checksums
+        working-directory: dist
+        run: sha256sum eve-* > SHA256SUMS
+
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*
           generate_release_notes: true
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - name: Set npm package version
+        working-directory: npm/eve
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: npm version "${RELEASE_TAG#v}" --no-git-tag-version --allow-same-version
+
+      - name: Publish npm installer
+        working-directory: npm/eve
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public --provenance

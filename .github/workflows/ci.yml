@@ -29,11 +29,17 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: |
+            npm/eve/package-lock.json
             ui/package-lock.json
             site/package-lock.json
 
       - name: Test Go
         run: go test ./...
+
+      - name: Test npm installer
+        run: |
+          npm --prefix npm/eve test
+          npm --prefix npm/eve run pack:check
 
       - name: Install UI dependencies
         run: npm --prefix ui ci

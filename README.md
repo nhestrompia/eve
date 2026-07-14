@@ -59,7 +59,38 @@ Canonical product history lives in the repository:
 
 `.eve/snapshots/*.json` is canonical. `.eve/cache/` is rebuildable.
 
-## Run Locally
+## Install EVE
+
+Install EVE once for the current user and configure supported agent clients:
+
+```sh
+npx @nhestrompia/eve@latest install
+```
+
+The installer downloads the matching macOS, Linux, or Windows binary from the
+GitHub Release, verifies its SHA-256 checksum, installs it in a user-owned bin
+directory, verifies the installed version, and configures Codex, Claude Code,
+and opencode with the absolute binary path.
+
+Configure only selected clients or skip MCP setup:
+
+```sh
+npx @nhestrompia/eve@latest install --clients codex,claude
+npx @nhestrompia/eve@latest install --no-mcp
+```
+
+Then initialize EVE in any Git repository:
+
+```sh
+cd /path/to/repository
+eve init
+eve doctor
+```
+
+The installer prints a shell-profile instruction if its user bin directory is
+not already on `PATH`.
+
+## Run from Source
 
 Prerequisites:
 
@@ -94,18 +125,6 @@ go run ./cmd/eve canonicalize .eve/snapshots/<snapshot-id>.json
 go run ./cmd/eve version
 ```
 
-Install the CLI if you want to call `eve` from other repositories:
-
-```sh
-go run ./cmd/eve install-mcp --install
-```
-
-That one command runs `go install ./cmd/eve`, finds the installed binary, and
-adds eve to Codex, Claude Code, and opencode MCP config with an absolute command
-path. GUI apps and agent hosts often do not inherit the same `PATH` as your
-interactive shell, so `command = "eve"` can fail even after a successful
-install.
-
 `eve init` also installs a concise, versioned EVE instruction block in
 `AGENTS.md` and `CLAUDE.md`. Existing repository guidance is preserved outside
 the managed markers. Use `eve init --no-agent-instructions` to opt out, or
@@ -131,13 +150,10 @@ must be resolved manually.
 Useful installed commands:
 
 ```sh
-EVE_BIN_DIR="$(go env GOBIN)"
-[ -n "$EVE_BIN_DIR" ] || EVE_BIN_DIR="$(go env GOPATH)/bin"
-EVE_BIN="$EVE_BIN_DIR/eve"
-"$EVE_BIN" version
-"$EVE_BIN" install-mcp
-"$EVE_BIN" doctor
-"$EVE_BIN" dev
+eve version
+eve install-mcp
+eve doctor
+eve dev
 ```
 
 ## Verify
@@ -146,6 +162,8 @@ For normal product or CLI development:
 
 ```sh
 go test ./...
+npm --prefix npm/eve test
+npm --prefix npm/eve run pack:check
 npm --prefix ui test
 npm --prefix ui run build
 ```
@@ -167,7 +185,9 @@ git push origin v0.2.0
 ```
 
 The GitHub Actions release workflow builds `eve` binaries for Linux, macOS, and
-Windows, then publishes them to a GitHub release.
+Windows, publishes them with a checksum manifest to a GitHub release, and
+publishes the matching `@nhestrompia/eve` installer to npm. The repository must
+provide an npm automation token as the `NPM_TOKEN` GitHub Actions secret.
 
 ## Repository Practices
 

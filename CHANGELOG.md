@@ -6,6 +6,8 @@ This project uses Git tags for releases.
 
 ## Unreleased
 
+- Added the `npx @nhestrompia/eve@latest install` flow for checksummed,
+  platform-specific global CLI installation and MCP setup.
 - Added automatic `AGENTS.md` and `CLAUDE.md` instruction bootstrap, managed
   instruction commands, and repository diagnostics through `eve doctor`.
 - Added a Fumadocs-powered documentation website.

@@ -1,0 +1,40 @@
+{
+  "name": "@nhestrompia/eve",
+  "version": "0.0.0-development",
+  "description": "Install the EVE product-history CLI from npm.",
+  "type": "module",
+  "bin": {
+    "eve": "bin/eve.mjs"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "pack:check": "npm pack --dry-run"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nhestrompia/eve.git",
+    "directory": "npm/eve"
+  },
+  "homepage": "https://github.com/nhestrompia/eve",
+  "bugs": "https://github.com/nhestrompia/eve/issues",
+  "keywords": [
+    "eve",
+    "product-history",
+    "snapshots",
+    "cli",
+    "mcp"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}
