@@ -3,6 +3,7 @@ import { useRouterState } from "@tanstack/react-router";
 import { Code2, ExternalLink, Search } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api";
+import { cn } from "../lib/utils";
 import { Button } from "./ui/button";
 
 export function TopBar({ onSearch }: { onSearch: () => void }) {
@@ -17,6 +18,7 @@ export function TopBar({ onSearch }: { onSearch: () => void }) {
   const id = match?.[0];
   const repoMatch = state.location.pathname.match(/^\/repositories\/([^/]+)/);
   const repo = repoMatch ? decodeURIComponent(repoMatch[1]) : undefined;
+  const isRootRoute = state.location.pathname === "/";
   const hasDetailRail = /^\/snapshots\/[^/]+$/.test(state.location.pathname);
   const isSnapshotRoute = /^\/snapshots\/[^/]+/.test(state.location.pathname);
   const currentGitState = config.data?.currentGitState;
@@ -47,7 +49,11 @@ export function TopBar({ onSearch }: { onSearch: () => void }) {
 
   return (
     <header
-      className={`sticky top-0 z-20 flex min-h-16 items-center justify-between gap-3 border-b bg-white/88 px-4 backdrop-blur md:h-[76px] md:px-8 ${hasDetailRail ? "xl:pr-[488px]" : ""}`}
+      className={cn(
+        "sticky top-0 z-20 flex min-h-16 items-center justify-between gap-3 border-b bg-white/88 px-4 backdrop-blur md:h-[76px] md:px-8",
+        isRootRoute && "md:hidden",
+        hasDetailRail && "xl:pr-[488px]",
+      )}
     >
       <div className="flex min-w-0 items-center gap-3 text-sm text-muted-foreground">
         {repo ? (
