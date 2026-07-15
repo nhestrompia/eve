@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 48,
-  "commitCount": 54,
+  "snapshotCount": 49,
+  "commitCount": 55,
   "decisionCount": 89,
   "riskCount": 36,
   "artifactCount": 33,
-  "latestAt": "2026-07-14T16:21:14Z",
-  "latestSnapshot": "snap_98c3fc9ffbec5166",
-  "latestTitle": "Install EVE through npx",
+  "latestAt": "2026-07-15T17:46:45Z",
+  "latestSnapshot": "snap_8392333b4938706c",
+  "latestTitle": "Home dashboard top spacing",
   "branch": "main",
-  "head": "c7ebedcdbf6b0c9d1440f157d7949114afe64b70",
+  "head": "fa183aaca9fcd772dbf0844f9aaa5d43cef8bab5",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "c7ebedcdbf6b0c9d1440f157d7949114afe64b70"
+  "latestGitState": "fa183aaca9fcd772dbf0844f9aaa5d43cef8bab5"
 }
