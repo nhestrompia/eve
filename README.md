@@ -15,35 +15,53 @@ experiment, refactor, or release.
 
 <img width="3024" height="1610" alt="eve snapshot detail UI" src="https://github.com/user-attachments/assets/13a3320d-63b5-4df8-aa82-59e131612418" />
 
-## Website and Documentation
+## Quick Start
 
-This repository includes a functional documentation website in `site/`, built
-with Next.js and Fumadocs. You do not need to run the docs site to use eve from
-a fork or local checkout.
-
-Only run the docs site when you are editing documentation or preparing a docs
-deployment:
+Install EVE once for the current user:
 
 ```sh
-npm --prefix site ci
-npm --prefix site run dev
+npx --yes @nhestrompia/eve@latest install
 ```
 
-Build it:
+The installer downloads and verifies the EVE binary, adds it to a user-owned
+bin directory, and configures Codex, Claude Code, and opencode with its absolute
+path. The installed `eve` command can be used from any Git repository.
+
+Initialize EVE in each repository where you want to record product history:
 
 ```sh
-npm --prefix site run build
+cd /path/to/repository
+eve init
+eve doctor
 ```
 
-The site is ready for Vercel deployment. Use `site` as the project root, keep
-the default Next.js build command, and publish from Vercel's generated output.
+Installation does not start a global EVE service. Snapshots belong to the local
+repository, so run EVE inside the repository whose history you want to inspect.
 
-The docs explain:
+To start the local UI, API, and HTTP MCP endpoint:
 
-- What eve records and why it complements Git
-- How snapshots, validation, artifacts, and relationships work
-- How coding agents should read and write eve history
-- CLI, MCP, local API, and snapshot schema reference
+```sh
+cd /path/to/repository
+eve dev
+```
+
+Then open `http://localhost:4317`. The UI shows Snapshots from that repository,
+and the HTTP MCP endpoint is available at `http://localhost:4317/mcp` while
+`eve dev` is running.
+
+The installer configures agent clients to use EVE over stdio. In that mode the
+agent client starts EVE for the active repository when needed; there is no
+always-running global MCP process.
+
+Installer options:
+
+```sh
+npx --yes @nhestrompia/eve@latest install --clients codex,claude
+npx --yes @nhestrompia/eve@latest install --no-mcp
+```
+
+The installer prints a shell-profile instruction if its user bin directory is
+not already on `PATH`.
 
 ## What eve Stores
 
@@ -59,38 +77,7 @@ Canonical product history lives in the repository:
 
 `.eve/snapshots/*.json` is canonical. `.eve/cache/` is rebuildable.
 
-## Install EVE
-
-Install EVE once for the current user and configure supported agent clients:
-
-```sh
-npx @nhestrompia/eve@latest install
-```
-
-The installer downloads the matching macOS, Linux, or Windows binary from the
-GitHub Release, verifies its SHA-256 checksum, installs it in a user-owned bin
-directory, verifies the installed version, and configures Codex, Claude Code,
-and opencode with the absolute binary path.
-
-Configure only selected clients or skip MCP setup:
-
-```sh
-npx @nhestrompia/eve@latest install --clients codex,claude
-npx @nhestrompia/eve@latest install --no-mcp
-```
-
-Then initialize EVE in any Git repository:
-
-```sh
-cd /path/to/repository
-eve init
-eve doctor
-```
-
-The installer prints a shell-profile instruction if its user bin directory is
-not already on `PATH`.
-
-## Run from Source
+## Development from Source
 
 Prerequisites:
 
@@ -109,6 +96,14 @@ go run ./cmd/eve dev
 ```
 
 Open `http://localhost:4317`.
+
+Run the documentation site only when editing or verifying documentation:
+
+```sh
+npm --prefix site ci
+npm --prefix site run dev
+npm --prefix site run build
+```
 
 Useful commands:
 
@@ -251,27 +246,9 @@ snapshot is completed.
 
 ## Local API
 
-```text
-GET  /api/config
-GET  /api/compare?from={snapshotId}&to={snapshotId}
-GET  /api/search
-GET  /api/snapshots
-GET  /api/snapshots/{snapshotId}
-GET  /api/repos
-GET  /api/repos/{repoId}
-GET  /api/repos/{repoId}/pending
-POST /api/repos/{repoId}/open-editor
-GET  /api/repos/{repoId}/snapshots
-GET  /api/repos/{repoId}/snapshots/{snapshotId}
-GET  /api/repos/{repoId}/snapshots/{snapshotId}/code/files
-GET  /api/repos/{repoId}/snapshots/{snapshotId}/code/file?path={path}&mode=diff|full
-GET  /api/repos/{repoId}/snapshots/{snapshotId}/sessions
-GET  /api/repos/{repoId}/snapshots/{snapshotId}/sessions/{sessionKey}
-POST /api/repos/{repoId}/snapshots/{snapshotId}/checkout
-POST /mcp
-```
-
-The Snapshot code endpoints expose the Git-backed files behind a recorded product state. `code/files` returns curated files first, then all changed files, with preview metadata such as language, size, and large/binary/deleted-file reasons. `code/file` returns raw diff hunks or full file content at the Snapshot Git state; syntax highlighting is owned by the UI.
+`eve dev` serves the repository-scoped API on `http://localhost:4317`. See the
+[local API reference](site/content/docs/reference/local-api.mdx) for endpoints
+and response details.
 
 ## MCP
 
@@ -313,200 +290,23 @@ removes the draft. The implementation working tree must be clean by default.
 Skip records resolve committed work that was reviewed but intentionally not
 snapshotted; they are not shown as product-history Snapshots.
 
-From this checkout, the recommended setup is one command:
+The `npx` installer configures supported clients automatically. To update that
+configuration later, run:
 
 ```sh
-go run ./cmd/eve install-mcp --install
+eve install-mcp
 ```
 
-After eve is installed, rerun setup any time with:
+The default stdio setup has no hard-coded repository path. The agent client
+starts `eve mcp-stdio` from its active workspace, and EVE finds the nearest Git
+root. If the client starts MCP elsewhere, pin the repository with
+`eve install-mcp --cwd /path/to/repo`.
 
-```sh
-EVE_BIN_DIR="$(go env GOBIN)"
-[ -n "$EVE_BIN_DIR" ] || EVE_BIN_DIR="$(go env GOPATH)/bin"
-EVE_BIN="$EVE_BIN_DIR/eve"
-"$EVE_BIN" install-mcp
-```
+Use HTTP MCP only while `eve dev` is running inside the target repository.
 
-By default this configures Codex, Claude Code, and opencode. To configure only
-some clients:
-
-```sh
-EVE_BIN_DIR="$(go env GOBIN)"
-[ -n "$EVE_BIN_DIR" ] || EVE_BIN_DIR="$(go env GOPATH)/bin"
-EVE_BIN="$EVE_BIN_DIR/eve"
-"$EVE_BIN" install-mcp --clients codex,claude
-```
-
-To pin a specific repository instead of letting the MCP client start eve from
-the active workspace:
-
-```sh
-EVE_BIN_DIR="$(go env GOBIN)"
-[ -n "$EVE_BIN_DIR" ] || EVE_BIN_DIR="$(go env GOPATH)/bin"
-EVE_BIN="$EVE_BIN_DIR/eve"
-"$EVE_BIN" install-mcp --cwd /path/to/repo
-```
-
-If you installed eve somewhere custom, pass the absolute binary path:
-
-```sh
-EVE_BIN=/absolute/path/to/eve
-"$EVE_BIN" install-mcp --eve-bin "$EVE_BIN"
-```
-
-The recommended stdio setup has no hard-coded repository path: the agent starts
-`eve mcp-stdio` from the active workspace, and eve finds the nearest Git root.
-
-Use HTTP only when `eve dev` is already running for a repository.
-
-If an agent starts MCP servers from somewhere other than the active workspace,
-set that client's MCP working directory to the workspace, set `EVE_CWD`, or pass
-`--cwd`.
-
-Quick local check:
-
-```sh
-EVE_BIN_DIR="$(go env GOBIN)"
-[ -n "$EVE_BIN_DIR" ] || EVE_BIN_DIR="$(go env GOPATH)/bin"
-EVE_BIN="$EVE_BIN_DIR/eve"
-printf '%s\n' \
-  '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' \
-  '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' |
-  "$EVE_BIN" mcp-stdio
-```
-
-### Manual Codex Setup
-
-Codex reads MCP servers from `~/.codex/config.toml`, or from a trusted
-project-scoped `.codex/config.toml`. For all projects, add it to
-`~/.codex/config.toml`:
-
-Stdio:
-
-```toml
-[mcp_servers.eve]
-command = "/absolute/path/to/eve"
-args = ["mcp-stdio"]
-startup_timeout_sec = 20
-tool_timeout_sec = 120
-```
-
-Or add it with the Codex CLI:
-
-```sh
-EVE_BIN_DIR="$(go env GOBIN)"
-[ -n "$EVE_BIN_DIR" ] || EVE_BIN_DIR="$(go env GOPATH)/bin"
-EVE_BIN="$EVE_BIN_DIR/eve"
-codex mcp add eve -- "$EVE_BIN" mcp-stdio
-```
-
-If your Codex host does not start MCP servers from the active workspace, pin the
-workspace explicitly:
-
-```toml
-[mcp_servers.eve]
-command = "/absolute/path/to/eve"
-args = ["mcp-stdio", "--cwd", "/path/to/repo"]
-startup_timeout_sec = 20
-tool_timeout_sec = 120
-```
-
-HTTP, after running `eve dev` in the repository:
-
-```toml
-[mcp_servers.eve]
-url = "http://localhost:4317/mcp"
-startup_timeout_sec = 20
-tool_timeout_sec = 120
-```
-
-Use `/mcp` in Codex to confirm the server is connected.
-
-### Manual Claude Code Setup
-
-User-wide stdio setup:
-
-```sh
-EVE_BIN_DIR="$(go env GOBIN)"
-[ -n "$EVE_BIN_DIR" ] || EVE_BIN_DIR="$(go env GOPATH)/bin"
-EVE_BIN="$EVE_BIN_DIR/eve"
-claude mcp add --scope user --transport stdio eve -- "$EVE_BIN" mcp-stdio --cwd '${CLAUDE_PROJECT_DIR:-.}'
-```
-
-Team-shared project setup in `.mcp.json` uses Claude's project directory. Use a
-portable command only if every teammate has `eve` on their agent host `PATH`;
-otherwise prefer user scope with an absolute command path:
-
-```json
-{
-  "mcpServers": {
-    "eve": {
-      "command": "/absolute/path/to/eve",
-      "args": ["mcp-stdio", "--cwd", "${CLAUDE_PROJECT_DIR:-.}"]
-    }
-  }
-}
-```
-
-HTTP, after running `eve dev` in the repository:
-
-```sh
-claude mcp add --transport http eve http://localhost:4317/mcp
-```
-
-Use `/mcp` or `claude mcp list` to check status. Claude Code asks for approval
-before using project-scoped `.mcp.json` servers.
-
-### Manual opencode Setup
-
-Add a local server to your global `opencode.json`:
-
-```json
-{
-  "$schema": "https://opencode.ai/config.json",
-  "mcp": {
-    "eve": {
-      "type": "local",
-      "command": ["/absolute/path/to/eve", "mcp-stdio"],
-      "enabled": true
-    }
-  }
-}
-```
-
-Or connect to the running HTTP endpoint after `eve dev`:
-
-```json
-{
-  "$schema": "https://opencode.ai/config.json",
-  "mcp": {
-    "eve": {
-      "type": "remote",
-      "url": "http://localhost:4317/mcp",
-      "enabled": true
-    }
-  }
-}
-```
-
-Check with:
-
-```sh
-opencode mcp list
-```
-
-### Pi and Other Agents
-
-Use whichever MCP transport the client supports:
-
-- Stdio: run `eve mcp-stdio` with the server process working directory set to
-  the active repository. Prefer an absolute binary path in client config.
-- Streamable HTTP: run `eve dev` in the repository, then connect to
-  `http://localhost:4317/mcp`.
-
-Keep local HTTP bound to localhost. MCP clients can expose powerful repo tools,
-so only connect agents and servers you trust.
+For client-specific and manual configuration, see the
+[MCP setup guide](site/content/docs/agents/mcp.mdx). Keep HTTP MCP bound to
+localhost, and only connect agents and servers you trust.
 
 ## Library
 
@@ -529,10 +329,3 @@ Public package APIs:
 - `ValidateSnapshot(*Snapshot) error`
 - `CanonicalSnapshotJSON(*Snapshot) ([]byte, error)`
 - `LoadSnapshotFile(path string) (*Snapshot, error)`
-
-## Docs Checked
-
-- [Model Context Protocol transports](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports)
-- [Codex MCP](https://developers.openai.com/codex/mcp)
-- [Claude Code MCP](https://code.claude.com/docs/en/mcp)
-- [opencode MCP servers](https://opencode.ai/docs/mcp-servers/)
