@@ -1,9 +1,9 @@
-# EVE
+# eve
 
-Git tracks code. EVE tracks the product meaning behind completed work: what
+Git tracks code. eve tracks the product meaning behind completed work: what
 changed for users, why it changed, and how it was verified.
 
-## Install EVE
+## Install eve
 
 Install EVE once, then use it from any Git repository:
 
@@ -15,9 +15,9 @@ The installer adds the `eve` CLI to a user-owned bin directory and configures
 Codex, Claude Code, and opencode to use EVE over MCP. Restart your agent client
 after installation so it reloads its MCP configuration.
 
-## Run EVE Locally
+## Run eve Locally
 
-EVE is installed globally, but its data and runtime are local to each
+eve is installed globally, but its data and runtime are local to each
 repository. Initialize the repository you want to use:
 
 ```sh
@@ -34,9 +34,13 @@ eve dev
 Open `http://localhost:4317` to view its Snapshots. The HTTP MCP endpoint is
 available at `http://localhost:4317/mcp` while `eve dev` is running.
 
-## Use EVE with Agents
 
-The installer configures supported agents to launch EVE over stdio. Open your
+<img width="3024" height="1606" alt="image" src="https://github.com/user-attachments/assets/2bb1b38e-aff2-4c26-8272-d90d12329fde" />
+
+
+## Use eve with Agents
+
+The installer configures supported agents to launch eve over stdio. Open your
 agent in an initialized repository; the agent starts EVE for that active
 workspace when it needs MCP tools. There is no always-running global MCP
 process.
