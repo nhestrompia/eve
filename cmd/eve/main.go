@@ -49,6 +49,8 @@ func runWithIO(args []string, stdin io.Reader, stdout io.Writer, stderr io.Write
 		return runAdd(args[1:], stdin, stdout, stderr)
 	case "commit":
 		return runCommit(args[1:], stdout, stderr)
+	case "run-suite":
+		return runSuite(args[1:], stdout, stderr)
 	case "dev":
 		return runDev(args[1:], stdout, stderr)
 	case "mcp-stdio":
@@ -90,6 +92,7 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  doctor")
 	fmt.Fprintln(w, "  add --title <title> --summary <summary> [--type feature] [--validation <command>]")
 	fmt.Fprintln(w, "  commit [--allow-dirty]")
+	fmt.Fprintln(w, "  run-suite [--cwd /path/to/repo] [--suite <name>] [--commit <sha>]")
 	fmt.Fprintln(w, "  dev [--addr localhost:4317]")
 	fmt.Fprintln(w, "  mcp-stdio [--cwd /path/to/repo]")
 	fmt.Fprintln(w, "  install-mcp [--install] [--clients codex,claude,opencode]")
@@ -323,6 +326,66 @@ func runCommit(args []string, stdout io.Writer, stderr io.Writer) int {
 	fmt.Fprintf(stdout, "Committed EVE snapshot %s\n", snapshot.ID)
 	fmt.Fprintf(stdout, "Path: %s\n", repo.snapshotPath(snapshot.ID))
 	return 0
+}
+
+func runSuite(args []string, stdout io.Writer, stderr io.Writer) int {
+	fs := flag.NewFlagSet("run-suite", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	cwd := fs.String("cwd", "", "repository path")
+	suite := fs.String("suite", "", "configured suite name")
+	commit := fs.String("commit", "", "committed HEAD SHA")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	if fs.NArg() != 0 {
+		fmt.Fprintln(stderr, "run-suite takes no positional arguments")
+		return 2
+	}
+	start := *cwd
+	var err error
+	if start == "" {
+		start, err = os.Getwd()
+		if err != nil {
+			fmt.Fprintln(stderr, err)
+			return 1
+		}
+	}
+	root, err := findGitRoot(start)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	repo := repoFromRoot(root)
+	server := runtimeServer{verificationRegistry: newVerificationRegistry()}
+	run, err := server.startVerificationRun(context.Background(), repo, *commit, *suite)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	for {
+		loaded, loadErr := server.verificationRun(repo, run.RunID)
+		if loadErr == nil {
+			run = loaded
+		}
+		if run.Status != "running" && run.Status != "queued" {
+			break
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
+	data, _ := json.MarshalIndent(run, "", "  ")
+	fmt.Fprintln(stdout, string(data))
+	if run.Status != "completed" || verificationStatusForRun(run, configRequiredChecks(repo, run.Profile)) != "required_checks_passed" {
+		return 1
+	}
+	return 0
+}
+
+func configRequiredChecks(repo repository, profile string) []string {
+	config, _, err := repo.verificationPolicy()
+	if err != nil {
+		return nil
+	}
+	return config.Verification.Suites[profile]
 }
 
 type stringListFlag []string
@@ -1049,6 +1112,7 @@ func completeSnapshot(repo repository, input completeSnapshotInput, ignoredStatu
 		Timeline:          input.Timeline,
 		Decisions:         input.Decisions,
 		Validation:        input.Validation,
+		Verification:      snapshotVerification(repo, facts),
 		Artifacts:         input.Artifacts,
 		Implementation: eve.Implementation{
 			Branch:     facts.Branch,
@@ -1066,6 +1130,33 @@ func completeSnapshot(repo repository, input completeSnapshotInput, ignoredStatu
 		return nil, err
 	}
 	return snapshot, nil
+}
+
+func snapshotVerification(repo repository, facts gitFacts) *eve.Verification {
+	config, configHash, err := repo.verificationPolicy()
+	if err != nil || len(config.Verification.Suites) == 0 {
+		return &eve.Verification{Status: "not_configured", Integrity: "unconfigured"}
+	}
+	ref := resolveVerificationProfile(repo, config, facts.Branch, gitTagsAt(repo, facts.GitState))
+	if ref.ResolvedProfile == "" {
+		return &eve.Verification{Status: "not_configured", Integrity: "unconfigured"}
+	}
+	required := append([]string{}, config.Verification.Suites[ref.ResolvedProfile]...)
+	if len(required) == 0 {
+		return &eve.Verification{Status: "not_configured", Profile: ref.ResolvedProfile, Integrity: "unconfigured"}
+	}
+	server := runtimeServer{verificationRegistry: newVerificationRegistry()}
+	run, err := server.latestVerificationRun(repo, facts.GitState, ref.ResolvedProfile, configHash)
+	if err != nil || run == nil {
+		return &eve.Verification{Status: "not_run", Profile: ref.ResolvedProfile, RequiredChecks: required, ConfigBlobHash: configHash, Integrity: "matched"}
+	}
+	verification := verificationFromRun(run, required)
+	verification.RefContext = map[string]any{"branch": ref.Branch, "matchingTags": ref.MatchingTags, "matchedRule": ref.MatchedRule, "resolvedProfile": ref.ResolvedProfile}
+	if verification.Status == "required_checks_passed" && run.RefContext.MatchedRule != ref.MatchedRule {
+		verification.Status = "incomplete"
+		verification.Integrity = "ref_context_mismatch"
+	}
+	return verification
 }
 
 func gitOutput(root string, args ...string) (string, error) {

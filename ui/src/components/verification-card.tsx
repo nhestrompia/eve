@@ -28,7 +28,7 @@ export function VerificationCard({
               <li key={`${value.status}-${index}`} className="flex items-center justify-between gap-5">
                 <span className="flex min-w-0 items-center gap-3">
                   <Icon className={`size-4 shrink-0 ${color}`} />
-                  <span className="truncate">{value.reference || value.type || 'Verification'}</span>
+                  <span className="min-w-0 truncate">{value.reference || value.type || 'Verification'}{value.provenance ? <span className="ml-2 text-xs text-muted-foreground">({provenanceTitle(value.provenance)})</span> : null}</span>
                 </span>
                 <span className={value.status === 'failed' ? 'text-red-600' : 'text-muted-foreground'}>{title(value.status)}</span>
               </li>
@@ -50,5 +50,16 @@ export function VerificationCard({
 }
 
 function title(value: string) {
+  if (value === 'required_checks_passed') return 'Required checks passed';
+  if (value === 'not_run') return 'Not run';
+  if (value === 'not_configured') return 'Not configured';
+  if (value === 'incomplete') return 'Incomplete verification';
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function provenanceTitle(value: string) {
+  if (value === 'executed_by_eve') return 'Executed by EVE';
+  if (value === 'reported_by_agent') return 'Reported by agent';
+  if (value === 'legacy_unattributed') return 'Legacy / unattributed';
+  return value;
 }

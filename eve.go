@@ -85,8 +85,8 @@ func ValidateSnapshot(snapshot *Snapshot) error {
 	if strings.TrimSpace(snapshot.ID) == "" {
 		problems = append(problems, "id is required")
 	}
-	if snapshot.SchemaVersion != SnapshotSchemaVersion {
-		problems = append(problems, fmt.Sprintf("schemaVersion must be %q", SnapshotSchemaVersion))
+	if snapshot.SchemaVersion != SnapshotSchemaVersion && snapshot.SchemaVersion != "0.1.0" {
+		problems = append(problems, fmt.Sprintf("schemaVersion must be %q or %q", SnapshotSchemaVersion, "0.1.0"))
 	}
 	if strings.TrimSpace(snapshot.Title) == "" {
 		problems = append(problems, "title is required")
@@ -135,6 +135,15 @@ func ValidateSnapshot(snapshot *Snapshot) error {
 			problems = append(problems, fmt.Sprintf("validation[%d].status must be one of passed, failed, skipped", i))
 		}
 	}
+	if snapshot.Verification != nil {
+		validStatuses := map[string]bool{
+			"not_configured": true, "not_run": true, "incomplete": true,
+			"failed": true, "required_checks_passed": true,
+		}
+		if !validStatuses[snapshot.Verification.Status] {
+			problems = append(problems, fmt.Sprintf("verification.status has invalid value %q", snapshot.Verification.Status))
+		}
+	}
 	for i, artifact := range snapshot.Artifacts {
 		if _, ok := artifactTypes[artifact.Type]; !ok {
 			problems = append(problems, fmt.Sprintf("artifacts[%d].type must be one of screenshot, video, preview, url, note, log, conversation", i))
@@ -176,7 +185,7 @@ func (err ValidationError) Error() string {
 }
 
 func normalizeSnapshot(snapshot Snapshot) Snapshot {
-	if snapshot.SchemaVersion == "" {
+	if snapshot.SchemaVersion == "" || snapshot.SchemaVersion == "0.1.0" {
 		snapshot.SchemaVersion = SnapshotSchemaVersion
 	}
 	if snapshot.Relationships.Corrects == nil {

@@ -33,6 +33,7 @@ export function VerificationPage() {
                         <div className="min-w-0">
                           <h2 className="font-semibold capitalize">{item.type || 'Verification'}</h2>
                           <p className="mt-2 break-all font-mono text-sm text-muted-foreground">{item.reference || 'No command/reference recorded.'}</p>
+                          {item.provenance ? <p className="mt-2 text-xs text-muted-foreground">{provenanceTitle(item.provenance)}</p> : null}
                         </div>
                       </div>
                       <span className="w-fit rounded-md border px-2 py-1 text-sm capitalize">{item.status}</span>
@@ -46,6 +47,13 @@ export function VerificationPage() {
       ) : null}
     </EvolutionShell>
   );
+}
+
+function provenanceTitle(value: string) {
+  if (value === 'executed_by_eve') return 'Executed by EVE';
+  if (value === 'reported_by_agent') return 'Reported by agent';
+  if (value === 'legacy_unattributed') return 'Legacy / unattributed';
+  return value;
 }
 
 export function Header({ eyebrow, title, subtitle }: { eyebrow: string; title: string; subtitle: string }) {

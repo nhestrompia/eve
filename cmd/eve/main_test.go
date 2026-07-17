@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -40,7 +41,7 @@ func TestRunVersion(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("exit code = %d, want 0; stderr = %s", code, stderr.String())
 	}
-	if !strings.Contains(stdout.String(), "snapshot schema 0.1.0") {
+	if !strings.Contains(stdout.String(), "snapshot schema "+eve.SnapshotSchemaVersion) {
 		t.Fatalf("stdout = %q, want snapshot schema", stdout.String())
 	}
 }
@@ -365,6 +366,47 @@ func TestRuntimeAPIAndMCP(t *testing.T) {
 	}
 	if len(snapshots) != 2 {
 		t.Fatalf("snapshot count = %d, want 2", len(snapshots))
+	}
+}
+
+func TestVerificationRunAndSnapshotAggregation(t *testing.T) {
+	repo := initTempGitRepo(t)
+	t.Chdir(repo)
+	mustRun(t, []string{"init", "--no-agent-instructions"})
+	config := `{"schemaVersion":3,"snapshotSchema":"0.2.0","verification":{"checks":{"unit":{"argv":["go","version"],"timeoutSeconds":10,"successExitCodes":[0],"outputLimitBytes":2000}},"suites":{"change":["unit"]},"profileRules":[{"default":"change"}]}}` + "\n"
+	if err := os.WriteFile(filepath.Join(repo, ".eve", "config.json"), []byte(config), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitRun(t, repo, "add", ".")
+	gitRun(t, repo, "commit", "-m", "configure verification")
+	head := gitOutputForTest(t, repo, "rev-parse", "HEAD")
+	server := newRuntimeServer(repoFromRoot(repo), "localhost:0")
+	run, err := server.startVerificationRun(context.Background(), repoFromRoot(repo), head, "")
+	if err != nil {
+		t.Fatalf("start verification: %v", err)
+	}
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		current, readErr := server.verificationRun(repoFromRoot(repo), run.RunID)
+		if readErr == nil && current.Status != "running" && current.Status != "queued" {
+			run = current
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if run.Status != "completed" || len(run.Checks) != 1 || run.Checks[0].Status != "passed" {
+		t.Fatalf("run = %#v, want completed passing run", run)
+	}
+	input := completeSnapshotInput{Title: "Verified snapshot", Type: "feature", Summary: "Recorded execution evidence."}
+	snapshot, err := completeSnapshot(repoFromRoot(repo), input, []string{".eve/runs"})
+	if err != nil {
+		t.Fatalf("complete snapshot: %v", err)
+	}
+	if snapshot.Verification == nil || snapshot.Verification.Status != "required_checks_passed" {
+		t.Fatalf("verification = %#v, want required_checks_passed", snapshot.Verification)
+	}
+	if snapshot.Verification.SelectedRunID != run.RunID || snapshot.Verification.RunRecordDigest == "" {
+		t.Fatalf("verification = %#v, want selected run and digest", snapshot.Verification)
 	}
 }
 

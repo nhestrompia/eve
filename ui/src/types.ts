@@ -2,12 +2,26 @@ export type Validation = {
   command: string;
   status: 'passed' | 'failed' | 'skipped' | string;
   output?: string;
+  provenance?: 'executed_by_eve' | 'reported_by_agent' | 'legacy_unattributed' | string;
+};
+
+export type SnapshotVerification = {
+  status: string;
+  profile?: string;
+  requiredChecks?: string[];
+  ranChecks?: string[];
+  selectedRunId?: string;
+  runRecordDigest?: string;
+  configBlobHash?: string;
+  integrity?: string;
+  policyChange?: { changed: boolean; requirementsReduced: boolean; addedChecks?: string[]; removedChecks?: string[] };
 };
 
 export type Verification = {
   type?: string;
   status: string;
   reference?: string;
+  provenance?: string;
 };
 
 export type BehaviorClaim = {
@@ -43,6 +57,7 @@ export type Snapshot = {
   }>;
   decisions: unknown[];
   validation: Validation[];
+  verification?: SnapshotVerification;
   artifacts: SnapshotArtifact[];
   implementation: {
     branch: string;

@@ -7,7 +7,7 @@
   "required": ["id", "schemaVersion", "title", "type", "summary", "relationships", "risks", "timeline", "decisions", "validation", "artifacts", "implementation", "createdAt"],
   "properties": {
     "id": { "type": "string" },
-    "schemaVersion": { "const": "0.1.0" },
+    "schemaVersion": { "const": "0.2.0" },
     "title": { "type": "string" },
     "type": { "type": "string", "enum": ["feature", "bugfix", "experiment", "refactor", "release"] },
     "summary": { "type": "string" },
@@ -17,6 +17,7 @@
     "timeline": { "type": "array", "items": { "$ref": "#/$defs/timeline_entry" } },
     "decisions": { "type": "array", "items": { "$ref": "#/$defs/decision" } },
     "validation": { "type": "array", "items": { "$ref": "#/$defs/validation" } },
+    "verification": { "$ref": "#/$defs/verification" },
     "artifacts": { "type": "array", "items": { "$ref": "#/$defs/artifact" } },
     "implementation": { "$ref": "#/$defs/implementation" },
     "createdAt": { "type": "string", "format": "date-time" }
@@ -71,7 +72,25 @@
       "properties": {
         "command": { "type": "string" },
         "status": { "type": "string", "enum": ["passed", "failed", "skipped"] },
-        "output": { "type": "string" }
+        "output": { "type": "string" },
+        "provenance": { "type": "string", "enum": ["executed_by_eve", "reported_by_agent", "legacy_unattributed"] }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": { "type": "string", "enum": ["not_configured", "not_run", "incomplete", "failed", "required_checks_passed"] },
+        "profile": { "type": "string" },
+        "requiredChecks": { "$ref": "#/$defs/id_list" },
+        "ranChecks": { "$ref": "#/$defs/id_list" },
+        "selectedRunId": { "type": "string" },
+        "runRecordDigest": { "type": "string" },
+        "configBlobHash": { "type": "string" },
+        "executorFingerprint": { "type": "object", "additionalProperties": { "type": "string" } },
+        "refContext": { "type": "object" },
+        "integrity": { "type": "string" }
       }
     },
     "artifact": {

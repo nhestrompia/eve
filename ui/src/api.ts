@@ -117,8 +117,19 @@ function validationToVerification(values: Snapshot['validation']): Verification[
   return values.map((value) => ({
     type: 'command',
     status: value.status,
-    reference: value.command
+    reference: value.command,
+    provenance: value.provenance
   }));
+}
+
+function snapshotVerificationToVerification(value: Snapshot['verification']): Verification[] {
+  if (!value) return [];
+  return [{
+    type: 'required suite',
+    status: value.status,
+    reference: value.profile ? `Profile: ${value.profile}` : undefined,
+    provenance: value.status === 'required_checks_passed' ? 'executed_by_eve' : 'not_run'
+  }];
 }
 
 function snapshotToEvolution(snapshot: Snapshot, sessions: SessionRecord[] = []): Evolution {
@@ -137,7 +148,7 @@ function snapshotToEvolution(snapshot: Snapshot, sessions: SessionRecord[] = [])
     behavior: { added: [{ description: snapshot.userVisibleChange || snapshot.summary }] },
     decisions: snapshot.decisions,
     risks: snapshot.risks,
-    verification: validationToVerification(snapshot.validation),
+    verification: [...snapshotVerificationToVerification(snapshot.verification), ...validationToVerification(snapshot.validation)],
     sessions: sessions.map((session) => ({
       provider: session.provider,
       id: session.id,

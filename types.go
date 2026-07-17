@@ -1,7 +1,7 @@
 package eve
 
 const (
-	SnapshotSchemaVersion = "0.1.0"
+	SnapshotSchemaVersion = "0.2.0"
 	CLIVersion            = "0.2.0"
 )
 
@@ -17,6 +17,7 @@ type Snapshot struct {
 	Timeline          []TimelineEntry `json:"timeline"`
 	Decisions         []Decision      `json:"decisions"`
 	Validation        []Validation    `json:"validation"`
+	Verification      *Verification   `json:"verification,omitempty"`
 	Artifacts         []Artifact      `json:"artifacts"`
 	Implementation    Implementation  `json:"implementation"`
 	CreatedAt         string          `json:"createdAt"`
@@ -49,9 +50,31 @@ type Decision struct {
 }
 
 type Validation struct {
-	Command string `json:"command"`
-	Status  string `json:"status"`
-	Output  string `json:"output,omitempty"`
+	Command    string `json:"command"`
+	Status     string `json:"status"`
+	Output     string `json:"output,omitempty"`
+	Provenance string `json:"provenance,omitempty"`
+}
+
+type Verification struct {
+	Status              string            `json:"status"`
+	Profile             string            `json:"profile,omitempty"`
+	RequiredChecks      []string          `json:"requiredChecks,omitempty"`
+	RanChecks           []string          `json:"ranChecks,omitempty"`
+	SelectedRunID       string            `json:"selectedRunId,omitempty"`
+	RunRecordDigest     string            `json:"runRecordDigest,omitempty"`
+	ConfigBlobHash      string            `json:"configBlobHash,omitempty"`
+	ExecutorFingerprint map[string]string `json:"executorFingerprint,omitempty"`
+	RefContext          map[string]any    `json:"refContext,omitempty"`
+	PolicyChange        *PolicyChange     `json:"policyChange,omitempty"`
+	Integrity           string            `json:"integrity,omitempty"`
+}
+
+type PolicyChange struct {
+	Changed             bool     `json:"changed"`
+	RequirementsReduced bool     `json:"requirementsReduced"`
+	AddedChecks         []string `json:"addedChecks,omitempty"`
+	RemovedChecks       []string `json:"removedChecks,omitempty"`
 }
 
 type Artifact struct {

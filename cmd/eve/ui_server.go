@@ -26,9 +26,10 @@ import (
 var embeddedUI embed.FS
 
 type runtimeServer struct {
-	repo        repository
-	addr        string
-	searchCache *snapshotSearchCache
+	repo                 repository
+	addr                 string
+	searchCache          *snapshotSearchCache
+	verificationRegistry *verificationRegistry
 }
 
 type apiError struct {
@@ -233,7 +234,7 @@ type legacySession struct {
 }
 
 func newRuntimeServer(repo repository, addr string) runtimeServer {
-	return runtimeServer{repo: repo, addr: addr, searchCache: &snapshotSearchCache{}}
+	return runtimeServer{repo: repo, addr: addr, searchCache: &snapshotSearchCache{}, verificationRegistry: newVerificationRegistry()}
 }
 
 func (server runtimeServer) routes() http.Handler {
@@ -710,6 +711,10 @@ func (server runtimeServer) loadSnapshotWithRaw(repo repository, id string) (*ev
 }
 
 func summarizeSnapshot(snapshot *eve.Snapshot) snapshotSummary {
+	state := validationState(snapshot.Validation)
+	if snapshot.Verification != nil && snapshot.Verification.Status != "" {
+		state = snapshot.Verification.Status
+	}
 	return snapshotSummary{
 		ID:                    snapshot.ID,
 		Title:                 snapshot.Title,
@@ -724,7 +729,7 @@ func summarizeSnapshot(snapshot *eve.Snapshot) snapshotSummary {
 		RiskCount:             len(snapshot.Risks),
 		ArtifactCount:         len(snapshot.Artifacts),
 		FailedValidationCount: failedValidationCount(snapshot.Validation),
-		ValidationState:       validationState(snapshot.Validation),
+		ValidationState:       state,
 		CreatedAt:             snapshot.CreatedAt,
 	}
 }
@@ -1626,6 +1631,9 @@ func mcpTools() []map[string]any {
 		{"name": "list_snapshots", "description": "List snapshots for a repository.", "inputSchema": objectSchema(map[string]any{"cwd": stringSchema(), "repoId": stringSchema(), "type": enumSchema("feature", "bugfix", "experiment", "refactor", "release")}, nil)},
 		{"name": "get_snapshot", "description": "Get one snapshot by id.", "inputSchema": objectSchema(map[string]any{"cwd": stringSchema(), "repoId": stringSchema(), "snapshotId": stringSchema()}, []string{"snapshotId"})},
 		{"name": "pending_snapshot", "description": "Report unresolved committed work that needs a Snapshot or Skip.", "inputSchema": objectSchema(map[string]any{"cwd": stringSchema(), "repoId": stringSchema()}, nil)},
+		{"name": "start_suite", "description": "Start an explicit repository-defined verification suite against the current committed HEAD.", "inputSchema": objectSchema(map[string]any{"cwd": stringSchema(), "repoId": stringSchema(), "commit": stringSchema(), "suite": stringSchema(), "actorClaim": stringSchema()}, nil)},
+		{"name": "get_suite_run", "description": "Read progress and results for a verification suite run.", "inputSchema": objectSchema(map[string]any{"cwd": stringSchema(), "repoId": stringSchema(), "runId": stringSchema()}, []string{"runId"})},
+		{"name": "cancel_suite", "description": "Cancel an in-progress verification suite run.", "inputSchema": objectSchema(map[string]any{"cwd": stringSchema(), "repoId": stringSchema(), "runId": stringSchema()}, []string{"runId"})},
 		{"name": "complete_snapshot", "description": "Create a completed product Snapshot after implementation changes are committed. This writes .eve files only; after it succeeds, stage and Git commit the generated .eve record separately.", "inputSchema": completeSnapshotSchema()},
 		{"name": "skip_snapshot", "description": "Record that the current task does not deserve product history.", "inputSchema": objectSchema(map[string]any{"cwd": stringSchema(), "repoId": stringSchema(), "reason": stringSchema()}, []string{"reason"})},
 		{"name": "checkout_snapshot", "description": "Checkout the Git state for a Snapshot.", "inputSchema": objectSchema(map[string]any{"cwd": stringSchema(), "repoId": stringSchema(), "snapshotId": stringSchema(), "force": map[string]string{"type": "boolean"}}, []string{"snapshotId"})},
@@ -1783,6 +1791,60 @@ func (server runtimeServer) callMCPTool(ctx context.Context, params json.RawMess
 			return toolError(err.Error()), nil
 		}
 		return toolResult(pendingSnapshotResponse{Pending: pending != nil, PendingSnapshot: pending}), nil
+	case "start_suite":
+		var input struct{ CWD, RepoID, Commit, Suite, ActorClaim string }
+		if err := json.Unmarshal(call.Arguments, &input); err != nil {
+			return nil, &mcpError{Code: -32602, Message: err.Error()}
+		}
+		repo, err := server.resolveToolRepo(input.CWD, input.RepoID)
+		if err != nil {
+			return toolError(err.Error()), nil
+		}
+		run, err := server.startVerificationRun(ctx, repo, input.Commit, input.Suite)
+		if err != nil {
+			return toolError(err.Error()), nil
+		}
+		return toolResult(run), nil
+	case "get_suite_run":
+		var input struct{ CWD, RepoID, RunID string }
+		if err := json.Unmarshal(call.Arguments, &input); err != nil {
+			return nil, &mcpError{Code: -32602, Message: err.Error()}
+		}
+		repo, err := server.resolveToolRepo(input.CWD, input.RepoID)
+		if err != nil {
+			return toolError(err.Error()), nil
+		}
+		run, err := server.verificationRun(repo, input.RunID)
+		if err != nil {
+			return toolError(err.Error()), nil
+		}
+		return toolResult(run), nil
+	case "cancel_suite":
+		var input struct{ CWD, RepoID, RunID string }
+		if err := json.Unmarshal(call.Arguments, &input); err != nil {
+			return nil, &mcpError{Code: -32602, Message: err.Error()}
+		}
+		repo, err := server.resolveToolRepo(input.CWD, input.RepoID)
+		if err != nil {
+			return toolError(err.Error()), nil
+		}
+		run, err := server.verificationRun(repo, input.RunID)
+		if err != nil {
+			return toolError(err.Error()), nil
+		}
+		if run.Status == "running" || run.Status == "queued" {
+			server.verificationRegistry.mu.RLock()
+			cancel := server.verificationRegistry.cancels[input.RunID]
+			server.verificationRegistry.mu.RUnlock()
+			if cancel != nil {
+				cancel()
+			} else {
+				run.Status = "cancelled"
+				run.CompletedAt = nowUTC()
+				_ = repo.saveVerificationRun(run)
+			}
+		}
+		return toolResult(run), nil
 	case "complete_snapshot":
 		return server.completeSnapshotTool(ctx, call.Arguments)
 	case "skip_snapshot":
@@ -1845,7 +1907,7 @@ func (server runtimeServer) completeSnapshotTool(ctx context.Context, args json.
 	if err != nil {
 		return toolError(err.Error()), nil
 	}
-	snapshot, err := completeSnapshot(repo, input, nil)
+	snapshot, err := completeSnapshot(repo, input, []string{".eve/runs"})
 	if err != nil {
 		return toolError(err.Error()), nil
 	}
@@ -1993,10 +2055,13 @@ func normalizeDecision(decision eve.Decision) eve.Decision {
 }
 
 func validationFromString(value string) eve.Validation {
-	return eve.Validation{Command: value, Status: inferValidationStatus(value)}
+	return eve.Validation{Command: value, Status: inferValidationStatus(value), Provenance: "reported_by_agent"}
 }
 
 func normalizeValidation(validation eve.Validation) eve.Validation {
+	if strings.TrimSpace(validation.Provenance) == "" {
+		validation.Provenance = "reported_by_agent"
+	}
 	if strings.TrimSpace(validation.Status) == "" {
 		validation.Status = inferValidationStatus(validation.Command + " " + validation.Output)
 	}
