@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -381,7 +382,7 @@ func TestVerificationRunAndSnapshotAggregation(t *testing.T) {
 	gitRun(t, repo, "commit", "-m", "configure verification")
 	head := gitOutputForTest(t, repo, "rev-parse", "HEAD")
 	server := newRuntimeServer(repoFromRoot(repo), "localhost:0")
-	run, err := server.startVerificationRun(context.Background(), repoFromRoot(repo), head, "")
+	run, err := server.startVerificationRun(context.Background(), repoFromRoot(repo), head, "", "")
 	if err != nil {
 		t.Fatalf("start verification: %v", err)
 	}
@@ -408,6 +409,361 @@ func TestVerificationRunAndSnapshotAggregation(t *testing.T) {
 	if snapshot.Verification.SelectedRunID != run.RunID || snapshot.Verification.RunRecordDigest == "" {
 		t.Fatalf("verification = %#v, want selected run and digest", snapshot.Verification)
 	}
+}
+
+func TestLegacyVerificationEvidenceRemainsValidWithoutRewrite(t *testing.T) {
+	repo := initTempGitRepo(t)
+	t.Chdir(repo)
+	mustRun(t, []string{"init", "--no-agent-instructions"})
+	head := gitOutputForTest(t, repo, "rev-parse", "HEAD")
+	store := repoFromRoot(repo)
+	run := &verificationRun{
+		RunID: "snap_legacy_run", Commit: head, ConfigBlobHash: "sha256:legacy-policy",
+		Profile: "change", Suite: "change", Status: "completed",
+		RefContext:          verificationRefContext{Branch: "master", MatchingTags: []string{}, MatchedRule: "default", ResolvedProfile: "change"},
+		ExecutorFingerprint: map[string]string{"eve": "0.1.0", "os": "test", "arch": "test"},
+		StartedAt:           "2026-07-01T10:00:00Z", CompletedAt: "2026-07-01T10:00:01Z",
+		Checks: []verificationAttempt{{
+			CheckID: "unit", Status: "passed", ExitCode: 0,
+			StartedAt: "2026-07-01T10:00:00Z", CompletedAt: "2026-07-01T10:00:01Z",
+			Output: "ok\n", OutputBytes: 3, OutputDigest: "sha256:legacy-output",
+		}},
+	}
+	legacyBytes, err := verificationRunCanonicalBytes(run)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(legacyBytes, []byte(`"exitCode": 0`)) || bytes.Contains(legacyBytes, []byte(`"schemaVersion"`)) {
+		t.Fatalf("legacy evidence changed shape: %s", legacyBytes)
+	}
+	if err := os.MkdirAll(store.verificationRunsDir(), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(store.verificationRunPath(run.RunID), legacyBytes, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	digest, err := verificationRunDigest(run)
+	if err != nil {
+		t.Fatal(err)
+	}
+	snapshot := sampleSnapshot("snap_legacy_evidence", "Legacy evidence", head)
+	snapshot.Verification = &eve.Verification{
+		Status: "required_checks_passed", Profile: "change", Suite: "change",
+		RequiredChecks: []string{"unit"}, RanChecks: []string{"unit"},
+		SelectedRunID: run.RunID, RunRecordDigest: digest, ConfigBlobHash: run.ConfigBlobHash,
+	}
+	writeSnapshot(t, repo, snapshot)
+
+	loadedRuns, err := store.loadVerificationRuns()
+	if err != nil || len(loadedRuns) != 1 {
+		t.Fatalf("load legacy runs = %#v, %v", loadedRuns, err)
+	}
+	loaded, err := store.loadSnapshot(snapshot.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.Verification.Status != "required_checks_passed" || loaded.Verification.Integrity != "matched" {
+		t.Fatalf("legacy verification = %#v, want matched passing evidence", loaded.Verification)
+	}
+	after, err := os.ReadFile(store.verificationRunPath(run.RunID))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(after, legacyBytes) {
+		t.Fatal("loading legacy evidence rewrote the run record")
+	}
+}
+
+func TestVerificationConfigMigrationPreservesOlderRepositories(t *testing.T) {
+	for name, config := range map[string]string{
+		"legacy snake case": `{"config_version":1,"created_at":"2026-07-01T00:00:00Z","eve":{"version":1}}`,
+		"schema version 2":  `{"schemaVersion":2,"snapshotSchema":"0.1.0","createdAt":"2026-07-01T00:00:00Z"}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			repo := initTempGitRepo(t)
+			t.Chdir(repo)
+			mustRun(t, []string{"init", "--no-agent-instructions"})
+			if err := os.WriteFile(filepath.Join(repo, ".eve", "config.json"), []byte(config+"\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			if err := validateDoctorRepository(repoFromRoot(repo)); err != nil {
+				t.Fatalf("older configuration should remain readable: %v", err)
+			}
+		})
+	}
+}
+
+func TestInitWritesCurrentConfigWithoutRewritingOlderConfig(t *testing.T) {
+	repo := initTempGitRepo(t)
+	t.Chdir(repo)
+	mustRun(t, []string{"init", "--no-agent-instructions"})
+	var current map[string]any
+	if err := json.Unmarshal([]byte(readTextFile(t, filepath.Join(repo, ".eve", "config.json"))), &current); err != nil {
+		t.Fatal(err)
+	}
+	if current["schemaVersion"] != float64(3) {
+		t.Fatalf("new config schemaVersion = %#v, want 3", current["schemaVersion"])
+	}
+	legacy := `{"schemaVersion":2,"snapshotSchema":"0.1.0","createdAt":"2026-07-01T00:00:00Z"}` + "\n"
+	if err := os.WriteFile(filepath.Join(repo, ".eve", "config.json"), []byte(legacy), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	mustRun(t, []string{"init", "--no-agent-instructions"})
+	if got := readTextFile(t, filepath.Join(repo, ".eve", "config.json")); got != legacy {
+		t.Fatalf("init rewrote older config:\n%s", got)
+	}
+}
+
+func TestVerificationRejectsUnsupportedOrMalformedConfiguredPolicy(t *testing.T) {
+	for name, config := range map[string]string{
+		"unsupported version":        `{"schemaVersion":999,"verification":{}}`,
+		"version 2 verification":     `{"schemaVersion":2,"verification":{"checks":{"unit":{"argv":["go","version"],"timeoutSeconds":10,"successExitCodes":[0],"outputLimitBytes":1000}},"suites":{"change":["unit"]},"profileRules":[{"default":"change"}]}}`,
+		"undefined check":            `{"schemaVersion":3,"verification":{"checks":{},"suites":{"change":["missing"]},"profileRules":[{"default":"change"}]}}`,
+		"unknown verification field": `{"schemaVersion":3,"verification":{"checkz":{},"suites":{},"profileRules":[]}}`,
+		"missing snapshot schema":    `{"schemaVersion":3,"verification":{}}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			repo := initTempGitRepo(t)
+			t.Chdir(repo)
+			mustRun(t, []string{"init", "--no-agent-instructions"})
+			if err := os.WriteFile(filepath.Join(repo, ".eve", "config.json"), []byte(config+"\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			gitRun(t, repo, "add", ".")
+			gitRun(t, repo, "commit", "-m", "set verification policy")
+			_, err := completeSnapshot(repoFromRoot(repo), completeSnapshotInput{Title: "Config", Type: "feature", Summary: "Policy"}, nil)
+			if err == nil {
+				t.Fatal("completeSnapshot succeeded with unsupported verification policy")
+			}
+		})
+	}
+}
+
+func TestVerificationHonorsConfiguredSuccessExitCodes(t *testing.T) {
+	repo := initTempGitRepo(t)
+	t.Chdir(repo)
+	mustRun(t, []string{"init", "--no-agent-instructions"})
+	config := `{"schemaVersion":3,"snapshotSchema":"0.2.0","verification":{"checks":{"unit":{"argv":["sh","-c","exit 7"],"timeoutSeconds":10,"successExitCodes":[7],"outputLimitBytes":2000}},"suites":{"change":["unit"]},"profileRules":[{"default":"change"}]}}` + "\n"
+	if err := os.WriteFile(filepath.Join(repo, ".eve", "config.json"), []byte(config), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitRun(t, repo, "add", ".")
+	gitRun(t, repo, "commit", "-m", "configure verification")
+	server := newRuntimeServer(repoFromRoot(repo), "localhost:0")
+	run, err := server.startVerificationRun(context.Background(), repoFromRoot(repo), "", "", "")
+	if err != nil {
+		t.Fatalf("start verification: %v", err)
+	}
+	run = waitForVerificationRun(t, server, repoFromRoot(repo), run.RunID)
+	if run.Status != "completed" || run.Checks[0].Status != "passed" {
+		t.Fatalf("run = %#v, want accepted exit code", run)
+	}
+}
+
+func TestVerificationRedactsAndBoundsPersistedOutput(t *testing.T) {
+	repo := initTempGitRepo(t)
+	t.Chdir(repo)
+	t.Setenv("EVE_TEST_SECRET", "secret-value-123")
+	mustRun(t, []string{"init", "--no-agent-instructions"})
+	config := `{"schemaVersion":3,"snapshotSchema":"0.2.0","verification":{"checks":{"unit":{"argv":["sh","-c","printf \"$EVE_TEST_SECRET-stdout-long\"; printf \"$EVE_TEST_SECRET-stderr-long\" >&2"],"timeoutSeconds":10,"successExitCodes":[0],"outputLimitBytes":24,"inheritEnvironment":["EVE_TEST_SECRET"]}},"suites":{"change":["unit"]},"profileRules":[{"default":"change"}]}}` + "\n"
+	if err := os.WriteFile(filepath.Join(repo, ".eve", "config.json"), []byte(config), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitRun(t, repo, "add", ".")
+	gitRun(t, repo, "commit", "-m", "configure verification")
+	server := newRuntimeServer(repoFromRoot(repo), "localhost:0")
+	run, err := server.startVerificationRun(context.Background(), repoFromRoot(repo), "", "", "test actor")
+	if err != nil {
+		t.Fatalf("start verification: %v", err)
+	}
+	run = waitForVerificationRun(t, server, repoFromRoot(repo), run.RunID)
+	if run.Status != "completed" || len(run.Checks) != 1 {
+		t.Fatalf("run = %#v, want completed output evidence", run)
+	}
+	attempt := run.Checks[0]
+	encoded, _ := json.Marshal(run)
+	if strings.Contains(string(encoded), "secret-value-123") {
+		t.Fatalf("persisted run leaked inherited secret: %s", encoded)
+	}
+	if !attempt.Truncated || len(attempt.Output) > 24 || len(attempt.Stdout)+len(attempt.Stderr) > 24 {
+		t.Fatalf("attempt output was not bounded: %#v", attempt)
+	}
+	if attempt.StdoutBytes == 0 || attempt.StderrBytes == 0 || attempt.StdoutDigest == "" || attempt.StderrDigest == "" {
+		t.Fatalf("attempt lacks separate stdout/stderr evidence: %#v", attempt)
+	}
+	if run.ActorClaim != "test actor" || run.ActorProvenance != "unauthenticated" {
+		t.Fatalf("actor evidence = %#v", run)
+	}
+}
+
+func TestVerificationCancellationTerminatesProcessGroup(t *testing.T) {
+	repo := initTempGitRepo(t)
+	t.Chdir(repo)
+	mustRun(t, []string{"init", "--no-agent-instructions"})
+	config := `{"schemaVersion":3,"snapshotSchema":"0.2.0","verification":{"checks":{"slow":{"argv":["sh","-c","sleep 30"],"timeoutSeconds":60,"successExitCodes":[0],"outputLimitBytes":1000}},"suites":{"change":["slow"]},"profileRules":[{"default":"change"}]}}` + "\n"
+	if err := os.WriteFile(filepath.Join(repo, ".eve", "config.json"), []byte(config), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitRun(t, repo, "add", ".")
+	gitRun(t, repo, "commit", "-m", "configure slow verification")
+	server := newRuntimeServer(repoFromRoot(repo), "localhost:0")
+	run, err := server.startVerificationRun(context.Background(), repoFromRoot(repo), "", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		current, readErr := server.verificationRun(repoFromRoot(repo), run.RunID)
+		if readErr == nil && len(current.Checks) == 1 && current.Checks[0].Status == "running" {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	otherProcess := newRuntimeServer(repoFromRoot(repo), "localhost:0")
+	queued, secondErr := otherProcess.startVerificationRun(context.Background(), repoFromRoot(repo), "", "", "")
+	if secondErr != nil || queued.Status != "queued" {
+		t.Fatalf("second runtime run = %#v err = %v, want queued serialization", queued, secondErr)
+	}
+	otherProcess.verificationRegistry.mu.RLock()
+	cancelQueued := otherProcess.verificationRegistry.cancels[queued.RunID]
+	otherProcess.verificationRegistry.mu.RUnlock()
+	if cancelQueued == nil {
+		t.Fatal("queued suite has no cancellation handle")
+	}
+	cancelQueued()
+	queued = waitForVerificationRun(t, otherProcess, repoFromRoot(repo), queued.RunID)
+	if queued.Status != "cancelled" {
+		t.Fatalf("queued cancellation = %#v", queued)
+	}
+	server.verificationRegistry.mu.RLock()
+	cancel := server.verificationRegistry.cancels[run.RunID]
+	server.verificationRegistry.mu.RUnlock()
+	if cancel == nil {
+		t.Fatal("running suite has no cancellation handle")
+	}
+	started := time.Now()
+	cancel()
+	run = waitForVerificationRun(t, server, repoFromRoot(repo), run.RunID)
+	if elapsed := time.Since(started); elapsed > 5*time.Second {
+		t.Fatalf("cancellation took %s; child process likely survived", elapsed)
+	}
+	if run.Status != "cancelled" || run.Checks[0].Status != "cancelled" {
+		t.Fatalf("cancelled run = %#v", run)
+	}
+}
+
+func TestVerificationInvalidatesTrackedDriftAndTamperedEvidence(t *testing.T) {
+	repo := initTempGitRepo(t)
+	t.Chdir(repo)
+	mustRun(t, []string{"init", "--no-agent-instructions"})
+	config := `{"schemaVersion":3,"snapshotSchema":"0.2.0","verification":{"checks":{"unit":{"argv":["sh","-c","echo changed > tracked.txt"],"timeoutSeconds":10,"successExitCodes":[0],"outputLimitBytes":2000}},"suites":{"change":["unit"]},"profileRules":[{"default":"change"}]}}` + "\n"
+	if err := os.WriteFile(filepath.Join(repo, ".eve", "config.json"), []byte(config), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitRun(t, repo, "add", ".")
+	gitRun(t, repo, "commit", "-m", "configure verification")
+	server := newRuntimeServer(repoFromRoot(repo), "localhost:0")
+	run, err := server.startVerificationRun(context.Background(), repoFromRoot(repo), "", "", "")
+	if err != nil {
+		t.Fatalf("start verification: %v", err)
+	}
+	run = waitForVerificationRun(t, server, repoFromRoot(repo), run.RunID)
+	if run.Status != "invalidated" {
+		t.Fatalf("run status = %q, want invalidated", run.Status)
+	}
+
+	config = strings.Replace(config, `"sh","-c","echo changed > tracked.txt"`, `"go","version"`, 1)
+	if err := os.WriteFile(filepath.Join(repo, ".eve", "config.json"), []byte(config), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitRun(t, repo, "add", ".")
+	gitRun(t, repo, "commit", "-m", "use passing check")
+	run, err = server.startVerificationRun(context.Background(), repoFromRoot(repo), "", "", "")
+	if err != nil {
+		t.Fatalf("start passing verification: %v", err)
+	}
+	run = waitForVerificationRun(t, server, repoFromRoot(repo), run.RunID)
+	if run.Status != "completed" {
+		t.Fatalf("passing run status = %q", run.Status)
+	}
+	snapshot, err := completeSnapshot(repoFromRoot(repo), completeSnapshotInput{Title: "Verified", Type: "feature", Summary: "Evidence"}, []string{".eve/runs"})
+	if err != nil {
+		t.Fatalf("complete snapshot: %v", err)
+	}
+	runData, err := os.ReadFile(repoFromRoot(repo).verificationRunPath(snapshot.Verification.SelectedRunID))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(repoFromRoot(repo).verificationRunPath(snapshot.Verification.SelectedRunID), append(runData, []byte(" ")...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := repoFromRoot(repo).loadSnapshot(snapshot.ID)
+	if err != nil {
+		t.Fatalf("load snapshot: %v", err)
+	}
+	if loaded.Verification.Integrity == "matched" || loaded.Verification.Status == "required_checks_passed" {
+		t.Fatalf("tampered verification = %#v, want integrity failure", loaded.Verification)
+	}
+	listed, err := repoFromRoot(repo).listSnapshots("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(listed) != 1 || listed[0].Verification.Status == "required_checks_passed" {
+		t.Fatalf("snapshot list retained green tampered evidence: %#v", listed)
+	}
+}
+
+func TestSnapshotDisclosesVerificationPolicyReduction(t *testing.T) {
+	repo := initTempGitRepo(t)
+	t.Chdir(repo)
+	mustRun(t, []string{"init", "--no-agent-instructions"})
+	fullPolicy := `{"schemaVersion":3,"snapshotSchema":"0.2.0","verification":{"checks":{"unit":{"argv":["go","version"],"timeoutSeconds":10,"successExitCodes":[0],"outputLimitBytes":2000},"e2e":{"argv":["go","version"],"timeoutSeconds":10,"successExitCodes":[0],"outputLimitBytes":2000}},"suites":{"release":["unit","e2e"]},"profileRules":[{"default":"release"}]}}` + "\n"
+	if err := os.WriteFile(filepath.Join(repo, ".eve", "config.json"), []byte(fullPolicy), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitRun(t, repo, "add", ".")
+	gitRun(t, repo, "commit", "-m", "configure full verification")
+	_, err := completeSnapshot(repoFromRoot(repo), completeSnapshotInput{Title: "Baseline", Type: "release", Summary: "Full policy baseline"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gitRun(t, repo, "add", ".eve")
+	gitRun(t, repo, "commit", "-m", "record baseline snapshot")
+
+	reducedPolicy := strings.Replace(fullPolicy, `"release":["unit","e2e"]`, `"release":["unit"]`, 1)
+	if err := os.WriteFile(filepath.Join(repo, ".eve", "config.json"), []byte(reducedPolicy), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitRun(t, repo, "add", ".eve/config.json")
+	gitRun(t, repo, "commit", "-m", "reduce verification requirements")
+	server := newRuntimeServer(repoFromRoot(repo), "localhost:0")
+	run, err := server.startVerificationRun(context.Background(), repoFromRoot(repo), "", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	waitForVerificationRun(t, server, repoFromRoot(repo), run.RunID)
+	snapshot, err := completeSnapshot(repoFromRoot(repo), completeSnapshotInput{Title: "Reduced", Type: "release", Summary: "Reduced policy"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	change := snapshot.Verification.PolicyChange
+	if change == nil || !change.Changed || !change.RequirementsReduced || !slices.Contains(change.RemovedChecks, "e2e") {
+		t.Fatalf("policy change = %#v, want disclosed e2e reduction", change)
+	}
+}
+
+func waitForVerificationRun(t *testing.T, server runtimeServer, repo repository, id string) *verificationRun {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		run, err := server.verificationRun(repo, id)
+		if err == nil && run.Status != "running" && run.Status != "queued" {
+			return run
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("verification run %s did not finish", id)
+	return nil
 }
 
 func TestPendingSnapshotIdleTriggerAndSkipResolution(t *testing.T) {
@@ -742,8 +1098,8 @@ func TestAddAndCommitSnapshotCLI(t *testing.T) {
 	if got := snapshot.Implementation.Commits; len(got) != 1 || got[0] != head {
 		t.Fatalf("implementation commits = %#v, want only %s", got, head)
 	}
-	if len(snapshot.Validation) != 1 || snapshot.Validation[0].Command != "go test ./..." || snapshot.Validation[0].Status != "passed" {
-		t.Fatalf("validation = %#v, want passed go test", snapshot.Validation)
+	if len(snapshot.Validation) != 1 || snapshot.Validation[0].Command != "go test ./..." || snapshot.Validation[0].Status != "skipped" || snapshot.Validation[0].Provenance != "reported_by_agent" {
+		t.Fatalf("validation = %#v, want non-passing agent-reported claim", snapshot.Validation)
 	}
 	if _, err := os.Stat(repoFromRoot(repo).stagedSnapshotPath()); !os.IsNotExist(err) {
 		t.Fatalf("staged draft should be removed, err = %v", err)

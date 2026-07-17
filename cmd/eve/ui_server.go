@@ -707,6 +707,7 @@ func (server runtimeServer) loadSnapshotWithRaw(repo repository, id string) (*ev
 	if err != nil {
 		return nil, nil, err
 	}
+	verifySnapshotRunEvidence(repo, snapshot)
 	return snapshot, json.RawMessage(data), nil
 }
 
@@ -1800,7 +1801,7 @@ func (server runtimeServer) callMCPTool(ctx context.Context, params json.RawMess
 		if err != nil {
 			return toolError(err.Error()), nil
 		}
-		run, err := server.startVerificationRun(ctx, repo, input.Commit, input.Suite)
+		run, err := server.startVerificationRun(ctx, repo, input.Commit, input.Suite, input.ActorClaim)
 		if err != nil {
 			return toolError(err.Error()), nil
 		}
@@ -1838,10 +1839,22 @@ func (server runtimeServer) callMCPTool(ctx context.Context, params json.RawMess
 			server.verificationRegistry.mu.RUnlock()
 			if cancel != nil {
 				cancel()
+				deadline := time.Now().Add(3500 * time.Millisecond)
+				for time.Now().Before(deadline) {
+					current, readErr := server.verificationRun(repo, input.RunID)
+					if readErr == nil {
+						run = current
+						if run.Status != "running" && run.Status != "queued" {
+							break
+						}
+					}
+					time.Sleep(10 * time.Millisecond)
+				}
 			} else {
-				run.Status = "cancelled"
-				run.CompletedAt = nowUTC()
-				_ = repo.saveVerificationRun(run)
+				markVerificationRunCancelled(run)
+				if err := repo.saveVerificationRun(run); err != nil {
+					return toolError(err.Error()), nil
+				}
 			}
 		}
 		return toolResult(run), nil
@@ -1907,7 +1920,7 @@ func (server runtimeServer) completeSnapshotTool(ctx context.Context, args json.
 	if err != nil {
 		return toolError(err.Error()), nil
 	}
-	snapshot, err := completeSnapshot(repo, input, []string{".eve/runs"})
+	snapshot, err := completeSnapshot(repo, input, nil)
 	if err != nil {
 		return toolError(err.Error()), nil
 	}
@@ -1966,6 +1979,11 @@ func normalizeCompleteSnapshotInput(raw completeSnapshotInputRaw) (completeSnaps
 	validation, err := decodeFlexibleArray(raw.Validation, validationFromString, normalizeValidation)
 	if err != nil {
 		return completeSnapshotInput{}, fmt.Errorf("validation: %w", err)
+	}
+	for i, claim := range validation {
+		if claim.Provenance != "reported_by_agent" {
+			return completeSnapshotInput{}, fmt.Errorf("validation[%d].provenance must be reported_by_agent", i)
+		}
 	}
 	artifacts, err := decodeFlexibleArray(raw.Artifacts, artifactFromString, normalizeArtifact)
 	if err != nil {
@@ -2055,7 +2073,7 @@ func normalizeDecision(decision eve.Decision) eve.Decision {
 }
 
 func validationFromString(value string) eve.Validation {
-	return eve.Validation{Command: value, Status: inferValidationStatus(value), Provenance: "reported_by_agent"}
+	return eve.Validation{Command: value, Status: "skipped", Provenance: "reported_by_agent"}
 }
 
 func normalizeValidation(validation eve.Validation) eve.Validation {
@@ -2063,21 +2081,9 @@ func normalizeValidation(validation eve.Validation) eve.Validation {
 		validation.Provenance = "reported_by_agent"
 	}
 	if strings.TrimSpace(validation.Status) == "" {
-		validation.Status = inferValidationStatus(validation.Command + " " + validation.Output)
+		validation.Status = "skipped"
 	}
 	return validation
-}
-
-func inferValidationStatus(value string) string {
-	lowered := strings.ToLower(value)
-	switch {
-	case strings.Contains(lowered, "skip"):
-		return "skipped"
-	case strings.Contains(lowered, "fail"):
-		return "failed"
-	default:
-		return "passed"
-	}
 }
 
 func artifactFromString(value string) eve.Artifact {

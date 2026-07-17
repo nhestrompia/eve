@@ -61,7 +61,17 @@ func ParseSnapshot(data []byte) (*Snapshot, error) {
 		return nil, errors.New("parse snapshot: unexpected trailing JSON value")
 	}
 
+	legacySchema := snapshot.SchemaVersion == "" || snapshot.SchemaVersion == "0.1.0"
 	snapshot = normalizeSnapshot(snapshot)
+	for i := range snapshot.Validation {
+		if strings.TrimSpace(snapshot.Validation[i].Provenance) == "" {
+			if legacySchema {
+				snapshot.Validation[i].Provenance = "legacy_unattributed"
+			} else {
+				snapshot.Validation[i].Provenance = "reported_by_agent"
+			}
+		}
+	}
 	if err := ValidateSnapshot(&snapshot); err != nil {
 		return nil, err
 	}
@@ -133,6 +143,12 @@ func ValidateSnapshot(snapshot *Snapshot) error {
 		}
 		if _, ok := validationStatuses[validation.Status]; !ok {
 			problems = append(problems, fmt.Sprintf("validation[%d].status must be one of passed, failed, skipped", i))
+		}
+		if validation.Provenance != "" {
+			validProvenance := map[string]bool{"executed_by_eve": true, "reported_by_agent": true, "legacy_unattributed": true}
+			if !validProvenance[validation.Provenance] {
+				problems = append(problems, fmt.Sprintf("validation[%d].provenance has invalid value %q", i, validation.Provenance))
+			}
 		}
 	}
 	if snapshot.Verification != nil {

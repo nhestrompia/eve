@@ -22,7 +22,7 @@ import (
 	"github.com/nhestrompia/eve"
 )
 
-const configFileVersion = 2
+const configFileVersion = 3
 
 func main() {
 	os.Exit(runWithIO(os.Args[1:], os.Stdin, os.Stdout, os.Stderr))
@@ -357,7 +357,7 @@ func runSuite(args []string, stdout io.Writer, stderr io.Writer) int {
 	}
 	repo := repoFromRoot(root)
 	server := runtimeServer{verificationRegistry: newVerificationRegistry()}
-	run, err := server.startVerificationRun(context.Background(), repo, *commit, *suite)
+	run, err := server.startVerificationRun(context.Background(), repo, *commit, *suite, "")
 	if err != nil {
 		fmt.Fprintln(stderr, err)
 		return 1
@@ -766,7 +766,12 @@ func (repo repository) stagedSnapshotPath() string {
 }
 
 func (repo repository) loadSnapshot(id string) (*eve.Snapshot, error) {
-	return eve.LoadSnapshotFile(repo.snapshotPath(id))
+	snapshot, err := eve.LoadSnapshotFile(repo.snapshotPath(id))
+	if err != nil {
+		return nil, err
+	}
+	verifySnapshotRunEvidence(repo, snapshot)
+	return snapshot, nil
 }
 
 func (repo repository) saveSnapshot(snapshot *eve.Snapshot) error {
@@ -837,7 +842,7 @@ func (repo repository) listSnapshots(snapshotType string) ([]*eve.Snapshot, erro
 		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
 			continue
 		}
-		snapshot, err := eve.LoadSnapshotFile(filepath.Join(repo.snapshotsDir(), entry.Name()))
+		snapshot, err := repo.loadSnapshot(strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name())))
 		if err != nil {
 			return nil, err
 		}
@@ -1008,7 +1013,7 @@ func deriveGitFactsIgnoring(repo repository, ignoredStatusPaths []string) (gitFa
 	if err != nil {
 		return gitFacts{}, err
 	}
-	status, err := gitOutput(repo.Root, "status", "--porcelain")
+	status, err := gitOutput(repo.Root, "status", "--porcelain", "--untracked-files=all")
 	if err != nil {
 		return gitFacts{}, err
 	}
@@ -1027,7 +1032,11 @@ func deriveGitFactsIgnoring(repo repository, ignoredStatusPaths []string) (gitFa
 }
 
 func latestCommittedEVEChange(repo repository) string {
-	commit, err := gitOutput(repo.Root, "log", "-n", "1", "--format=%H", "--", ".eve")
+	commit, err := gitOutput(repo.Root, "log", "-n", "1", "--format=%H", "--", ".eve/snapshots", ".eve/evolutions", ".eve/skips")
+	if err == nil && strings.TrimSpace(commit) != "" {
+		return strings.TrimSpace(commit)
+	}
+	commit, err = gitOutput(repo.Root, "log", "-n", "1", "--format=%H", "--", ".eve")
 	if err != nil {
 		return ""
 	}
@@ -1093,6 +1102,17 @@ func gitStatusLineIgnored(line string, ignoredPaths []string) bool {
 }
 
 func completeSnapshot(repo repository, input completeSnapshotInput, ignoredStatusPaths []string) (*eve.Snapshot, error) {
+	evidencePaths, err := verificationNewEvidencePaths(repo)
+	if err != nil {
+		return nil, err
+	}
+	filteredIgnored := make([]string, 0, len(ignoredStatusPaths)+len(evidencePaths))
+	for _, path := range ignoredStatusPaths {
+		if strings.TrimSuffix(filepath.ToSlash(path), "/") != ".eve/runs" {
+			filteredIgnored = append(filteredIgnored, path)
+		}
+	}
+	ignoredStatusPaths = append(filteredIgnored, evidencePaths...)
 	facts, err := deriveGitFactsIgnoring(repo, ignoredStatusPaths)
 	if err != nil {
 		return nil, err
@@ -1112,7 +1132,7 @@ func completeSnapshot(repo repository, input completeSnapshotInput, ignoredStatu
 		Timeline:          input.Timeline,
 		Decisions:         input.Decisions,
 		Validation:        input.Validation,
-		Verification:      snapshotVerification(repo, facts),
+		Verification:      nil,
 		Artifacts:         input.Artifacts,
 		Implementation: eve.Implementation{
 			Branch:     facts.Branch,
@@ -1123,6 +1143,11 @@ func completeSnapshot(repo repository, input completeSnapshotInput, ignoredStatu
 		},
 		CreatedAt: nowUTC(),
 	}
+	verification, err := snapshotVerification(repo, facts)
+	if err != nil {
+		return nil, err
+	}
+	snapshot.Verification = verification
 	if err := repo.saveSnapshot(snapshot); err != nil {
 		return nil, err
 	}
@@ -1132,31 +1157,64 @@ func completeSnapshot(repo repository, input completeSnapshotInput, ignoredStatu
 	return snapshot, nil
 }
 
-func snapshotVerification(repo repository, facts gitFacts) *eve.Verification {
+func snapshotVerification(repo repository, facts gitFacts) (*eve.Verification, error) {
 	config, configHash, err := repo.verificationPolicy()
-	if err != nil || len(config.Verification.Suites) == 0 {
-		return &eve.Verification{Status: "not_configured", Integrity: "unconfigured"}
+	if errors.Is(err, os.ErrNotExist) {
+		return &eve.Verification{Status: "not_configured", Integrity: "unconfigured"}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if len(config.Verification.Suites) == 0 {
+		ref := verificationRefContext{Branch: facts.Branch, MatchingTags: gitTagsAt(repo, facts.GitState)}
+		policyChange, policyErr := verificationPolicyChange(repo, facts.BaseCommit, ref, nil, configHash)
+		if policyErr != nil {
+			return nil, policyErr
+		}
+		return &eve.Verification{Status: "not_configured", ConfigBlobHash: configHash, PolicyChange: policyChange, Integrity: "unconfigured"}, nil
 	}
 	ref := resolveVerificationProfile(repo, config, facts.Branch, gitTagsAt(repo, facts.GitState))
 	if ref.ResolvedProfile == "" {
-		return &eve.Verification{Status: "not_configured", Integrity: "unconfigured"}
+		policyChange, policyErr := verificationPolicyChange(repo, facts.BaseCommit, ref, nil, configHash)
+		if policyErr != nil {
+			return nil, policyErr
+		}
+		return &eve.Verification{Status: "not_configured", ConfigBlobHash: configHash, PolicyChange: policyChange, Integrity: "unconfigured"}, nil
 	}
 	required := append([]string{}, config.Verification.Suites[ref.ResolvedProfile]...)
 	if len(required) == 0 {
-		return &eve.Verification{Status: "not_configured", Profile: ref.ResolvedProfile, Integrity: "unconfigured"}
+		policyChange, policyErr := verificationPolicyChange(repo, facts.BaseCommit, ref, nil, configHash)
+		if policyErr != nil {
+			return nil, policyErr
+		}
+		return &eve.Verification{Status: "not_configured", Profile: ref.ResolvedProfile, ConfigBlobHash: configHash, PolicyChange: policyChange, Integrity: "unconfigured"}, nil
+	}
+	policyChange, err := verificationPolicyChange(repo, facts.BaseCommit, ref, required, configHash)
+	if err != nil {
+		return nil, err
+	}
+	if facts.Dirty {
+		return &eve.Verification{Status: "incomplete", Profile: ref.ResolvedProfile, RequiredChecks: required, ConfigBlobHash: configHash, PolicyChange: policyChange, Integrity: "dirty_tree"}, nil
 	}
 	server := runtimeServer{verificationRegistry: newVerificationRegistry()}
 	run, err := server.latestVerificationRun(repo, facts.GitState, ref.ResolvedProfile, configHash)
 	if err != nil || run == nil {
-		return &eve.Verification{Status: "not_run", Profile: ref.ResolvedProfile, RequiredChecks: required, ConfigBlobHash: configHash, Integrity: "matched"}
+		if err != nil {
+			if errors.Is(err, errVerificationEvidenceInvalid) {
+				return &eve.Verification{Status: "failed", Profile: ref.ResolvedProfile, RequiredChecks: required, ConfigBlobHash: configHash, PolicyChange: policyChange, Integrity: "evidence_invalid"}, nil
+			}
+			return nil, err
+		}
+		return &eve.Verification{Status: "not_run", Profile: ref.ResolvedProfile, RequiredChecks: required, ConfigBlobHash: configHash, PolicyChange: policyChange, Integrity: "matched"}, nil
 	}
 	verification := verificationFromRun(run, required)
+	verification.PolicyChange = policyChange
 	verification.RefContext = map[string]any{"branch": ref.Branch, "matchingTags": ref.MatchingTags, "matchedRule": ref.MatchedRule, "resolvedProfile": ref.ResolvedProfile}
-	if verification.Status == "required_checks_passed" && run.RefContext.MatchedRule != ref.MatchedRule {
+	if verification.Status == "required_checks_passed" && (run.RefContext.MatchedRule != ref.MatchedRule || run.RefContext.Branch != ref.Branch || !equalStrings(run.RefContext.MatchingTags, ref.MatchingTags)) {
 		verification.Status = "incomplete"
 		verification.Integrity = "ref_context_mismatch"
 	}
-	return verification
+	return verification, nil
 }
 
 func gitOutput(root string, args ...string) (string, error) {
@@ -1278,11 +1336,15 @@ func checkoutSnapshot(repo repository, snapshot *eve.Snapshot, force bool) check
 }
 
 func newSnapshotID() string {
+	return newRecordID("snap")
+}
+
+func newRecordID(prefix string) string {
 	var raw [8]byte
 	if _, err := rand.Read(raw[:]); err != nil {
-		return "snap_" + time.Now().UTC().Format("20060102150405")
+		return prefix + "_" + time.Now().UTC().Format("20060102150405")
 	}
-	return "snap_" + hex.EncodeToString(raw[:])
+	return prefix + "_" + hex.EncodeToString(raw[:])
 }
 
 func nowUTC() string {

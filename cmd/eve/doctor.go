@@ -138,11 +138,15 @@ func validateDoctorRepository(repo repository) error {
 	if err != nil {
 		return err
 	}
-	if config.SchemaVersion != configFileVersion {
-		return fmt.Errorf("configuration schemaVersion is %d; expected %d", config.SchemaVersion, configFileVersion)
+	version := config.effectiveSchemaVersion()
+	if version != 1 && version != 2 && version != configFileVersion {
+		return fmt.Errorf("configuration schemaVersion is %d; supported versions are 1, 2, and %d", version, configFileVersion)
 	}
-	if config.SnapshotSchema != eve.SnapshotSchemaVersion {
+	if version == configFileVersion && config.SnapshotSchema != eve.SnapshotSchemaVersion {
 		return fmt.Errorf("configuration snapshotSchema is %q; expected %q", config.SnapshotSchema, eve.SnapshotSchemaVersion)
+	}
+	if version == 2 && config.SnapshotSchema != "0.1.0" && config.SnapshotSchema != eve.SnapshotSchemaVersion {
+		return fmt.Errorf("configuration snapshotSchema is %q; supported version-2 values are %q and %q", config.SnapshotSchema, "0.1.0", eve.SnapshotSchemaVersion)
 	}
 	for _, dir := range []string{repo.snapshotsDir(), repo.skipsDir(), repo.artifactsDir(), repo.cacheDir()} {
 		info, err := os.Stat(dir)

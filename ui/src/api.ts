@@ -124,11 +124,14 @@ function validationToVerification(values: Snapshot['validation']): Verification[
 
 function snapshotVerificationToVerification(value: Snapshot['verification']): Verification[] {
   if (!value) return [];
+  const policyQualifier = value.policyChange?.requirementsReduced
+    ? ' · requirements reduced'
+    : value.policyChange?.changed ? ' · policy changed' : '';
   return [{
     type: 'required suite',
     status: value.status,
-    reference: value.profile ? `Profile: ${value.profile}` : undefined,
-    provenance: value.status === 'required_checks_passed' ? 'executed_by_eve' : 'not_run'
+    reference: value.profile ? `Profile: ${value.profile}${policyQualifier}` : policyQualifier.slice(3) || undefined,
+    provenance: value.selectedRunId ? 'executed_by_eve' : undefined
   }];
 }
 

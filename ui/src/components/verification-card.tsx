@@ -22,8 +22,10 @@ export function VerificationCard({
         <ul className="space-y-4">
           {values.length === 0 ? <li className="text-muted-foreground">No verification recorded.</li> : null}
           {values.map((value, index) => {
-            const Icon = value.status === 'failed' ? XCircle : value.status === 'pending' ? Circle : CheckCircle2;
-            const color = value.status === 'failed' ? 'text-red-600' : value.status === 'pending' ? 'text-orange-500' : 'text-emerald-600';
+            const failed = value.status === 'failed';
+            const passed = value.status === 'passed' || value.status === 'required_checks_passed';
+            const Icon = failed ? XCircle : passed ? CheckCircle2 : Circle;
+            const color = failed ? 'text-red-600' : passed ? 'text-emerald-600' : 'text-orange-500';
             return (
               <li key={`${value.status}-${index}`} className="flex items-center justify-between gap-5">
                 <span className="flex min-w-0 items-center gap-3">

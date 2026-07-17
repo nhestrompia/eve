@@ -8,13 +8,39 @@ export type Validation = {
 export type SnapshotVerification = {
   status: string;
   profile?: string;
+  suite?: string;
   requiredChecks?: string[];
   ranChecks?: string[];
+  checkResults?: Array<{
+    checkId: string;
+    status: string;
+    exitCode?: number;
+    startedAt?: string;
+    completedAt?: string;
+    output?: string;
+    outputBytes?: number;
+    outputDigest?: string;
+    truncated?: boolean;
+  }>;
   selectedRunId?: string;
+  runStartedAt?: string;
+  runCompletedAt?: string;
   runRecordDigest?: string;
   configBlobHash?: string;
+  executorFingerprint?: Record<string, string>;
+  refContext?: Record<string, unknown>;
   integrity?: string;
-  policyChange?: { changed: boolean; requirementsReduced: boolean; addedChecks?: string[]; removedChecks?: string[] };
+  policyChange?: {
+    changed: boolean;
+    requirementsReduced: boolean;
+    policyIntroduced?: boolean;
+    profileIntroduced?: boolean;
+    profileRemoved?: boolean;
+    previousConfigHash?: string;
+    currentConfigHash?: string;
+    addedChecks?: string[];
+    removedChecks?: string[];
+  };
 };
 
 export type Verification = {

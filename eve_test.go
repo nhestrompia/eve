@@ -23,6 +23,39 @@ func TestParseValidSnapshot(t *testing.T) {
 	}
 }
 
+func TestParseLegacySnapshotLabelsValidationAsUnattributed(t *testing.T) {
+	legacy := validSnapshotJSON()
+	snapshot, err := ParseSnapshot([]byte(legacy))
+	if err != nil {
+		t.Fatalf("ParseSnapshot returned error: %v", err)
+	}
+	if snapshot.Validation[0].Provenance != "legacy_unattributed" {
+		t.Fatalf("provenance = %q, want legacy_unattributed", snapshot.Validation[0].Provenance)
+	}
+}
+
+func TestParseSchemaLessHistoricalSnapshotAsLegacy(t *testing.T) {
+	historical := strings.Replace(validSnapshotJSON(), "  \"schemaVersion\": \"0.1.0\",\n", "", 1)
+	snapshot, err := ParseSnapshot([]byte(historical))
+	if err != nil {
+		t.Fatalf("ParseSnapshot returned error: %v", err)
+	}
+	if snapshot.SchemaVersion != SnapshotSchemaVersion || snapshot.Validation[0].Provenance != "legacy_unattributed" {
+		t.Fatalf("historical snapshot migration = %#v", snapshot)
+	}
+}
+
+func TestParseCurrentSnapshotLabelsMissingValidationProvenanceAsAgentReported(t *testing.T) {
+	current := strings.Replace(validSnapshotJSON(), `"schemaVersion": "0.1.0"`, `"schemaVersion": "0.2.0"`, 1)
+	snapshot, err := ParseSnapshot([]byte(current))
+	if err != nil {
+		t.Fatalf("ParseSnapshot returned error: %v", err)
+	}
+	if snapshot.Validation[0].Provenance != "reported_by_agent" {
+		t.Fatalf("provenance = %q, want reported_by_agent", snapshot.Validation[0].Provenance)
+	}
+}
+
 func TestParseRejectsUnknownFields(t *testing.T) {
 	input := strings.Replace(validSnapshotJSON(), `"createdAt":`, `"unexpected": true, "createdAt":`, 1)
 	_, err := ParseSnapshot([]byte(input))

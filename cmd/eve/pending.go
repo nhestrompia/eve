@@ -460,10 +460,21 @@ func (repo repository) trunkBranch() string {
 }
 
 type eveConfig struct {
-	SchemaVersion  int    `json:"schemaVersion"`
-	SnapshotSchema string `json:"snapshotSchema"`
-	CreatedAt      string `json:"createdAt"`
-	TrunkBranch    string `json:"trunkBranch"`
+	SchemaVersion       int    `json:"schemaVersion"`
+	LegacyConfigVersion int    `json:"config_version"`
+	SnapshotSchema      string `json:"snapshotSchema"`
+	CreatedAt           string `json:"createdAt"`
+	TrunkBranch         string `json:"trunkBranch"`
+}
+
+func (config eveConfig) effectiveSchemaVersion() int {
+	if config.SchemaVersion != 0 {
+		return config.SchemaVersion
+	}
+	if config.LegacyConfigVersion == 1 {
+		return 1
+	}
+	return 0
 }
 
 func (repo repository) loadConfig() (eveConfig, error) {

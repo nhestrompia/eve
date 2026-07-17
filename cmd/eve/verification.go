@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -20,8 +22,10 @@ import (
 )
 
 type verificationConfig struct {
-	SchemaVersion int `json:"schemaVersion"`
-	Verification  struct {
+	SchemaVersion       int    `json:"schemaVersion"`
+	LegacyConfigVersion int    `json:"config_version"`
+	SnapshotSchema      string `json:"snapshotSchema"`
+	Verification        struct {
 		Checks       map[string]verificationCheck `json:"checks"`
 		Suites       map[string][]string          `json:"suites"`
 		ProfileRules []verificationProfileRule    `json:"profileRules"`
@@ -57,20 +61,61 @@ type verificationRefContext struct {
 }
 
 type verificationRun struct {
-	RunID               string                 `json:"runId"`
-	Commit              string                 `json:"commit"`
-	ConfigBlobHash      string                 `json:"configBlobHash"`
-	Profile             string                 `json:"profile"`
-	Suite               string                 `json:"suite"`
-	RefContext          verificationRefContext `json:"refContext"`
-	ExecutorFingerprint map[string]string      `json:"executorFingerprint"`
-	Status              string                 `json:"status"`
-	StartedAt           string                 `json:"startedAt"`
-	CompletedAt         string                 `json:"completedAt,omitempty"`
-	Checks              []verificationAttempt  `json:"checks"`
+	RunID               string                       `json:"runId"`
+	SchemaVersion       string                       `json:"schemaVersion,omitempty"`
+	Commit              string                       `json:"commit"`
+	ConfigBlobHash      string                       `json:"configBlobHash"`
+	Profile             string                       `json:"profile"`
+	Suite               string                       `json:"suite"`
+	RefContext          verificationRefContext       `json:"refContext"`
+	ExecutorFingerprint map[string]string            `json:"executorFingerprint"`
+	ActorClaim          string                       `json:"actorClaim,omitempty"`
+	ActorProvenance     string                       `json:"actorProvenance,omitempty"`
+	ResolvedChecks      map[string]verificationCheck `json:"resolvedChecks,omitempty"`
+	ResolvedSuite       []string                     `json:"resolvedSuite,omitempty"`
+	Status              string                       `json:"status"`
+	DriftReason         string                       `json:"driftReason,omitempty"`
+	StartedAt           string                       `json:"startedAt"`
+	CompletedAt         string                       `json:"completedAt,omitempty"`
+	Checks              []verificationAttempt        `json:"checks"`
 }
 
 type verificationAttempt struct {
+	CheckID      string `json:"checkId"`
+	Status       string `json:"status"`
+	ExitCode     int    `json:"exitCode"`
+	StartedAt    string `json:"startedAt"`
+	CompletedAt  string `json:"completedAt,omitempty"`
+	Output       string `json:"output,omitempty"`
+	Stdout       string `json:"stdout,omitempty"`
+	Stderr       string `json:"stderr,omitempty"`
+	OutputBytes  int    `json:"outputBytes,omitempty"`
+	OutputDigest string `json:"outputDigest,omitempty"`
+	Truncated    bool   `json:"truncated,omitempty"`
+	StdoutBytes  int    `json:"stdoutBytes,omitempty"`
+	StderrBytes  int    `json:"stderrBytes,omitempty"`
+	StdoutDigest string `json:"stdoutDigest,omitempty"`
+	StderrDigest string `json:"stderrDigest,omitempty"`
+}
+
+// legacyVerificationRun preserves the exact JSON shape used before run records
+// gained their own schema version. Keep the field order and tags stable: older
+// snapshots bind to the compact JSON digest of this representation.
+type legacyVerificationRun struct {
+	RunID               string                      `json:"runId"`
+	Commit              string                      `json:"commit"`
+	ConfigBlobHash      string                      `json:"configBlobHash"`
+	Profile             string                      `json:"profile"`
+	Suite               string                      `json:"suite"`
+	RefContext          verificationRefContext      `json:"refContext"`
+	ExecutorFingerprint map[string]string           `json:"executorFingerprint"`
+	Status              string                      `json:"status"`
+	StartedAt           string                      `json:"startedAt"`
+	CompletedAt         string                      `json:"completedAt,omitempty"`
+	Checks              []legacyVerificationAttempt `json:"checks"`
+}
+
+type legacyVerificationAttempt struct {
 	CheckID      string `json:"checkId"`
 	Status       string `json:"status"`
 	ExitCode     int    `json:"exitCode,omitempty"`
@@ -82,14 +127,109 @@ type verificationAttempt struct {
 	Truncated    bool   `json:"truncated,omitempty"`
 }
 
+type capturedEvidence struct {
+	Excerpt   []byte
+	Bytes     int
+	Digest    string
+	Truncated bool
+}
+
+type redactingEvidenceWriter struct {
+	mu       sync.Mutex
+	patterns [][]byte
+	pending  []byte
+	excerpt  []byte
+	limit    int
+	bytes    int
+	digest   hash.Hash
+}
+
+func newRedactingEvidenceWriter(limit int, values []string) *redactingEvidenceWriter {
+	patterns := make([][]byte, 0, len(values))
+	seen := map[string]bool{}
+	for _, value := range values {
+		if value != "" && !seen[value] {
+			seen[value] = true
+			patterns = append(patterns, []byte(value))
+		}
+	}
+	sort.Slice(patterns, func(i, j int) bool { return len(patterns[i]) > len(patterns[j]) })
+	return &redactingEvidenceWriter{patterns: patterns, limit: limit, digest: sha256.New()}
+}
+
+func (writer *redactingEvidenceWriter) Write(data []byte) (int, error) {
+	writer.mu.Lock()
+	defer writer.mu.Unlock()
+	writer.pending = append(writer.pending, data...)
+	writer.drain(false)
+	return len(data), nil
+}
+
+func (writer *redactingEvidenceWriter) finish() capturedEvidence {
+	writer.mu.Lock()
+	defer writer.mu.Unlock()
+	writer.drain(true)
+	return capturedEvidence{Excerpt: append([]byte{}, writer.excerpt...), Bytes: writer.bytes, Digest: "sha256:" + hex.EncodeToString(writer.digest.Sum(nil)), Truncated: writer.bytes > len(writer.excerpt)}
+}
+
+func (writer *redactingEvidenceWriter) drain(final bool) {
+	for len(writer.pending) > 0 {
+		matched := false
+		incomplete := false
+		for _, pattern := range writer.patterns {
+			if len(writer.pending) >= len(pattern) && bytes.Equal(writer.pending[:len(pattern)], pattern) {
+				writer.emit([]byte("[REDACTED]"))
+				writer.pending = writer.pending[len(pattern):]
+				matched = true
+				break
+			}
+			if len(writer.pending) < len(pattern) && bytes.Equal(writer.pending, pattern[:len(writer.pending)]) {
+				incomplete = true
+			}
+		}
+		if matched {
+			continue
+		}
+		if incomplete && !final {
+			return
+		}
+		nextCandidate := len(writer.pending)
+		for _, pattern := range writer.patterns {
+			if index := bytes.IndexByte(writer.pending[1:], pattern[0]); index >= 0 && index+1 < nextCandidate {
+				nextCandidate = index + 1
+			}
+		}
+		if nextCandidate == 0 {
+			nextCandidate = 1
+		}
+		writer.emit(writer.pending[:nextCandidate])
+		writer.pending = writer.pending[nextCandidate:]
+	}
+}
+
+func (writer *redactingEvidenceWriter) emit(data []byte) {
+	_, _ = writer.digest.Write(data)
+	writer.bytes += len(data)
+	remaining := writer.limit - len(writer.excerpt)
+	if remaining > 0 {
+		writer.excerpt = append(writer.excerpt, data[:min(remaining, len(data))]...)
+	}
+}
+
 type verificationRegistry struct {
 	mu      sync.RWMutex
 	runs    map[string]*verificationRun
 	cancels map[string]context.CancelFunc
+	locks   map[string]*os.File
 }
 
+var errVerificationEvidenceInvalid = errors.New("verification evidence is invalid")
+var errVerificationLockBusy = errors.New("verification lock is busy")
+
+const verificationRunSchemaVersion = "0.1.0"
+
 func newVerificationRegistry() *verificationRegistry {
-	return &verificationRegistry{runs: map[string]*verificationRun{}, cancels: map[string]context.CancelFunc{}}
+	return &verificationRegistry{runs: map[string]*verificationRun{}, cancels: map[string]context.CancelFunc{}, locks: map[string]*os.File{}}
 }
 
 func (repo repository) verificationRunsDir() string {
@@ -105,24 +245,140 @@ func (repo repository) loadVerificationConfig() (verificationConfig, error) {
 	if err != nil {
 		return verificationConfig{}, err
 	}
-	var config verificationConfig
-	if err := json.Unmarshal(data, &config); err != nil {
-		return verificationConfig{}, fmt.Errorf("parse verification config: %w", err)
-	}
-	return config, nil
+	return parseVerificationConfig(data)
 }
 
 func (repo repository) verificationPolicy() (verificationConfig, string, error) {
-	config, err := repo.loadVerificationConfig()
+	data, err := os.ReadFile(repo.configPath())
 	if err != nil {
 		return verificationConfig{}, "", err
 	}
-	data, err := os.ReadFile(repo.configPath())
+	config, err := parseVerificationConfig(data)
 	if err != nil {
 		return verificationConfig{}, "", err
 	}
 	hash := sha256.Sum256(data)
 	return config, "sha256:" + hex.EncodeToString(hash[:]), nil
+}
+
+func parseVerificationConfig(data []byte) (verificationConfig, error) {
+	var config verificationConfig
+	if err := json.Unmarshal(data, &config); err != nil {
+		return verificationConfig{}, fmt.Errorf("parse verification config: %w", err)
+	}
+	var root struct {
+		Verification json.RawMessage `json:"verification"`
+	}
+	if err := json.Unmarshal(data, &root); err != nil {
+		return verificationConfig{}, fmt.Errorf("parse verification config: %w", err)
+	}
+	if len(root.Verification) > 0 && string(root.Verification) != "null" {
+		var strict struct {
+			Checks       map[string]verificationCheck `json:"checks"`
+			Suites       map[string][]string          `json:"suites"`
+			ProfileRules []verificationProfileRule    `json:"profileRules"`
+		}
+		decoder := json.NewDecoder(bytes.NewReader(root.Verification))
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&strict); err != nil {
+			return verificationConfig{}, fmt.Errorf("parse verification config: %w", err)
+		}
+	}
+	if err := validateVerificationConfig(config); err != nil {
+		return verificationConfig{}, err
+	}
+	return config, nil
+}
+
+func validateVerificationConfig(config verificationConfig) error {
+	configured := len(config.Verification.Checks) > 0 || len(config.Verification.Suites) > 0 || len(config.Verification.ProfileRules) > 0
+	if config.SchemaVersion == 0 && config.LegacyConfigVersion == 1 {
+		if configured {
+			return errors.New("verification requires configuration schemaVersion 3; found legacy version 1")
+		}
+		return nil
+	}
+	if config.SchemaVersion == 2 {
+		if config.SnapshotSchema != "0.1.0" && config.SnapshotSchema != eve.SnapshotSchemaVersion {
+			return fmt.Errorf("configuration schemaVersion 2 has unsupported snapshotSchema %q", config.SnapshotSchema)
+		}
+		if configured {
+			return errors.New("verification requires configuration schemaVersion 3; found 2")
+		}
+		return nil
+	}
+	if config.SchemaVersion != 3 {
+		return fmt.Errorf("unsupported EVE configuration schemaVersion %d", config.SchemaVersion)
+	}
+	if config.SnapshotSchema != eve.SnapshotSchemaVersion {
+		return fmt.Errorf("configuration schemaVersion 3 requires snapshotSchema %q", eve.SnapshotSchemaVersion)
+	}
+	if !configured {
+		return nil
+	}
+	if len(config.Verification.ProfileRules) == 0 {
+		return errors.New("verification requires at least one profile rule")
+	}
+	defaults := 0
+	for _, rule := range config.Verification.ProfileRules {
+		if rule.Default != "" {
+			defaults++
+			if rule.Match != nil || rule.Profile != "" {
+				return errors.New("verification default profile rule cannot also define match or profile")
+			}
+		}
+		if rule.Match != nil && rule.Profile == "" {
+			return errors.New("verification profile rule has no profile")
+		}
+		if rule.Match != nil && rule.Match.Branch == "" && rule.Match.Tag == "" {
+			return errors.New("verification profile rule match must define branch or tag")
+		}
+	}
+	if defaults != 1 {
+		return errors.New("verification requires exactly one default profile")
+	}
+	for id, check := range config.Verification.Checks {
+		if strings.TrimSpace(id) == "" {
+			return errors.New("verification check ID cannot be empty")
+		}
+		if len(check.Argv) == 0 || strings.TrimSpace(check.Argv[0]) == "" {
+			return fmt.Errorf("verification check %q must define argv", id)
+		}
+		if check.TimeoutSeconds <= 0 {
+			return fmt.Errorf("verification check %q must define a positive timeoutSeconds", id)
+		}
+		if check.OutputLimitBytes <= 0 {
+			return fmt.Errorf("verification check %q must define a positive outputLimitBytes", id)
+		}
+		if len(check.SuccessExitCodes) == 0 {
+			return fmt.Errorf("verification check %q must define successExitCodes", id)
+		}
+	}
+	for suite, checks := range config.Verification.Suites {
+		if len(checks) == 0 {
+			return fmt.Errorf("verification suite %q cannot be empty", suite)
+		}
+		seen := map[string]bool{}
+		for _, id := range checks {
+			if seen[id] {
+				return fmt.Errorf("verification suite %q contains duplicate check %q", suite, id)
+			}
+			seen[id] = true
+			if _, ok := config.Verification.Checks[id]; !ok {
+				return fmt.Errorf("verification suite %q references undefined check %q", suite, id)
+			}
+		}
+	}
+	for _, rule := range config.Verification.ProfileRules {
+		profile := rule.Default
+		if profile == "" {
+			profile = rule.Profile
+		}
+		if _, ok := config.Verification.Suites[profile]; !ok {
+			return fmt.Errorf("verification profile %q references undefined suite", profile)
+		}
+	}
+	return nil
 }
 
 func resolveVerificationProfile(repo repository, config verificationConfig, branch string, tags []string) verificationRefContext {
@@ -173,11 +429,34 @@ func gitTagsAt(repo repository, commit string) []string {
 }
 
 func verificationExecutorFingerprint() map[string]string {
-	return map[string]string{"eve": eve.CLIVersion, "os": runtime.GOOS, "arch": runtime.GOARCH}
+	return map[string]string{
+		"eve": eve.CLIVersion, "os": runtime.GOOS, "arch": runtime.GOARCH,
+		"go": detectedToolVersion("go", "version"), "node": detectedToolVersion("node", "--version"),
+	}
+}
+
+func detectedToolVersion(name string, args ...string) string {
+	path, err := exec.LookPath(name)
+	if err != nil {
+		return "unavailable"
+	}
+	output, err := exec.Command(path, args...).CombinedOutput()
+	if err != nil {
+		return "detection_failed"
+	}
+	return strings.TrimSpace(string(output))
 }
 
 func verificationRunDigest(run *verificationRun) (string, error) {
-	data, err := json.Marshal(run)
+	if isLegacyVerificationRun(run) {
+		data, err := json.Marshal(asLegacyVerificationRun(run))
+		if err != nil {
+			return "", err
+		}
+		hash := sha256.Sum256(data)
+		return "sha256:" + hex.EncodeToString(hash[:]), nil
+	}
+	data, err := verificationRunCanonicalBytes(run)
 	if err != nil {
 		return "", err
 	}
@@ -185,11 +464,44 @@ func verificationRunDigest(run *verificationRun) (string, error) {
 	return "sha256:" + hex.EncodeToString(hash[:]), nil
 }
 
+func verificationRunCanonicalBytes(run *verificationRun) ([]byte, error) {
+	var value any = run
+	if isLegacyVerificationRun(run) {
+		value = asLegacyVerificationRun(run)
+	}
+	data, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	return append(data, '\n'), nil
+}
+
+func isLegacyVerificationRun(run *verificationRun) bool {
+	return run != nil && run.SchemaVersion == "" && strings.HasPrefix(run.RunID, "snap_")
+}
+
+func asLegacyVerificationRun(run *verificationRun) legacyVerificationRun {
+	checks := make([]legacyVerificationAttempt, 0, len(run.Checks))
+	for _, check := range run.Checks {
+		checks = append(checks, legacyVerificationAttempt{
+			CheckID: check.CheckID, Status: check.Status, ExitCode: check.ExitCode,
+			StartedAt: check.StartedAt, CompletedAt: check.CompletedAt, Output: check.Output,
+			OutputBytes: check.OutputBytes, OutputDigest: check.OutputDigest, Truncated: check.Truncated,
+		})
+	}
+	return legacyVerificationRun{
+		RunID: run.RunID, Commit: run.Commit, ConfigBlobHash: run.ConfigBlobHash,
+		Profile: run.Profile, Suite: run.Suite, RefContext: run.RefContext,
+		ExecutorFingerprint: run.ExecutorFingerprint, Status: run.Status,
+		StartedAt: run.StartedAt, CompletedAt: run.CompletedAt, Checks: checks,
+	}
+}
+
 func (repo repository) saveVerificationRun(run *verificationRun) error {
 	if err := os.MkdirAll(repo.verificationRunsDir(), 0o755); err != nil {
 		return err
 	}
-	data, err := json.MarshalIndent(run, "", "  ")
+	data, err := verificationRunCanonicalBytes(run)
 	if err != nil {
 		return err
 	}
@@ -199,7 +511,7 @@ func (repo repository) saveVerificationRun(run *verificationRun) error {
 	}
 	tmpName := tmp.Name()
 	defer os.Remove(tmpName)
-	if _, err := tmp.Write(append(data, '\n')); err != nil {
+	if _, err := tmp.Write(data); err != nil {
 		tmp.Close()
 		return err
 	}
@@ -224,17 +536,28 @@ func (repo repository) loadVerificationRuns() ([]*verificationRun, error) {
 		}
 		data, err := os.ReadFile(filepath.Join(repo.verificationRunsDir(), entry.Name()))
 		if err != nil {
-			continue
+			return nil, err
 		}
 		var run verificationRun
-		if json.Unmarshal(data, &run) == nil {
-			runs = append(runs, &run)
+		if err := json.Unmarshal(data, &run); err != nil {
+			return nil, fmt.Errorf("%w: %s", errVerificationEvidenceInvalid, entry.Name())
 		}
+		canonical, canonicalErr := verificationRunCanonicalBytes(&run)
+		if canonicalErr != nil || !bytes.Equal(data, canonical) || entry.Name() != run.RunID+".json" {
+			return nil, fmt.Errorf("%w: %s", errVerificationEvidenceInvalid, entry.Name())
+		}
+		runs = append(runs, &run)
 	}
 	return runs, nil
 }
 
 func verificationStatusForRun(run *verificationRun, required []string) string {
+	if run.Status == "cancelled" {
+		return "failed"
+	}
+	if run.Status != "completed" {
+		return "incomplete"
+	}
 	byID := map[string]verificationAttempt{}
 	for _, attempt := range run.Checks {
 		byID[attempt.CheckID] = attempt
@@ -266,7 +589,8 @@ func verificationStatusForRun(run *verificationRun, required []string) string {
 	return "required_checks_passed"
 }
 
-func (server runtimeServer) startVerificationRun(ctx context.Context, repo repository, commit string, suiteName string) (*verificationRun, error) {
+func (server runtimeServer) startVerificationRun(ctx context.Context, repo repository, commit string, suiteName string, actorClaim string) (*verificationRun, error) {
+	_ = ctx
 	config, configHash, err := repo.verificationPolicy()
 	if err != nil {
 		return nil, err
@@ -288,14 +612,12 @@ func (server runtimeServer) startVerificationRun(ctx context.Context, repo repos
 	if strings.TrimSpace(commit) != strings.TrimSpace(head) {
 		return nil, fmt.Errorf("requested commit %s is not current HEAD %s", commit, head)
 	}
-	status, err := gitOutput(repo.Root, "status", "--porcelain")
+	clean, err := verificationTreeClean(repo, "")
 	if err != nil {
 		return nil, err
 	}
-	for _, line := range strings.Split(strings.TrimSpace(status), "\n") {
-		if strings.TrimSpace(line) != "" && !gitStatusLineIgnored(line, []string{".eve/runs"}) {
-			return nil, errors.New("working tree must be clean before starting verification")
-		}
+	if !clean {
+		return nil, errors.New("working tree must be clean before starting verification")
 	}
 	ref := resolveVerificationProfile(repo, config, branch, gitTagsAt(repo, commit))
 	if ref.ResolvedProfile == "" {
@@ -318,22 +640,143 @@ func (server runtimeServer) startVerificationRun(ctx context.Context, repo repos
 			return nil, fmt.Errorf("verification check %q is not defined", id)
 		}
 	}
+	if err := os.MkdirAll(repo.verificationRunsDir(), 0o755); err != nil {
+		return nil, err
+	}
+	lock, lockErr := acquireVerificationLock(repo)
+	if lockErr != nil && !errors.Is(lockErr, errVerificationLockBusy) {
+		return nil, lockErr
+	}
+	resolvedChecks := make(map[string]verificationCheck, len(checks))
+	pendingChecks := make([]verificationAttempt, 0, len(checks))
+	for _, id := range checks {
+		resolvedChecks[id] = config.Verification.Checks[id]
+		pendingChecks = append(pendingChecks, verificationAttempt{CheckID: id, Status: "pending"})
+	}
 	run := &verificationRun{
-		RunID: newSnapshotID(), Commit: strings.TrimSpace(commit), ConfigBlobHash: configHash,
+		RunID: newRecordID("run"), SchemaVersion: verificationRunSchemaVersion, Commit: strings.TrimSpace(commit), ConfigBlobHash: configHash,
 		Profile: ref.ResolvedProfile, Suite: suiteName, RefContext: ref,
-		ExecutorFingerprint: verificationExecutorFingerprint(), Status: "running", StartedAt: nowUTC(),
-		Checks: make([]verificationAttempt, 0, len(checks)),
+		ExecutorFingerprint: verificationExecutorFingerprint(), ActorClaim: strings.TrimSpace(actorClaim), ActorProvenance: "unauthenticated", ResolvedChecks: resolvedChecks, ResolvedSuite: append([]string{}, checks...), Status: "running", StartedAt: nowUTC(),
+		Checks: pendingChecks,
+	}
+	if errors.Is(lockErr, errVerificationLockBusy) {
+		run.Status = "queued"
 	}
 	runCtx, cancel := context.WithCancel(context.Background())
 	server.verificationRegistry.mu.Lock()
 	server.verificationRegistry.runs[run.RunID] = run
 	server.verificationRegistry.cancels[run.RunID] = cancel
+	if lock != nil {
+		server.verificationRegistry.locks[run.RunID] = lock
+	}
 	server.verificationRegistry.mu.Unlock()
 	if err := repo.saveVerificationRun(run); err != nil {
+		server.verificationRegistry.mu.Lock()
+		delete(server.verificationRegistry.runs, run.RunID)
+		delete(server.verificationRegistry.cancels, run.RunID)
+		delete(server.verificationRegistry.locks, run.RunID)
+		server.verificationRegistry.mu.Unlock()
+		if lock != nil {
+			_ = lock.Close()
+			_ = os.Remove(filepath.Join(repo.verificationRunsDir(), ".active.lock"))
+		}
 		return nil, err
 	}
-	go server.executeVerificationRun(runCtx, repo, run, config, checks)
-	return run, nil
+	result, err := cloneVerificationRun(run)
+	if err != nil {
+		server.verificationRegistry.mu.Lock()
+		delete(server.verificationRegistry.runs, run.RunID)
+		delete(server.verificationRegistry.cancels, run.RunID)
+		delete(server.verificationRegistry.locks, run.RunID)
+		server.verificationRegistry.mu.Unlock()
+		if lock != nil {
+			_ = lock.Close()
+			_ = os.Remove(filepath.Join(repo.verificationRunsDir(), ".active.lock"))
+		}
+		return nil, err
+	}
+	if run.Status == "queued" {
+		go server.awaitVerificationLock(runCtx, repo, run, config, checks)
+	} else {
+		go server.executeVerificationRun(runCtx, repo, run, config, checks)
+	}
+	return result, nil
+}
+
+func acquireVerificationLock(repo repository) (*os.File, error) {
+	lockPath := filepath.Join(repo.verificationRunsDir(), ".active.lock")
+	for attempt := 0; attempt < 2; attempt++ {
+		lock, err := os.OpenFile(lockPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+		if err == nil {
+			if _, writeErr := lock.WriteString(fmt.Sprintf("pid=%d\n", os.Getpid())); writeErr != nil {
+				_ = lock.Close()
+				_ = os.Remove(lockPath)
+				return nil, writeErr
+			}
+			return lock, nil
+		}
+		if !errors.Is(err, os.ErrExist) {
+			return nil, fmt.Errorf("acquire verification lock: %w", err)
+		}
+		data, readErr := os.ReadFile(lockPath)
+		pid := 0
+		if readErr == nil {
+			_, _ = fmt.Sscanf(strings.TrimSpace(string(data)), "pid=%d", &pid)
+		}
+		if pid > 0 && verificationProcessActive(pid) {
+			return nil, errVerificationLockBusy
+		}
+		if removeErr := os.Remove(lockPath); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
+			return nil, errVerificationLockBusy
+		}
+	}
+	return nil, errVerificationLockBusy
+}
+
+func (server runtimeServer) awaitVerificationLock(ctx context.Context, repo repository, run *verificationRun, config verificationConfig, checks []string) {
+	for {
+		if ctx.Err() != nil {
+			server.verificationRegistry.mu.Lock()
+			markVerificationRunCancelled(run)
+			server.verificationRegistry.mu.Unlock()
+			_ = server.persistVerificationRun(repo, run)
+			server.cleanupVerificationRun(repo, run.RunID)
+			return
+		}
+		lock, err := acquireVerificationLock(repo)
+		if err == nil {
+			server.verificationRegistry.mu.Lock()
+			server.verificationRegistry.locks[run.RunID] = lock
+			run.Status = "running"
+			run.StartedAt = nowUTC()
+			server.verificationRegistry.mu.Unlock()
+			if reason := verificationDriftReason(repo, run); reason != "" {
+				server.verificationRegistry.mu.Lock()
+				run.Status, run.DriftReason, run.CompletedAt = "invalidated", reason, nowUTC()
+				server.verificationRegistry.mu.Unlock()
+				_ = server.persistVerificationRun(repo, run)
+				server.cleanupVerificationRun(repo, run.RunID)
+				return
+			}
+			_ = server.persistVerificationRun(repo, run)
+			server.executeVerificationRun(ctx, repo, run, config, checks)
+			return
+		}
+		if !errors.Is(err, errVerificationLockBusy) {
+			server.verificationRegistry.mu.Lock()
+			run.Status, run.DriftReason, run.CompletedAt = "invalidated", err.Error(), nowUTC()
+			server.verificationRegistry.mu.Unlock()
+			_ = server.persistVerificationRun(repo, run)
+			server.cleanupVerificationRun(repo, run.RunID)
+			return
+		}
+		timer := time.NewTimer(100 * time.Millisecond)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+		case <-timer.C:
+		}
+	}
 }
 
 func containsAll(have, required []string) bool {
@@ -350,17 +793,27 @@ func containsAll(have, required []string) bool {
 }
 
 func (server runtimeServer) executeVerificationRun(ctx context.Context, repo repository, run *verificationRun, config verificationConfig, checks []string) {
+	persistenceFailure := ""
 	for _, id := range checks {
 		if ctx.Err() != nil {
 			server.verificationRegistry.mu.Lock()
-			run.Checks = append(run.Checks, verificationAttempt{CheckID: id, Status: "cancelled", StartedAt: nowUTC(), CompletedAt: nowUTC()})
+			for i := range run.Checks {
+				if run.Checks[i].CheckID == id && run.Checks[i].Status == "pending" {
+					now := nowUTC()
+					run.Checks[i].Status, run.Checks[i].StartedAt, run.Checks[i].CompletedAt = "cancelled", now, now
+				}
+			}
 			server.verificationRegistry.mu.Unlock()
 			continue
 		}
 		check := config.Verification.Checks[id]
-		attempt := verificationAttempt{CheckID: id, Status: "running", StartedAt: nowUTC()}
 		server.verificationRegistry.mu.Lock()
-		run.Checks = append(run.Checks, attempt)
+		for i := range run.Checks {
+			if run.Checks[i].CheckID == id && run.Checks[i].Status == "pending" {
+				run.Checks[i].Status = "running"
+				run.Checks[i].StartedAt = nowUTC()
+			}
+		}
 		server.verificationRegistry.mu.Unlock()
 		commandCtx := ctx
 		cancel := func() {}
@@ -368,15 +821,23 @@ func (server runtimeServer) executeVerificationRun(ctx context.Context, repo rep
 			commandCtx, cancel = context.WithTimeout(ctx, time.Duration(check.TimeoutSeconds)*time.Second)
 		}
 		cmd := exec.CommandContext(commandCtx, check.Argv[0], check.Argv[1:]...)
+		configureVerificationProcess(cmd)
 		cmd.Dir = repo.Root
 		if check.WorkingDirectory != "" {
 			workingDirectory := filepath.Clean(check.WorkingDirectory)
 			if filepath.IsAbs(workingDirectory) || workingDirectory == ".." || strings.HasPrefix(workingDirectory, ".."+string(filepath.Separator)) {
-				server.markVerificationAttempt(run, id, "failed", -1, "working directory must stay inside repository")
+				server.markVerificationAttempt(run, id, "execution_error", -1, "working directory must stay inside repository")
 				cancel()
 				continue
 			}
 			cmd.Dir = filepath.Join(repo.Root, workingDirectory)
+			resolvedRoot, rootErr := filepath.EvalSymlinks(repo.Root)
+			resolved, resolveErr := filepath.EvalSymlinks(cmd.Dir)
+			if rootErr != nil || resolveErr != nil || !pathWithinRoot(resolvedRoot, resolved) {
+				server.markVerificationAttempt(run, id, "execution_error", -1, "working directory must stay inside repository")
+				cancel()
+				continue
+			}
 		}
 		allowed := map[string]bool{}
 		for _, key := range check.InheritEnvironment {
@@ -387,54 +848,382 @@ func (server runtimeServer) executeVerificationRun(ctx context.Context, repo rep
 			env = append(env, key+"="+value)
 		}
 		cmd.Env = env
-		output, err := cmd.CombinedOutput()
+		redactionValues := configuredEnvironmentValues(check, os.Environ())
+		stdoutCapture := newRedactingEvidenceWriter(check.OutputLimitBytes, redactionValues)
+		stderrCapture := newRedactingEvidenceWriter(check.OutputLimitBytes, redactionValues)
+		cmd.Stdout, cmd.Stderr = stdoutCapture, stderrCapture
+		err := cmd.Run()
 		contextErr := commandCtx.Err()
 		cancel()
-		status := "passed"
-		exitCode := 0
+		exitCode := commandExitCode(err)
+		if err == nil {
+			exitCode = 0
+		}
+		status := "failed"
 		if contextErr == context.DeadlineExceeded {
 			status = "timed_out"
 			exitCode = -1
 		} else if contextErr == context.Canceled {
 			status = "cancelled"
 			exitCode = -1
-		} else if err != nil {
-			status = "failed"
-			exitCode = commandExitCode(err)
+		} else if isExecutionError(err) {
+			status = "execution_error"
+		} else if acceptedExitCode(exitCode, check.SuccessExitCodes) {
+			status = "passed"
 		}
 		limit := check.OutputLimitBytes
-		if limit <= 0 {
-			limit = 1_000_000
-		}
-		truncated := len(output) > limit
-		if truncated {
-			output = output[:limit]
-		}
+		stdoutEvidence, stderrEvidence := stdoutCapture.finish(), stderrCapture.finish()
+		fullOutputBytes := stdoutEvidence.Bytes + stderrEvidence.Bytes
+		truncated := fullOutputBytes > limit
+		stdoutExcerpt := boundedPrefix(stdoutEvidence.Excerpt, limit)
+		stderrExcerpt := boundedPrefix(stderrEvidence.Excerpt, limit-len(stdoutExcerpt))
+		output := append(append([]byte{}, stdoutExcerpt...), stderrExcerpt...)
 		attemptOutput := string(output)
-		hash := sha256.Sum256(output)
+		combinedHash := sha256.Sum256([]byte(stdoutEvidence.Digest + "\n" + stderrEvidence.Digest))
 		server.verificationRegistry.mu.Lock()
 		for i := range run.Checks {
 			if run.Checks[i].CheckID == id && run.Checks[i].Status == "running" {
 				run.Checks[i].Status, run.Checks[i].ExitCode = status, exitCode
-				run.Checks[i].Output, run.Checks[i].OutputBytes = attemptOutput, len(output)
-				run.Checks[i].OutputDigest, run.Checks[i].Truncated = "sha256:"+hex.EncodeToString(hash[:]), truncated
+				run.Checks[i].Output, run.Checks[i].OutputBytes = attemptOutput, fullOutputBytes
+				run.Checks[i].Stdout, run.Checks[i].Stderr = string(stdoutExcerpt), string(stderrExcerpt)
+				run.Checks[i].StdoutBytes, run.Checks[i].StderrBytes = stdoutEvidence.Bytes, stderrEvidence.Bytes
+				run.Checks[i].StdoutDigest, run.Checks[i].StderrDigest = stdoutEvidence.Digest, stderrEvidence.Digest
+				run.Checks[i].OutputDigest, run.Checks[i].Truncated = "sha256:"+hex.EncodeToString(combinedHash[:]), truncated
 				run.Checks[i].CompletedAt = nowUTC()
 				break
 			}
 		}
 		server.verificationRegistry.mu.Unlock()
-		_ = repo.saveVerificationRun(run)
+		if err := server.persistVerificationRun(repo, run); err != nil {
+			persistenceFailure = "persist verification evidence: " + err.Error()
+			break
+		}
 	}
-	if ctx.Err() != nil {
+	driftReason := verificationDriftReason(repo, run)
+	server.verificationRegistry.mu.Lock()
+	if persistenceFailure != "" {
+		run.Status = "invalidated"
+		run.DriftReason = persistenceFailure
+	} else if driftReason != "" {
+		run.Status = "invalidated"
+		run.DriftReason = driftReason
+		for i := range run.Checks {
+			if run.Checks[i].Status == "running" || run.Checks[i].Status == "pending" {
+				run.Checks[i].Status = "invalidated"
+			}
+		}
+	} else if ctx.Err() != nil {
 		run.Status = "cancelled"
 	} else {
 		run.Status = "completed"
 	}
 	run.CompletedAt = nowUTC()
-	_ = repo.saveVerificationRun(run)
-	server.verificationRegistry.mu.Lock()
-	delete(server.verificationRegistry.cancels, run.RunID)
 	server.verificationRegistry.mu.Unlock()
+	if err := server.persistVerificationRun(repo, run); err != nil {
+		server.verificationRegistry.mu.Lock()
+		run.Status = "invalidated"
+		run.DriftReason = "persist terminal verification evidence: " + err.Error()
+		server.verificationRegistry.mu.Unlock()
+		_ = server.persistVerificationRun(repo, run)
+	}
+	server.cleanupVerificationRun(repo, run.RunID)
+}
+
+func (server runtimeServer) cleanupVerificationRun(repo repository, runID string) {
+	server.verificationRegistry.mu.Lock()
+	lock := server.verificationRegistry.locks[runID]
+	delete(server.verificationRegistry.cancels, runID)
+	delete(server.verificationRegistry.locks, runID)
+	server.verificationRegistry.mu.Unlock()
+	if lock != nil {
+		_ = lock.Close()
+		_ = os.Remove(filepath.Join(repo.verificationRunsDir(), ".active.lock"))
+	}
+}
+
+func isExecutionError(err error) bool {
+	if err == nil {
+		return false
+	}
+	var execErr *exec.Error
+	var pathErr *os.PathError
+	return errors.As(err, &execErr) || errors.As(err, &pathErr)
+}
+
+func (server runtimeServer) persistVerificationRun(repo repository, run *verificationRun) error {
+	server.verificationRegistry.mu.RLock()
+	copy, err := cloneVerificationRun(run)
+	server.verificationRegistry.mu.RUnlock()
+	if err != nil {
+		return err
+	}
+	return repo.saveVerificationRun(copy)
+}
+
+func cloneVerificationRun(run *verificationRun) (*verificationRun, error) {
+	data, err := json.Marshal(run)
+	if err != nil {
+		return nil, err
+	}
+	var copy verificationRun
+	if err := json.Unmarshal(data, &copy); err != nil {
+		return nil, err
+	}
+	return &copy, nil
+}
+
+func markVerificationRunCancelled(run *verificationRun) {
+	now := nowUTC()
+	seen := map[string]bool{}
+	for i := range run.Checks {
+		seen[run.Checks[i].CheckID] = true
+		if run.Checks[i].Status == "running" || run.Checks[i].Status == "pending" {
+			run.Checks[i].Status = "cancelled"
+			run.Checks[i].CompletedAt = now
+		}
+	}
+	for _, id := range run.ResolvedSuite {
+		if !seen[id] {
+			run.Checks = append(run.Checks, verificationAttempt{CheckID: id, Status: "cancelled", StartedAt: now, CompletedAt: now})
+		}
+	}
+	run.Status = "cancelled"
+	run.CompletedAt = now
+}
+
+func boundedPrefix(value []byte, limit int) []byte {
+	if limit <= 0 {
+		return nil
+	}
+	if len(value) <= limit {
+		return value
+	}
+	return value[:limit]
+}
+
+func acceptedExitCode(exitCode int, accepted []int) bool {
+	if len(accepted) == 0 {
+		return exitCode == 0
+	}
+	for _, code := range accepted {
+		if exitCode == code {
+			return true
+		}
+	}
+	return false
+}
+
+func pathWithinRoot(root, path string) bool {
+	relative, err := filepath.Rel(root, path)
+	return err == nil && relative != ".." && !strings.HasPrefix(relative, ".."+string(filepath.Separator))
+}
+
+func configuredEnvironmentValues(check verificationCheck, parent []string) []string {
+	values := make([]string, 0, len(check.Environment)+len(check.InheritEnvironment))
+	for _, key := range check.InheritEnvironment {
+		for _, entry := range parent {
+			if strings.HasPrefix(entry, key+"=") {
+				values = append(values, strings.TrimPrefix(entry, key+"="))
+			}
+		}
+	}
+	for _, value := range check.Environment {
+		values = append(values, value)
+	}
+	return values
+}
+
+func verificationDriftReason(repo repository, run *verificationRun) string {
+	head, err := gitOutput(repo.Root, "rev-parse", "HEAD")
+	if err != nil || strings.TrimSpace(head) != run.Commit {
+		return "HEAD changed during verification"
+	}
+	clean, err := verificationTreeClean(repo, run.RunID)
+	if err != nil {
+		return "unable to inspect working tree after verification"
+	}
+	if !clean {
+		return "tracked or untracked files changed during verification"
+	}
+	config, configHash, err := repo.verificationPolicy()
+	if err != nil || configHash != run.ConfigBlobHash {
+		return "verification policy changed during execution"
+	}
+	branch, err := currentBranch(repo)
+	if err != nil {
+		return "unable to resolve verification branch after execution"
+	}
+	ref := resolveVerificationProfile(repo, config, branch, gitTagsAt(repo, head))
+	if ref.Branch != run.RefContext.Branch || ref.ResolvedProfile != run.RefContext.ResolvedProfile || ref.MatchedRule != run.RefContext.MatchedRule || !equalStrings(ref.MatchingTags, run.RefContext.MatchingTags) {
+		return "verification reference context changed during execution"
+	}
+	return ""
+}
+
+func verificationTreeClean(repo repository, activeRunID string) (bool, error) {
+	status, err := gitOutput(repo.Root, "status", "--porcelain", "--untracked-files=all")
+	if err != nil {
+		return false, err
+	}
+	for _, line := range strings.Split(strings.TrimSpace(status), "\n") {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		if verificationStatusLineAllowed(repo, line, activeRunID) {
+			continue
+		}
+		return false, nil
+	}
+	return true, nil
+}
+
+func verificationNewEvidencePaths(repo repository) ([]string, error) {
+	status, err := gitOutput(repo.Root, "status", "--porcelain", "--untracked-files=all")
+	if err != nil {
+		return nil, err
+	}
+	var paths []string
+	for _, line := range strings.Split(strings.TrimSpace(status), "\n") {
+		if verificationStatusLineAllowed(repo, line, "") {
+			path := filepath.ToSlash(strings.Trim(strings.TrimSpace(line[3:]), `"`))
+			if filepath.Ext(path) == ".json" {
+				paths = append(paths, path)
+			}
+		}
+	}
+	return paths, nil
+}
+
+func verificationPolicyChange(repo repository, baseCommit string, currentRef verificationRefContext, currentRequired []string, currentHash string) (*eve.PolicyChange, error) {
+	change := &eve.PolicyChange{CurrentConfigHash: currentHash, AddedChecks: []string{}, RemovedChecks: []string{}}
+	if strings.TrimSpace(baseCommit) == "" {
+		change.Changed = true
+		change.PolicyIntroduced = true
+		change.ProfileIntroduced = true
+		change.AddedChecks = append(change.AddedChecks, currentRequired...)
+		return change, nil
+	}
+	data, exists, err := gitFileAtCommit(repo, baseCommit, ".eve/config.json")
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		change.Changed = true
+		change.PolicyIntroduced = true
+		change.ProfileIntroduced = true
+		change.AddedChecks = append(change.AddedChecks, currentRequired...)
+		return change, nil
+	}
+	hash := sha256.Sum256(data)
+	change.PreviousConfigHash = "sha256:" + hex.EncodeToString(hash[:])
+	change.Changed = change.PreviousConfigHash != currentHash
+	previous, err := parseVerificationConfig(data)
+	if err != nil {
+		return nil, fmt.Errorf("validate verification policy at base commit %s: %w", baseCommit, err)
+	}
+	previousRef := resolveVerificationProfile(repo, previous, currentRef.Branch, gitTagsAt(repo, baseCommit))
+	previousRequired := previous.Verification.Suites[previousRef.ResolvedProfile]
+	if len(previousRequired) == 0 && len(currentRequired) > 0 {
+		change.ProfileIntroduced = true
+	}
+	if len(previousRequired) > 0 && len(currentRequired) == 0 {
+		change.ProfileRemoved = true
+		change.RequirementsReduced = true
+	}
+	change.AddedChecks, change.RemovedChecks = checkSetDifference(previousRequired, currentRequired)
+	change.RequirementsReduced = change.RequirementsReduced || len(change.RemovedChecks) > 0
+	return change, nil
+}
+
+func gitFileAtCommit(repo repository, commit, path string) ([]byte, bool, error) {
+	spec := commit + ":" + path
+	check := exec.Command("git", "cat-file", "-e", spec)
+	check.Dir = repo.Root
+	if err := check.Run(); err != nil {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			return nil, false, nil
+		}
+		return nil, false, err
+	}
+	cmd := exec.Command("git", "show", spec)
+	cmd.Dir = repo.Root
+	data, err := cmd.Output()
+	if err != nil {
+		return nil, false, err
+	}
+	return data, true, nil
+}
+
+func checkSetDifference(previous, current []string) (added, removed []string) {
+	previousSet, currentSet := map[string]bool{}, map[string]bool{}
+	for _, id := range previous {
+		previousSet[id] = true
+	}
+	for _, id := range current {
+		currentSet[id] = true
+	}
+	for _, id := range current {
+		if !previousSet[id] {
+			added = append(added, id)
+		}
+	}
+	for _, id := range previous {
+		if !currentSet[id] {
+			removed = append(removed, id)
+		}
+	}
+	return added, removed
+}
+
+func verificationStatusLineAllowed(repo repository, line, _ string) bool {
+	if len(line) < 4 || line[:2] != "??" {
+		return false
+	}
+	path := filepath.ToSlash(strings.Trim(strings.TrimSpace(line[3:]), `"`))
+	if path == filepath.ToSlash(filepath.Join(".eve", "runs", ".active.lock")) {
+		data, err := os.ReadFile(filepath.Join(repo.Root, filepath.FromSlash(path)))
+		if err != nil {
+			return false
+		}
+		pid := 0
+		_, scanErr := fmt.Sscanf(strings.TrimSpace(string(data)), "pid=%d", &pid)
+		return scanErr == nil && pid > 0
+	}
+	prefix := filepath.ToSlash(filepath.Join(".eve", "runs")) + "/"
+	if !strings.HasPrefix(path, prefix) || filepath.Ext(path) != ".json" {
+		return false
+	}
+	data, err := os.ReadFile(filepath.Join(repo.Root, filepath.FromSlash(path)))
+	if err != nil {
+		return false
+	}
+	var run verificationRun
+	if json.Unmarshal(data, &run) != nil || filepath.Base(path) != run.RunID+".json" {
+		return false
+	}
+	legacy := isLegacyVerificationRun(&run)
+	current := run.SchemaVersion == verificationRunSchemaVersion && strings.HasPrefix(run.RunID, "run_") && run.ActorProvenance == "unauthenticated" && len(run.ResolvedSuite) > 0 && len(run.ResolvedChecks) > 0
+	if !legacy && !current {
+		return false
+	}
+	canonical, err := verificationRunCanonicalBytes(&run)
+	if err != nil || !bytes.Equal(data, canonical) {
+		return false
+	}
+	return true
+}
+
+func equalStrings(left, right []string) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for i := range left {
+		if left[i] != right[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func filterEnvironment(values []string, allowed map[string]bool) []string {
@@ -475,10 +1264,12 @@ func commandExitCode(err error) int {
 func (server runtimeServer) verificationRun(repo repository, id string) (*verificationRun, error) {
 	server.verificationRegistry.mu.RLock()
 	run := server.verificationRegistry.runs[id]
-	server.verificationRegistry.mu.RUnlock()
 	if run != nil {
-		return run, nil
+		copy, err := cloneVerificationRun(run)
+		server.verificationRegistry.mu.RUnlock()
+		return copy, err
 	}
+	server.verificationRegistry.mu.RUnlock()
 	data, err := os.ReadFile(repo.verificationRunPath(id))
 	if err != nil {
 		return nil, err
@@ -500,11 +1291,47 @@ func (server runtimeServer) latestVerificationRun(repo repository, commit, profi
 		if run.Commit != commit || run.Profile != profile || run.ConfigBlobHash != configHash || run.Status == "invalidated" || run.Status == "running" || run.Status == "queued" {
 			continue
 		}
-		if selected == nil || run.CompletedAt > selected.CompletedAt {
+		if selected == nil || run.CompletedAt > selected.CompletedAt || (run.CompletedAt == selected.CompletedAt && run.RunID > selected.RunID) {
 			selected = run
 		}
 	}
 	return selected, nil
+}
+
+func verifySnapshotRunEvidence(repo repository, snapshot *eve.Snapshot) {
+	if snapshot == nil || snapshot.Verification == nil || snapshot.Verification.SelectedRunID == "" || snapshot.Verification.RunRecordDigest == "" {
+		return
+	}
+	data, err := os.ReadFile(repo.verificationRunPath(snapshot.Verification.SelectedRunID))
+	if err != nil {
+		snapshot.Verification.Status = "failed"
+		snapshot.Verification.Integrity = "evidence_missing"
+		return
+	}
+	var run verificationRun
+	if json.Unmarshal(data, &run) != nil || run.RunID != snapshot.Verification.SelectedRunID {
+		snapshot.Verification.Status = "failed"
+		snapshot.Verification.Integrity = "evidence_invalid"
+		return
+	}
+	canonical, canonicalErr := verificationRunCanonicalBytes(&run)
+	if canonicalErr != nil || !bytes.Equal(data, canonical) {
+		snapshot.Verification.Status = "failed"
+		snapshot.Verification.Integrity = "evidence_digest_mismatch"
+		return
+	}
+	digest, err := verificationRunDigest(&run)
+	if err != nil || digest != snapshot.Verification.RunRecordDigest {
+		snapshot.Verification.Status = "failed"
+		snapshot.Verification.Integrity = "evidence_digest_mismatch"
+		return
+	}
+	if run.Commit != snapshot.Implementation.GitState || run.Profile != snapshot.Verification.Profile || run.ConfigBlobHash != snapshot.Verification.ConfigBlobHash || verificationStatusForRun(&run, snapshot.Verification.RequiredChecks) != snapshot.Verification.Status {
+		snapshot.Verification.Status = "failed"
+		snapshot.Verification.Integrity = "evidence_context_mismatch"
+		return
+	}
+	snapshot.Verification.Integrity = "matched"
 }
 
 func verificationFromRun(run *verificationRun, required []string) *eve.Verification {
@@ -512,13 +1339,15 @@ func verificationFromRun(run *verificationRun, required []string) *eve.Verificat
 		return nil
 	}
 	ran := make([]string, 0, len(run.Checks))
+	results := make([]eve.VerificationCheckResult, 0, len(run.Checks))
 	for _, check := range run.Checks {
 		ran = append(ran, check.CheckID)
+		results = append(results, eve.VerificationCheckResult{CheckID: check.CheckID, Status: check.Status, ExitCode: check.ExitCode, StartedAt: check.StartedAt, CompletedAt: check.CompletedAt, Output: check.Output, OutputBytes: check.OutputBytes, OutputDigest: check.OutputDigest, Truncated: check.Truncated})
 	}
 	digest, _ := verificationRunDigest(run)
 	executor := map[string]string{}
 	for key, value := range run.ExecutorFingerprint {
 		executor[key] = value
 	}
-	return &eve.Verification{Status: verificationStatusForRun(run, required), Profile: run.Profile, RequiredChecks: required, RanChecks: ran, SelectedRunID: run.RunID, RunRecordDigest: digest, ConfigBlobHash: run.ConfigBlobHash, ExecutorFingerprint: executor, Integrity: "matched"}
+	return &eve.Verification{Status: verificationStatusForRun(run, required), Profile: run.Profile, Suite: run.Suite, RequiredChecks: required, RanChecks: ran, CheckResults: results, SelectedRunID: run.RunID, RunStartedAt: run.StartedAt, RunCompletedAt: run.CompletedAt, RunRecordDigest: digest, ConfigBlobHash: run.ConfigBlobHash, ExecutorFingerprint: executor, Integrity: "matched"}
 }

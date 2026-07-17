@@ -57,22 +57,43 @@ type Validation struct {
 }
 
 type Verification struct {
-	Status              string            `json:"status"`
-	Profile             string            `json:"profile,omitempty"`
-	RequiredChecks      []string          `json:"requiredChecks,omitempty"`
-	RanChecks           []string          `json:"ranChecks,omitempty"`
-	SelectedRunID       string            `json:"selectedRunId,omitempty"`
-	RunRecordDigest     string            `json:"runRecordDigest,omitempty"`
-	ConfigBlobHash      string            `json:"configBlobHash,omitempty"`
-	ExecutorFingerprint map[string]string `json:"executorFingerprint,omitempty"`
-	RefContext          map[string]any    `json:"refContext,omitempty"`
-	PolicyChange        *PolicyChange     `json:"policyChange,omitempty"`
-	Integrity           string            `json:"integrity,omitempty"`
+	Status              string                    `json:"status"`
+	Profile             string                    `json:"profile,omitempty"`
+	Suite               string                    `json:"suite,omitempty"`
+	RequiredChecks      []string                  `json:"requiredChecks,omitempty"`
+	RanChecks           []string                  `json:"ranChecks,omitempty"`
+	CheckResults        []VerificationCheckResult `json:"checkResults,omitempty"`
+	SelectedRunID       string                    `json:"selectedRunId,omitempty"`
+	RunStartedAt        string                    `json:"runStartedAt,omitempty"`
+	RunCompletedAt      string                    `json:"runCompletedAt,omitempty"`
+	RunRecordDigest     string                    `json:"runRecordDigest,omitempty"`
+	ConfigBlobHash      string                    `json:"configBlobHash,omitempty"`
+	ExecutorFingerprint map[string]string         `json:"executorFingerprint,omitempty"`
+	RefContext          map[string]any            `json:"refContext,omitempty"`
+	PolicyChange        *PolicyChange             `json:"policyChange,omitempty"`
+	Integrity           string                    `json:"integrity,omitempty"`
+}
+
+type VerificationCheckResult struct {
+	CheckID      string `json:"checkId"`
+	Status       string `json:"status"`
+	ExitCode     int    `json:"exitCode"`
+	StartedAt    string `json:"startedAt,omitempty"`
+	CompletedAt  string `json:"completedAt,omitempty"`
+	Output       string `json:"output,omitempty"`
+	OutputBytes  int    `json:"outputBytes,omitempty"`
+	OutputDigest string `json:"outputDigest,omitempty"`
+	Truncated    bool   `json:"truncated,omitempty"`
 }
 
 type PolicyChange struct {
 	Changed             bool     `json:"changed"`
 	RequirementsReduced bool     `json:"requirementsReduced"`
+	PolicyIntroduced    bool     `json:"policyIntroduced,omitempty"`
+	ProfileIntroduced   bool     `json:"profileIntroduced,omitempty"`
+	ProfileRemoved      bool     `json:"profileRemoved,omitempty"`
+	PreviousConfigHash  string   `json:"previousConfigHash,omitempty"`
+	CurrentConfigHash   string   `json:"currentConfigHash,omitempty"`
 	AddedChecks         []string `json:"addedChecks,omitempty"`
 	RemovedChecks       []string `json:"removedChecks,omitempty"`
 }
