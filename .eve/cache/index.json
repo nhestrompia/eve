@@ -3,15 +3,15 @@
   "root": "/Users/nhestrompia/Documents/eve",
   "snapshotCount": 53,
   "commitCount": 59,
-  "decisionCount": 91,
+  "decisionCount": 94,
   "riskCount": 36,
-  "artifactCount": 33,
-  "latestAt": "2026-07-17T20:50:12Z",
-  "latestSnapshot": "snap_905e6e5529d9d5e4",
-  "latestTitle": "Implement tamper-evident snapshot verification",
+  "artifactCount": 34,
+  "latestAt": "2026-07-17T23:00:00Z",
+  "latestSnapshot": "snap_b99950ee3056f884",
+  "latestTitle": "Harden snapshot verification integrity and migrations",
   "branch": "main",
-  "head": "1c0f6fa92cd623df54d7ae0d5c067473a06d5e38",
+  "head": "4a12886527e9649ce64554a8ced3bd52c5cb94bf",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "1c0f6fa92cd623df54d7ae0d5c067473a06d5e38"
+  "latestGitState": "4a12886527e9649ce64554a8ced3bd52c5cb94bf"
 }
