@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 53,
-  "commitCount": 59,
-  "decisionCount": 94,
+  "snapshotCount": 54,
+  "commitCount": 60,
+  "decisionCount": 96,
   "riskCount": 36,
   "artifactCount": 34,
-  "latestAt": "2026-07-17T23:00:00Z",
-  "latestSnapshot": "snap_b99950ee3056f884",
-  "latestTitle": "Harden snapshot verification integrity and migrations",
+  "latestAt": "2026-07-20T18:47:23Z",
+  "latestSnapshot": "snap_c2456d1d441bd484",
+  "latestTitle": "Close snapshot verification correctness and compatibility gaps",
   "branch": "main",
-  "head": "4a12886527e9649ce64554a8ced3bd52c5cb94bf",
+  "head": "e89aa26dca3b74d0ee64d47e35e669562bda4615",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "4a12886527e9649ce64554a8ced3bd52c5cb94bf"
+  "latestGitState": "e89aa26dca3b74d0ee64d47e35e669562bda4615"
 }
