@@ -1197,7 +1197,7 @@ func snapshotVerification(repo repository, facts gitFacts) (*eve.Verification, e
 		return &eve.Verification{Status: "incomplete", Profile: ref.ResolvedProfile, RequiredChecks: required, ConfigBlobHash: configHash, PolicyChange: policyChange, Integrity: "dirty_tree"}, nil
 	}
 	server := runtimeServer{verificationRegistry: newVerificationRegistry()}
-	run, err := server.latestVerificationRun(repo, facts.GitState, ref.ResolvedProfile, configHash)
+	run, err := server.latestVerificationRun(repo, facts.GitState, ref.ResolvedProfile, configHash, ref)
 	if err != nil || run == nil {
 		if err != nil {
 			if errors.Is(err, errVerificationEvidenceInvalid) {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -411,6 +412,41 @@ func TestVerificationRunAndSnapshotAggregation(t *testing.T) {
 	}
 }
 
+func TestStartSuiteResolvesLaterMatchingRuleAfterDefault(t *testing.T) {
+	repo := initTempGitRepo(t)
+	t.Chdir(repo)
+	mustRun(t, []string{"init", "--no-agent-instructions"})
+	config := `{"schemaVersion":3,"snapshotSchema":"0.2.0","verification":{"checks":{"unit":{"argv":["go","version"],"timeoutSeconds":10,"successExitCodes":[0],"outputLimitBytes":2000}},"suites":{"change":["unit"],"integration":["unit"],"release":["unit"]},"profileRules":[{"default":"change"},{"match":{"branch":"release/*"},"profile":"integration"},{"match":{"tag":"v*"},"profile":"release"}]}}` + "\n"
+	if err := os.WriteFile(filepath.Join(repo, ".eve", "config.json"), []byte(config), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitRun(t, repo, "add", ".")
+	gitRun(t, repo, "commit", "-m", "configure verification")
+	gitRun(t, repo, "tag", "v1.0.0")
+	handler := newRuntimeServer(repoFromRoot(repo), "localhost:0").routes()
+	response := mcpCall(t, handler, `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"start_suite","arguments":{}}}`)
+	if !strings.Contains(response, `"profile":"release"`) || !strings.Contains(response, `"matchedRule":"tag:v*"`) {
+		t.Fatalf("start_suite response = %s, want release tag profile", response)
+	}
+}
+
+func TestStartSuiteRejectsInvalidProfileGlob(t *testing.T) {
+	repo := initTempGitRepo(t)
+	t.Chdir(repo)
+	mustRun(t, []string{"init", "--no-agent-instructions"})
+	config := `{"schemaVersion":3,"snapshotSchema":"0.2.0","verification":{"checks":{"unit":{"argv":["go","version"],"timeoutSeconds":10,"successExitCodes":[0],"outputLimitBytes":2000}},"suites":{"change":["unit"],"release":["unit"]},"profileRules":[{"match":{"tag":"["},"profile":"release"},{"default":"change"}]}}` + "\n"
+	if err := os.WriteFile(filepath.Join(repo, ".eve", "config.json"), []byte(config), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitRun(t, repo, "add", ".")
+	gitRun(t, repo, "commit", "-m", "configure invalid verification")
+	handler := newRuntimeServer(repoFromRoot(repo), "localhost:0").routes()
+	response := mcpCall(t, handler, `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"start_suite","arguments":{}}}`)
+	if !strings.Contains(response, `"isError":true`) || !strings.Contains(response, "invalid tag glob") {
+		t.Fatalf("start_suite response = %s, want invalid glob error", response)
+	}
+}
+
 func TestLegacyVerificationEvidenceRemainsValidWithoutRewrite(t *testing.T) {
 	repo := initTempGitRepo(t)
 	t.Chdir(repo)
@@ -471,6 +507,76 @@ func TestLegacyVerificationEvidenceRemainsValidWithoutRewrite(t *testing.T) {
 	}
 	if !bytes.Equal(after, legacyBytes) {
 		t.Fatal("loading legacy evidence rewrote the run record")
+	}
+}
+
+func TestSnapshotReadFailsClosedWhenPassingEvidenceBindingIsMissing(t *testing.T) {
+	for name, verification := range map[string]*eve.Verification{
+		"run id": {Status: "required_checks_passed", Integrity: "matched", RunRecordDigest: "sha256:present"},
+		"digest": {Status: "required_checks_passed", Integrity: "matched", SelectedRunID: "run_present"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			repo := initTempGitRepo(t)
+			t.Chdir(repo)
+			mustRun(t, []string{"init", "--no-agent-instructions"})
+			head := gitOutputForTest(t, repo, "rev-parse", "HEAD")
+			snapshot := sampleSnapshot("snap_missing_binding", "Missing evidence binding", head)
+			snapshot.Verification = verification
+			writeSnapshot(t, repo, snapshot)
+			before := readTextFile(t, repoFromRoot(repo).snapshotPath(snapshot.ID))
+
+			loaded, err := repoFromRoot(repo).loadSnapshot(snapshot.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if loaded.Verification.Status != "failed" || loaded.Verification.Integrity != "evidence_binding_missing" {
+				t.Fatalf("verification = %#v, want missing-binding integrity failure", loaded.Verification)
+			}
+			if after := readTextFile(t, repoFromRoot(repo).snapshotPath(snapshot.ID)); after != before {
+				t.Fatal("read-time integrity migration rewrote the snapshot")
+			}
+		})
+	}
+}
+
+func TestSnapshotSelectsLatestTerminalRunFromMatchingReferenceContext(t *testing.T) {
+	repo := initTempGitRepo(t)
+	t.Chdir(repo)
+	mustRun(t, []string{"init", "--no-agent-instructions"})
+	config := `{"schemaVersion":3,"snapshotSchema":"0.2.0","verification":{"checks":{"unit":{"argv":["go","version"],"timeoutSeconds":10,"successExitCodes":[0],"outputLimitBytes":2000}},"suites":{"change":["unit"]},"profileRules":[{"default":"change"}]}}` + "\n"
+	if err := os.WriteFile(filepath.Join(repo, ".eve", "config.json"), []byte(config), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitRun(t, repo, "add", ".")
+	gitRun(t, repo, "commit", "-m", "configure verification")
+	originalBranch := gitOutputForTest(t, repo, "branch", "--show-current")
+	server := newRuntimeServer(repoFromRoot(repo), "localhost:0")
+	matching, err := server.startVerificationRun(context.Background(), repoFromRoot(repo), "", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	matching = waitForVerificationRun(t, server, repoFromRoot(repo), matching.RunID)
+	if matching.Status != "completed" {
+		t.Fatalf("matching run = %#v", matching)
+	}
+	time.Sleep(1100 * time.Millisecond)
+	gitRun(t, repo, "checkout", "-b", "other-context")
+	other, err := server.startVerificationRun(context.Background(), repoFromRoot(repo), "", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	other = waitForVerificationRun(t, server, repoFromRoot(repo), other.RunID)
+	if other.Status != "completed" {
+		t.Fatalf("other-context run = %#v", other)
+	}
+	gitRun(t, repo, "checkout", originalBranch)
+
+	snapshot, err := completeSnapshot(repoFromRoot(repo), completeSnapshotInput{Title: "Context-bound", Type: "feature", Summary: "Select matching evidence."}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if snapshot.Verification.Status != "required_checks_passed" || snapshot.Verification.SelectedRunID != matching.RunID {
+		t.Fatalf("verification = %#v, want matching-context run %s", snapshot.Verification, matching.RunID)
 	}
 }
 
@@ -649,6 +755,113 @@ func TestVerificationCancellationTerminatesProcessGroup(t *testing.T) {
 	}
 	if run.Status != "cancelled" || run.Checks[0].Status != "cancelled" {
 		t.Fatalf("cancelled run = %#v", run)
+	}
+}
+
+func TestCancelSuiteAcrossRuntimeServersStopsOwningRun(t *testing.T) {
+	repo := initTempGitRepo(t)
+	t.Chdir(repo)
+	mustRun(t, []string{"init", "--no-agent-instructions"})
+	config := `{"schemaVersion":3,"snapshotSchema":"0.2.0","verification":{"checks":{"slow":{"argv":["sh","-c","sleep 10"],"timeoutSeconds":20,"successExitCodes":[0],"outputLimitBytes":1000}},"suites":{"change":["slow"]},"profileRules":[{"default":"change"}]}}` + "\n"
+	if err := os.WriteFile(filepath.Join(repo, ".eve", "config.json"), []byte(config), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitRun(t, repo, "add", ".")
+	gitRun(t, repo, "commit", "-m", "configure slow verification")
+	owner := newRuntimeServer(repoFromRoot(repo), "localhost:0")
+	run, err := owner.startVerificationRun(context.Background(), repoFromRoot(repo), "", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		owner.verificationRegistry.mu.RLock()
+		cancel := owner.verificationRegistry.cancels[run.RunID]
+		owner.verificationRegistry.mu.RUnlock()
+		if cancel != nil {
+			cancel()
+		}
+	}()
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		current, readErr := owner.verificationRun(repoFromRoot(repo), run.RunID)
+		if readErr == nil && current.Checks[0].Status == "running" {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	canceller := newRuntimeServer(repoFromRoot(repo), "localhost:0")
+	response := mcpCall(t, canceller.routes(), `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"cancel_suite","arguments":{"runId":"`+run.RunID+`"}}}`)
+	if !strings.Contains(response, `"status":"cancelled"`) {
+		t.Fatalf("cancel_suite response = %s, want acknowledged cancellation", response)
+	}
+	terminal := waitForVerificationRun(t, owner, repoFromRoot(repo), run.RunID)
+	if terminal.Status != "cancelled" || terminal.Checks[0].Status != "cancelled" {
+		t.Fatalf("owning run = %#v, want durable cancellation", terminal)
+	}
+}
+
+func TestStartSuiteRejectsUnregisteredUntrackedRunEvidence(t *testing.T) {
+	repo := initTempGitRepo(t)
+	t.Chdir(repo)
+	mustRun(t, []string{"init", "--no-agent-instructions"})
+	config := `{"schemaVersion":3,"snapshotSchema":"0.2.0","verification":{"checks":{"unit":{"argv":["go","version"],"timeoutSeconds":10,"successExitCodes":[0],"outputLimitBytes":1000}},"suites":{"change":["unit"]},"profileRules":[{"default":"change"}]}}` + "\n"
+	if err := os.WriteFile(filepath.Join(repo, ".eve", "config.json"), []byte(config), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitRun(t, repo, "add", ".")
+	gitRun(t, repo, "commit", "-m", "configure verification")
+	head := gitOutputForTest(t, repo, "rev-parse", "HEAD")
+	forged := &verificationRun{
+		RunID: "run_unregistered", SchemaVersion: verificationRunSchemaVersion, Commit: head,
+		ConfigBlobHash: "sha256:forged", Profile: "change", Suite: "change",
+		RefContext:          verificationRefContext{Branch: gitOutputForTest(t, repo, "branch", "--show-current"), MatchingTags: []string{}, MatchedRule: "default", ResolvedProfile: "change"},
+		ExecutorFingerprint: map[string]string{"eve": "forged"}, ActorProvenance: "unauthenticated",
+		ResolvedChecks: map[string]verificationCheck{"unit": {Argv: []string{"go", "version"}, TimeoutSeconds: 10, SuccessExitCodes: []int{0}, OutputLimitBytes: 1000}},
+		ResolvedSuite:  []string{"unit"}, Status: "completed", StartedAt: "2026-07-20T00:00:00Z", CompletedAt: "2026-07-20T00:00:01Z",
+		Checks: []verificationAttempt{{CheckID: "unit", Status: "passed", ExitCode: 0, StartedAt: "2026-07-20T00:00:00Z", CompletedAt: "2026-07-20T00:00:01Z"}},
+	}
+	if err := repoFromRoot(repo).saveVerificationRun(forged); err != nil {
+		t.Fatal(err)
+	}
+	response := mcpCall(t, newRuntimeServer(repoFromRoot(repo), "localhost:0").routes(), `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"start_suite","arguments":{}}}`)
+	if !strings.Contains(response, `"isError":true`) || !strings.Contains(response, "working tree must be clean") || !strings.Contains(response, "requires review") {
+		t.Fatalf("start_suite response = %s, want unregistered evidence rejection", response)
+	}
+	if err := os.Remove(repoFromRoot(repo).verificationRunPath(forged.RunID)); err != nil {
+		t.Fatal(err)
+	}
+	forged.RunID = "snap_legacy_unregistered"
+	forged.SchemaVersion = ""
+	if err := repoFromRoot(repo).saveVerificationRun(forged); err != nil {
+		t.Fatal(err)
+	}
+	response = mcpCall(t, newRuntimeServer(repoFromRoot(repo), "localhost:0").routes(), `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"start_suite","arguments":{}}}`)
+	if !strings.Contains(response, `"isError":true`) || !strings.Contains(response, "older or external EVE process") || !strings.Contains(response, "commit trusted evidence or remove it") {
+		t.Fatalf("start_suite response = %s, want controlled legacy evidence guidance", response)
+	}
+}
+
+func TestVerificationLockReleaseDoesNotDeleteAnotherOwnerMarker(t *testing.T) {
+	repoRoot := initTempGitRepo(t)
+	repo := repoFromRoot(repoRoot)
+	if err := os.MkdirAll(repo.verificationRunsDir(), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	lock, err := acquireVerificationLock(repo, "run_owner")
+	if err != nil {
+		t.Fatal(err)
+	}
+	replacement := fmt.Sprintf("pid=%d\nrunId=run_replacement\ntoken=lock_replacement\n", os.Getpid())
+	if err := os.WriteFile(lock.markerPath, []byte(replacement), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	releaseVerificationLock(lock)
+	data, err := os.ReadFile(lock.markerPath)
+	if err != nil {
+		t.Fatalf("replacement marker was removed by prior owner: %v", err)
+	}
+	if string(data) != replacement {
+		t.Fatalf("replacement marker = %q, want %q", data, replacement)
 	}
 }
 

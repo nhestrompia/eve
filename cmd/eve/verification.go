@@ -11,6 +11,7 @@ import (
 	"hash"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -217,10 +218,17 @@ func (writer *redactingEvidenceWriter) emit(data []byte) {
 }
 
 type verificationRegistry struct {
-	mu      sync.RWMutex
-	runs    map[string]*verificationRun
-	cancels map[string]context.CancelFunc
-	locks   map[string]*os.File
+	mu           sync.RWMutex
+	runs         map[string]*verificationRun
+	cancels      map[string]context.CancelFunc
+	watcherStops map[string]context.CancelFunc
+	locks        map[string]*verificationLock
+}
+
+type verificationLock struct {
+	file       *os.File
+	markerPath string
+	token      string
 }
 
 var errVerificationEvidenceInvalid = errors.New("verification evidence is invalid")
@@ -229,7 +237,10 @@ var errVerificationLockBusy = errors.New("verification lock is busy")
 const verificationRunSchemaVersion = "0.1.0"
 
 func newVerificationRegistry() *verificationRegistry {
-	return &verificationRegistry{runs: map[string]*verificationRun{}, cancels: map[string]context.CancelFunc{}, locks: map[string]*os.File{}}
+	return &verificationRegistry{
+		runs: map[string]*verificationRun{}, cancels: map[string]context.CancelFunc{},
+		watcherStops: map[string]context.CancelFunc{}, locks: map[string]*verificationLock{},
+	}
 }
 
 func (repo repository) verificationRunsDir() string {
@@ -238,6 +249,70 @@ func (repo repository) verificationRunsDir() string {
 
 func (repo repository) verificationRunPath(id string) string {
 	return filepath.Join(repo.verificationRunsDir(), id+".json")
+}
+
+func (repo repository) verificationPrivatePath(parts ...string) (string, error) {
+	pathParts := append([]string{"eve"}, parts...)
+	path, err := gitOutput(repo.Root, "rev-parse", "--git-path", filepath.ToSlash(filepath.Join(pathParts...)))
+	if err != nil {
+		return "", err
+	}
+	path = strings.TrimSpace(path)
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(repo.Root, filepath.FromSlash(path))
+	}
+	return filepath.Clean(path), nil
+}
+
+func (repo repository) registerVerificationRun(runID string) error {
+	path, err := repo.verificationPrivatePath("known-runs", runID)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return err
+	}
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return err
+	}
+	if _, err := file.WriteString(fmt.Sprintf("pid=%d\n", os.Getpid())); err != nil {
+		_ = file.Close()
+		_ = os.Remove(path)
+		return err
+	}
+	return file.Close()
+}
+
+func (repo repository) unregisterVerificationRun(runID string) {
+	path, err := repo.verificationPrivatePath("known-runs", runID)
+	if err == nil {
+		_ = os.Remove(path)
+	}
+}
+
+func (repo repository) verificationRunRegistered(runID string) bool {
+	path, err := repo.verificationPrivatePath("known-runs", runID)
+	if err != nil {
+		return false
+	}
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
+}
+
+func (repo repository) cancellationPath(runID string) (string, error) {
+	return repo.verificationPrivatePath("cancel", runID)
+}
+
+func (repo repository) requestVerificationCancellation(runID string) error {
+	path, err := repo.cancellationPath(runID)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return err
+	}
+	return os.WriteFile(path, []byte(nowUTC()+"\n"), 0o600)
 }
 
 func (repo repository) loadVerificationConfig() (verificationConfig, error) {
@@ -333,6 +408,16 @@ func validateVerificationConfig(config verificationConfig) error {
 		if rule.Match != nil && rule.Match.Branch == "" && rule.Match.Tag == "" {
 			return errors.New("verification profile rule match must define branch or tag")
 		}
+		if rule.Match != nil && rule.Match.Branch != "" {
+			if _, err := path.Match(rule.Match.Branch, ""); err != nil {
+				return fmt.Errorf("verification profile rule has invalid branch glob %q: %w", rule.Match.Branch, err)
+			}
+		}
+		if rule.Match != nil && rule.Match.Tag != "" {
+			if _, err := path.Match(rule.Match.Tag, ""); err != nil {
+				return fmt.Errorf("verification profile rule has invalid tag glob %q: %w", rule.Match.Tag, err)
+			}
+		}
 	}
 	if defaults != 1 {
 		return errors.New("verification requires exactly one default profile")
@@ -385,10 +470,13 @@ func resolveVerificationProfile(repo repository, config verificationConfig, bran
 	ctx := verificationRefContext{Branch: branch, MatchingTags: append([]string{}, tags...), ResolvedProfile: ""}
 	for _, rule := range config.Verification.ProfileRules {
 		if rule.Default != "" {
-			if ctx.ResolvedProfile == "" {
-				ctx.ResolvedProfile = rule.Default
-				ctx.MatchedRule = "default"
-			}
+			ctx.ResolvedProfile = rule.Default
+			ctx.MatchedRule = "default"
+			break
+		}
+	}
+	for _, rule := range config.Verification.ProfileRules {
+		if rule.Default != "" {
 			continue
 		}
 		if rule.Match == nil {
@@ -399,14 +487,16 @@ func resolveVerificationProfile(repo repository, config verificationConfig, bran
 			ctx.MatchedRule = "branch:" + rule.Match.Branch
 			break
 		}
+		matchedTag := false
 		for _, tag := range tags {
 			if rule.Match.Tag != "" && globMatch(rule.Match.Tag, tag) {
 				ctx.ResolvedProfile = rule.Profile
 				ctx.MatchedRule = "tag:" + rule.Match.Tag
+				matchedTag = true
 				break
 			}
 		}
-		if ctx.ResolvedProfile != "" {
+		if matchedTag {
 			break
 		}
 	}
@@ -414,7 +504,7 @@ func resolveVerificationProfile(repo repository, config verificationConfig, bran
 }
 
 func globMatch(pattern, value string) bool {
-	matched, err := filepath.Match(pattern, value)
+	matched, err := path.Match(pattern, value)
 	return err == nil && matched
 }
 
@@ -617,6 +707,9 @@ func (server runtimeServer) startVerificationRun(ctx context.Context, repo repos
 		return nil, err
 	}
 	if !clean {
+		if paths, inspectErr := unregisteredVerificationEvidencePaths(repo); inspectErr == nil && len(paths) > 0 {
+			return nil, fmt.Errorf("working tree must be clean before starting verification; unregistered run evidence from an older or external EVE process requires review: %s (commit trusted evidence or remove it, then rerun the suite)", strings.Join(paths, ", "))
+		}
 		return nil, errors.New("working tree must be clean before starting verification")
 	}
 	ref := resolveVerificationProfile(repo, config, branch, gitTagsAt(repo, commit))
@@ -643,8 +736,13 @@ func (server runtimeServer) startVerificationRun(ctx context.Context, repo repos
 	if err := os.MkdirAll(repo.verificationRunsDir(), 0o755); err != nil {
 		return nil, err
 	}
-	lock, lockErr := acquireVerificationLock(repo)
+	runID := newRecordID("run")
+	if err := repo.registerVerificationRun(runID); err != nil {
+		return nil, fmt.Errorf("register verification operation: %w", err)
+	}
+	lock, lockErr := acquireVerificationLock(repo, runID)
 	if lockErr != nil && !errors.Is(lockErr, errVerificationLockBusy) {
+		repo.unregisterVerificationRun(runID)
 		return nil, lockErr
 	}
 	resolvedChecks := make(map[string]verificationCheck, len(checks))
@@ -654,7 +752,7 @@ func (server runtimeServer) startVerificationRun(ctx context.Context, repo repos
 		pendingChecks = append(pendingChecks, verificationAttempt{CheckID: id, Status: "pending"})
 	}
 	run := &verificationRun{
-		RunID: newRecordID("run"), SchemaVersion: verificationRunSchemaVersion, Commit: strings.TrimSpace(commit), ConfigBlobHash: configHash,
+		RunID: runID, SchemaVersion: verificationRunSchemaVersion, Commit: strings.TrimSpace(commit), ConfigBlobHash: configHash,
 		Profile: ref.ResolvedProfile, Suite: suiteName, RefContext: ref,
 		ExecutorFingerprint: verificationExecutorFingerprint(), ActorClaim: strings.TrimSpace(actorClaim), ActorProvenance: "unauthenticated", ResolvedChecks: resolvedChecks, ResolvedSuite: append([]string{}, checks...), Status: "running", StartedAt: nowUTC(),
 		Checks: pendingChecks,
@@ -663,22 +761,27 @@ func (server runtimeServer) startVerificationRun(ctx context.Context, repo repos
 		run.Status = "queued"
 	}
 	runCtx, cancel := context.WithCancel(context.Background())
+	watcherCtx, stopWatcher := context.WithCancel(context.Background())
 	server.verificationRegistry.mu.Lock()
 	server.verificationRegistry.runs[run.RunID] = run
 	server.verificationRegistry.cancels[run.RunID] = cancel
+	server.verificationRegistry.watcherStops[run.RunID] = stopWatcher
 	if lock != nil {
 		server.verificationRegistry.locks[run.RunID] = lock
 	}
 	server.verificationRegistry.mu.Unlock()
+	go watchVerificationCancellation(watcherCtx, repo, run.RunID, cancel)
 	if err := repo.saveVerificationRun(run); err != nil {
 		server.verificationRegistry.mu.Lock()
 		delete(server.verificationRegistry.runs, run.RunID)
 		delete(server.verificationRegistry.cancels, run.RunID)
+		delete(server.verificationRegistry.watcherStops, run.RunID)
 		delete(server.verificationRegistry.locks, run.RunID)
 		server.verificationRegistry.mu.Unlock()
+		stopWatcher()
+		repo.unregisterVerificationRun(run.RunID)
 		if lock != nil {
-			_ = lock.Close()
-			_ = os.Remove(filepath.Join(repo.verificationRunsDir(), ".active.lock"))
+			releaseVerificationLock(lock)
 		}
 		return nil, err
 	}
@@ -687,11 +790,13 @@ func (server runtimeServer) startVerificationRun(ctx context.Context, repo repos
 		server.verificationRegistry.mu.Lock()
 		delete(server.verificationRegistry.runs, run.RunID)
 		delete(server.verificationRegistry.cancels, run.RunID)
+		delete(server.verificationRegistry.watcherStops, run.RunID)
 		delete(server.verificationRegistry.locks, run.RunID)
 		server.verificationRegistry.mu.Unlock()
+		stopWatcher()
+		repo.unregisterVerificationRun(run.RunID)
 		if lock != nil {
-			_ = lock.Close()
-			_ = os.Remove(filepath.Join(repo.verificationRunsDir(), ".active.lock"))
+			releaseVerificationLock(lock)
 		}
 		return nil, err
 	}
@@ -703,22 +808,60 @@ func (server runtimeServer) startVerificationRun(ctx context.Context, repo repos
 	return result, nil
 }
 
-func acquireVerificationLock(repo repository) (*os.File, error) {
-	lockPath := filepath.Join(repo.verificationRunsDir(), ".active.lock")
+func acquireVerificationLock(repo repository, runID string) (*verificationLock, error) {
+	lockPath, err := repo.verificationPrivatePath("verification.lock")
+	if err != nil {
+		return nil, err
+	}
+	if err := os.MkdirAll(filepath.Dir(lockPath), 0o700); err != nil {
+		return nil, err
+	}
+	lockFile, err := os.OpenFile(lockPath, os.O_RDWR|os.O_CREATE, 0o600)
+	if err != nil {
+		return nil, fmt.Errorf("open verification lock: %w", err)
+	}
+	if err := tryVerificationFileLock(lockFile); err != nil {
+		_ = lockFile.Close()
+		if errors.Is(err, errVerificationLockBusy) {
+			return nil, err
+		}
+		return nil, fmt.Errorf("acquire verification lock: %w", err)
+	}
+	token := newRecordID("lock")
+	marker := fmt.Sprintf("pid=%d\nrunId=%s\ntoken=%s\n", os.Getpid(), runID, token)
+	markerPath := filepath.Join(repo.verificationRunsDir(), ".active.lock")
+	markerFile, err := createVerificationMarker(markerPath)
+	if err != nil {
+		_ = unlockVerificationFile(lockFile)
+		_ = lockFile.Close()
+		return nil, err
+	}
+	if _, err := markerFile.WriteString(marker); err != nil {
+		_ = markerFile.Close()
+		_ = os.Remove(markerPath)
+		_ = unlockVerificationFile(lockFile)
+		_ = lockFile.Close()
+		return nil, err
+	}
+	if err := markerFile.Close(); err != nil {
+		_ = os.Remove(markerPath)
+		_ = unlockVerificationFile(lockFile)
+		_ = lockFile.Close()
+		return nil, err
+	}
+	return &verificationLock{file: lockFile, markerPath: markerPath, token: token}, nil
+}
+
+func createVerificationMarker(path string) (*os.File, error) {
 	for attempt := 0; attempt < 2; attempt++ {
-		lock, err := os.OpenFile(lockPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+		file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 		if err == nil {
-			if _, writeErr := lock.WriteString(fmt.Sprintf("pid=%d\n", os.Getpid())); writeErr != nil {
-				_ = lock.Close()
-				_ = os.Remove(lockPath)
-				return nil, writeErr
-			}
-			return lock, nil
+			return file, nil
 		}
 		if !errors.Is(err, os.ErrExist) {
-			return nil, fmt.Errorf("acquire verification lock: %w", err)
+			return nil, err
 		}
-		data, readErr := os.ReadFile(lockPath)
+		data, readErr := os.ReadFile(path)
 		pid := 0
 		if readErr == nil {
 			_, _ = fmt.Sscanf(strings.TrimSpace(string(data)), "pid=%d", &pid)
@@ -726,11 +869,42 @@ func acquireVerificationLock(repo repository) (*os.File, error) {
 		if pid > 0 && verificationProcessActive(pid) {
 			return nil, errVerificationLockBusy
 		}
-		if removeErr := os.Remove(lockPath); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
+		if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return nil, errVerificationLockBusy
 		}
 	}
 	return nil, errVerificationLockBusy
+}
+
+func releaseVerificationLock(lock *verificationLock) {
+	if lock == nil {
+		return
+	}
+	if data, err := os.ReadFile(lock.markerPath); err == nil && strings.Contains(string(data), "token="+lock.token+"\n") {
+		_ = os.Remove(lock.markerPath)
+	}
+	_ = unlockVerificationFile(lock.file)
+	_ = lock.file.Close()
+}
+
+func watchVerificationCancellation(ctx context.Context, repo repository, runID string, cancel context.CancelFunc) {
+	path, err := repo.cancellationPath(runID)
+	if err != nil {
+		return
+	}
+	ticker := time.NewTicker(25 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		if _, err := os.Stat(path); err == nil {
+			cancel()
+			return
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+	}
 }
 
 func (server runtimeServer) awaitVerificationLock(ctx context.Context, repo repository, run *verificationRun, config verificationConfig, checks []string) {
@@ -743,7 +917,7 @@ func (server runtimeServer) awaitVerificationLock(ctx context.Context, repo repo
 			server.cleanupVerificationRun(repo, run.RunID)
 			return
 		}
-		lock, err := acquireVerificationLock(repo)
+		lock, err := acquireVerificationLock(repo, run.RunID)
 		if err == nil {
 			server.verificationRegistry.mu.Lock()
 			server.verificationRegistry.locks[run.RunID] = lock
@@ -932,12 +1106,19 @@ func (server runtimeServer) executeVerificationRun(ctx context.Context, repo rep
 func (server runtimeServer) cleanupVerificationRun(repo repository, runID string) {
 	server.verificationRegistry.mu.Lock()
 	lock := server.verificationRegistry.locks[runID]
+	stopWatcher := server.verificationRegistry.watcherStops[runID]
 	delete(server.verificationRegistry.cancels, runID)
+	delete(server.verificationRegistry.watcherStops, runID)
 	delete(server.verificationRegistry.locks, runID)
 	server.verificationRegistry.mu.Unlock()
+	if stopWatcher != nil {
+		stopWatcher()
+	}
+	if path, err := repo.cancellationPath(runID); err == nil {
+		_ = os.Remove(path)
+	}
 	if lock != nil {
-		_ = lock.Close()
-		_ = os.Remove(filepath.Join(repo.verificationRunsDir(), ".active.lock"))
+		releaseVerificationLock(lock)
 	}
 }
 
@@ -1094,6 +1275,42 @@ func verificationNewEvidencePaths(repo repository) ([]string, error) {
 	return paths, nil
 }
 
+func unregisteredVerificationEvidencePaths(repo repository) ([]string, error) {
+	status, err := gitOutput(repo.Root, "status", "--porcelain", "--untracked-files=all")
+	if err != nil {
+		return nil, err
+	}
+	prefix := filepath.ToSlash(filepath.Join(".eve", "runs")) + "/"
+	var paths []string
+	for _, line := range strings.Split(strings.TrimSpace(status), "\n") {
+		if len(line) < 4 || line[:2] != "??" {
+			continue
+		}
+		path := filepath.ToSlash(strings.Trim(strings.TrimSpace(line[3:]), `"`))
+		if !strings.HasPrefix(path, prefix) || filepath.Ext(path) != ".json" {
+			continue
+		}
+		data, readErr := os.ReadFile(filepath.Join(repo.Root, filepath.FromSlash(path)))
+		if readErr != nil {
+			continue
+		}
+		var run verificationRun
+		if json.Unmarshal(data, &run) != nil || filepath.Base(path) != run.RunID+".json" {
+			continue
+		}
+		current := run.SchemaVersion == verificationRunSchemaVersion && strings.HasPrefix(run.RunID, "run_")
+		if !current && !isLegacyVerificationRun(&run) {
+			continue
+		}
+		canonical, canonicalErr := verificationRunCanonicalBytes(&run)
+		if canonicalErr == nil && bytes.Equal(data, canonical) && !repo.verificationRunRegistered(run.RunID) {
+			paths = append(paths, path)
+		}
+	}
+	sort.Strings(paths)
+	return paths, nil
+}
+
 func verificationPolicyChange(repo repository, baseCommit string, currentRef verificationRefContext, currentRequired []string, currentHash string) (*eve.PolicyChange, error) {
 	change := &eve.PolicyChange{CurrentConfigHash: currentHash, AddedChecks: []string{}, RemovedChecks: []string{}}
 	if strings.TrimSpace(baseCommit) == "" {
@@ -1188,7 +1405,7 @@ func verificationStatusLineAllowed(repo repository, line, _ string) bool {
 		}
 		pid := 0
 		_, scanErr := fmt.Sscanf(strings.TrimSpace(string(data)), "pid=%d", &pid)
-		return scanErr == nil && pid > 0
+		return scanErr == nil && pid > 0 && verificationProcessActive(pid)
 	}
 	prefix := filepath.ToSlash(filepath.Join(".eve", "runs")) + "/"
 	if !strings.HasPrefix(path, prefix) || filepath.Ext(path) != ".json" {
@@ -1202,9 +1419,8 @@ func verificationStatusLineAllowed(repo repository, line, _ string) bool {
 	if json.Unmarshal(data, &run) != nil || filepath.Base(path) != run.RunID+".json" {
 		return false
 	}
-	legacy := isLegacyVerificationRun(&run)
 	current := run.SchemaVersion == verificationRunSchemaVersion && strings.HasPrefix(run.RunID, "run_") && run.ActorProvenance == "unauthenticated" && len(run.ResolvedSuite) > 0 && len(run.ResolvedChecks) > 0
-	if !legacy && !current {
+	if !current || !repo.verificationRunRegistered(run.RunID) {
 		return false
 	}
 	canonical, err := verificationRunCanonicalBytes(&run)
@@ -1281,14 +1497,14 @@ func (server runtimeServer) verificationRun(repo repository, id string) (*verifi
 	return &loaded, nil
 }
 
-func (server runtimeServer) latestVerificationRun(repo repository, commit, profile, configHash string) (*verificationRun, error) {
+func (server runtimeServer) latestVerificationRun(repo repository, commit, profile, configHash string, ref verificationRefContext) (*verificationRun, error) {
 	runs, err := repo.loadVerificationRuns()
 	if err != nil {
 		return nil, err
 	}
 	var selected *verificationRun
 	for _, run := range runs {
-		if run.Commit != commit || run.Profile != profile || run.ConfigBlobHash != configHash || run.Status == "invalidated" || run.Status == "running" || run.Status == "queued" {
+		if run.Commit != commit || run.Profile != profile || run.ConfigBlobHash != configHash || !equalVerificationRefContext(run.RefContext, ref) || run.Status == "invalidated" || run.Status == "running" || run.Status == "queued" {
 			continue
 		}
 		if selected == nil || run.CompletedAt > selected.CompletedAt || (run.CompletedAt == selected.CompletedAt && run.RunID > selected.RunID) {
@@ -1298,8 +1514,25 @@ func (server runtimeServer) latestVerificationRun(repo repository, commit, profi
 	return selected, nil
 }
 
+func equalVerificationRefContext(left, right verificationRefContext) bool {
+	return left.Branch == right.Branch &&
+		left.MatchedRule == right.MatchedRule &&
+		left.ResolvedProfile == right.ResolvedProfile &&
+		equalStrings(left.MatchingTags, right.MatchingTags)
+}
+
 func verifySnapshotRunEvidence(repo repository, snapshot *eve.Snapshot) {
-	if snapshot == nil || snapshot.Verification == nil || snapshot.Verification.SelectedRunID == "" || snapshot.Verification.RunRecordDigest == "" {
+	if snapshot == nil || snapshot.Verification == nil {
+		return
+	}
+	missingRunID := snapshot.Verification.SelectedRunID == ""
+	missingDigest := snapshot.Verification.RunRecordDigest == ""
+	if missingRunID && missingDigest && snapshot.Verification.Status != "required_checks_passed" {
+		return
+	}
+	if missingRunID || missingDigest {
+		snapshot.Verification.Status = "failed"
+		snapshot.Verification.Integrity = "evidence_binding_missing"
 		return
 	}
 	data, err := os.ReadFile(repo.verificationRunPath(snapshot.Verification.SelectedRunID))

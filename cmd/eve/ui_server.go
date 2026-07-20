@@ -1834,27 +1834,28 @@ func (server runtimeServer) callMCPTool(ctx context.Context, params json.RawMess
 			return toolError(err.Error()), nil
 		}
 		if run.Status == "running" || run.Status == "queued" {
+			if err := repo.requestVerificationCancellation(input.RunID); err != nil {
+				return toolError(err.Error()), nil
+			}
 			server.verificationRegistry.mu.RLock()
 			cancel := server.verificationRegistry.cancels[input.RunID]
 			server.verificationRegistry.mu.RUnlock()
 			if cancel != nil {
 				cancel()
-				deadline := time.Now().Add(3500 * time.Millisecond)
-				for time.Now().Before(deadline) {
-					current, readErr := server.verificationRun(repo, input.RunID)
-					if readErr == nil {
-						run = current
-						if run.Status != "running" && run.Status != "queued" {
-							break
-						}
+			}
+			deadline := time.Now().Add(3500 * time.Millisecond)
+			for time.Now().Before(deadline) {
+				current, readErr := server.verificationRun(repo, input.RunID)
+				if readErr == nil {
+					run = current
+					if run.Status != "running" && run.Status != "queued" {
+						break
 					}
-					time.Sleep(10 * time.Millisecond)
 				}
-			} else {
-				markVerificationRunCancelled(run)
-				if err := repo.saveVerificationRun(run); err != nil {
-					return toolError(err.Error()), nil
-				}
+				time.Sleep(10 * time.Millisecond)
+			}
+			if run.Status == "running" || run.Status == "queued" {
+				return toolError("verification cancellation was not acknowledged by the owning process"), nil
 			}
 		}
 		return toolResult(run), nil
