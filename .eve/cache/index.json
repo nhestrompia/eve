@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 55,
-  "commitCount": 61,
-  "decisionCount": 98,
-  "riskCount": 37,
-  "artifactCount": 34,
-  "latestAt": "2026-07-24T01:53:54Z",
-  "latestSnapshot": "snap_21869bc8e2f7ad92",
-  "latestTitle": "Add resumable Plan Snapshots",
+  "snapshotCount": 56,
+  "commitCount": 62,
+  "decisionCount": 101,
+  "riskCount": 38,
+  "artifactCount": 35,
+  "latestAt": "2026-07-24T02:52:14Z",
+  "latestSnapshot": "snap_3ba787e940bc2d19",
+  "latestTitle": "Make plan approvals visible and queue-safe",
   "branch": "feat/plan-shapshots",
-  "head": "a09c2eb75bd28a061065469023f07cb9b25a107b",
+  "head": "f0e916dd6e7abea660c196b1542a7d6c0ba83e58",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "a09c2eb75bd28a061065469023f07cb9b25a107b"
+  "latestGitState": "f0e916dd6e7abea660c196b1542a7d6c0ba83e58"
 }
