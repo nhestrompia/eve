@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 57,
-  "commitCount": 63,
-  "decisionCount": 102,
-  "riskCount": 38,
+  "snapshotCount": 58,
+  "commitCount": 64,
+  "decisionCount": 106,
+  "riskCount": 39,
   "artifactCount": 35,
-  "latestAt": "2026-07-24T02:56:17Z",
-  "latestSnapshot": "snap_17bc028b1b3cd154",
-  "latestTitle": "Add EVE smoke greeting",
+  "latestAt": "2026-07-24T09:40:43Z",
+  "latestSnapshot": "snap_b978bdaf3f3f9229",
+  "latestTitle": "Add private on-device voice feedback",
   "branch": "feat/plan-shapshots",
-  "head": "762487c911fbdd31e0bb23f5f8928dde56c65ac7",
+  "head": "ee18c80fe9c41f9f566a08007e710c6def57f39a",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "762487c911fbdd31e0bb23f5f8928dde56c65ac7"
+  "latestGitState": "ee18c80fe9c41f9f566a08007e710c6def57f39a"
 }
