@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 56,
-  "commitCount": 62,
-  "decisionCount": 101,
+  "snapshotCount": 57,
+  "commitCount": 63,
+  "decisionCount": 102,
   "riskCount": 38,
   "artifactCount": 35,
-  "latestAt": "2026-07-24T02:52:14Z",
-  "latestSnapshot": "snap_3ba787e940bc2d19",
-  "latestTitle": "Make plan approvals visible and queue-safe",
+  "latestAt": "2026-07-24T02:56:17Z",
+  "latestSnapshot": "snap_17bc028b1b3cd154",
+  "latestTitle": "Add EVE smoke greeting",
   "branch": "feat/plan-shapshots",
-  "head": "f0e916dd6e7abea660c196b1542a7d6c0ba83e58",
+  "head": "762487c911fbdd31e0bb23f5f8928dde56c65ac7",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "f0e916dd6e7abea660c196b1542a7d6c0ba83e58"
+  "latestGitState": "762487c911fbdd31e0bb23f5f8928dde56c65ac7"
 }
