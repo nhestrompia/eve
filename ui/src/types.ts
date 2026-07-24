@@ -84,6 +84,8 @@ export type Snapshot = {
   decisions: unknown[];
   validation: Validation[];
   verification?: SnapshotVerification;
+  plan?: PlanReference;
+  planConformance?: PlanConformance;
   artifacts: SnapshotArtifact[];
   implementation: {
     branch: string;
@@ -93,6 +95,58 @@ export type Snapshot = {
     dirty: boolean;
   };
   createdAt: string;
+};
+
+export type PlanReference = {
+  id: string;
+  revision: number;
+};
+
+export type PlanConformance = {
+  status: 'matched' | 'failed' | 'incomplete' | 'no_plan';
+  noPlanOnFile: boolean;
+  requiredChecksStatus?: string;
+  policyMatched: boolean;
+  checkDefinitionsMatch: boolean;
+  scopeDrift: boolean;
+  changedPaths: string[];
+  outOfScopePaths: string[];
+};
+
+export type PlanMilestone = {
+  title: string;
+  goal?: string;
+};
+
+export type PlanRevision = {
+  revision: number;
+  source: 'agent' | 'human';
+  goal: string;
+  acceptanceCriteria: string;
+  allowedPathGlobs: string[];
+  milestones: PlanMilestone[];
+  configuredSuite?: string;
+  resolvedSuite?: string;
+  resolvedCheckIds: string[];
+  policyHash: string;
+  checkDefinitionsHash: string;
+  suiteDigest: string;
+  baseCommit: string;
+  branch: string;
+  createdAt: string;
+};
+
+export type PlanRecord = {
+  id: string;
+  schemaVersion: string;
+  planRequestId: string;
+  repository: string;
+  status: string;
+  revisions: PlanRevision[];
+  lockedRevision: number;
+  lockedAt: string;
+  approvedBy: string;
+  fulfilledBySnapshot?: string;
 };
 
 export type SnapshotArtifact = {
@@ -238,6 +292,7 @@ export type ComparisonResponse = {
 export type DetailResponse = {
   repository: string;
   snapshot: Snapshot;
+  planRecord?: PlanRecord;
   evolution: Evolution;
   summary: EvolutionSummary;
   sessions: SessionRecord[];

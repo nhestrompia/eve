@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -73,6 +74,7 @@ type snapshotSummary struct {
 type snapshotDetailResponse struct {
 	Repository string            `json:"repository"`
 	Snapshot   *eve.Snapshot     `json:"snapshot"`
+	Plan       *eve.PlanRecord   `json:"planRecord,omitempty"`
 	Summary    snapshotSummary   `json:"summary"`
 	Sessions   []uiSessionRecord `json:"sessions"`
 	Providers  []uiProviderInfo  `json:"providers"`
@@ -240,6 +242,9 @@ func newRuntimeServer(repo repository, addr string) runtimeServer {
 func (server runtimeServer) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/config", server.handleConfig)
+	mux.HandleFunc("/api/health", server.handleHealth)
+	mux.HandleFunc("/api/plan-requests", server.handlePlanRequests)
+	mux.HandleFunc("/api/plan-requests/", server.handlePlanRequestRoutes)
 	mux.HandleFunc("/api/compare", server.handleCompare)
 	mux.HandleFunc("/api/search", server.handleSnapshotSearch)
 	mux.HandleFunc("/api/snapshots", server.handleGlobalSnapshots)
@@ -249,6 +254,14 @@ func (server runtimeServer) routes() http.Handler {
 	mux.HandleFunc("/mcp", server.handleMCPHTTP)
 	mux.Handle("/", spaHandler())
 	return logRequests(mux)
+}
+
+func (server runtimeServer) handleHealth(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeMethodNotAllowed(w)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"service": "eve", "version": eve.CLIVersion})
 }
 
 func (server runtimeServer) handleCompare(w http.ResponseWriter, r *http.Request) {
@@ -519,9 +532,14 @@ func (server runtimeServer) handleSnapshotDetail(w http.ResponseWriter, r *http.
 		return
 	}
 	commits := server.gitCommits(repo, snapshotImplementationCommits(repo, snapshot))
+	var plan *eve.PlanRecord
+	if snapshot.Plan != nil {
+		plan, _ = repo.loadPlanRecord(snapshot.Plan.ID)
+	}
 	writeJSON(w, http.StatusOK, snapshotDetailResponse{
 		Repository: repo.ID,
 		Snapshot:   snapshot,
+		Plan:       plan,
 		Summary:    summarizeSnapshotForRepo(repo, snapshot),
 		Sessions:   server.snapshotSessionRecords(repo, snapshot),
 		Providers:  providerInfos(),
@@ -1604,6 +1622,7 @@ func (server runtimeServer) dispatchMCP(ctx context.Context, req mcpRequest) (an
 				"name":    "eve",
 				"version": eve.CLIVersion,
 			},
+			"instructions": "Before snapshot-worthy implementation, call declare_plan and wait for a locked revision. Reuse the same planRequestId after timeout or cancellation, and pass the returned planId and revision to complete_snapshot.",
 			"capabilities": map[string]any{
 				"tools":     map[string]bool{"listChanged": false},
 				"resources": map[string]bool{"listChanged": false},
@@ -1632,6 +1651,8 @@ func mcpTools() []map[string]any {
 		{"name": "list_snapshots", "description": "List snapshots for a repository.", "inputSchema": objectSchema(map[string]any{"cwd": stringSchema(), "repoId": stringSchema(), "type": enumSchema("feature", "bugfix", "experiment", "refactor", "release")}, nil)},
 		{"name": "get_snapshot", "description": "Get one snapshot by id.", "inputSchema": objectSchema(map[string]any{"cwd": stringSchema(), "repoId": stringSchema(), "snapshotId": stringSchema()}, []string{"snapshotId"})},
 		{"name": "pending_snapshot", "description": "Report unresolved committed work that needs a Snapshot or Skip.", "inputSchema": objectSchema(map[string]any{"cwd": stringSchema(), "repoId": stringSchema()}, nil)},
+		{"name": "declare_plan", "description": "Persist a resumable Plan request and wait for human approval. Reuse planRequestId to resume after timeout or cancellation.", "inputSchema": declarePlanSchema()},
+		{"name": "get_plan_request", "description": "Read a durable Plan request without waiting.", "inputSchema": objectSchema(map[string]any{"cwd": stringSchema(), "repoId": stringSchema(), "planRequestId": stringSchema()}, []string{"planRequestId"})},
 		{"name": "start_suite", "description": "Start an explicit repository-defined verification suite against the current committed HEAD.", "inputSchema": objectSchema(map[string]any{"cwd": stringSchema(), "repoId": stringSchema(), "commit": stringSchema(), "suite": stringSchema(), "actorClaim": stringSchema()}, nil)},
 		{"name": "get_suite_run", "description": "Read progress and results for a verification suite run.", "inputSchema": objectSchema(map[string]any{"cwd": stringSchema(), "repoId": stringSchema(), "runId": stringSchema()}, []string{"runId"})},
 		{"name": "cancel_suite", "description": "Cancel an in-progress verification suite run.", "inputSchema": objectSchema(map[string]any{"cwd": stringSchema(), "repoId": stringSchema(), "runId": stringSchema()}, []string{"runId"})},
@@ -1639,6 +1660,22 @@ func mcpTools() []map[string]any {
 		{"name": "skip_snapshot", "description": "Record that the current task does not deserve product history.", "inputSchema": objectSchema(map[string]any{"cwd": stringSchema(), "repoId": stringSchema(), "reason": stringSchema()}, []string{"reason"})},
 		{"name": "checkout_snapshot", "description": "Checkout the Git state for a Snapshot.", "inputSchema": objectSchema(map[string]any{"cwd": stringSchema(), "repoId": stringSchema(), "snapshotId": stringSchema(), "force": map[string]string{"type": "boolean"}}, []string{"snapshotId"})},
 	}
+}
+
+func declarePlanSchema() map[string]any {
+	return objectSchema(map[string]any{
+		"cwd":                stringSchema(),
+		"repoId":             stringSchema(),
+		"planRequestId":      stringSchema(),
+		"goal":               stringSchema(),
+		"acceptanceCriteria": stringSchema(),
+		"allowedPathGlobs":   stringArraySchema(),
+		"requiredSuite":      stringSchema(),
+		"milestones": arraySchema(objectSchema(map[string]any{
+			"title": stringSchema(),
+			"goal":  stringSchema(),
+		}, []string{"title"})),
+	}, []string{"planRequestId"})
 }
 
 func completeSnapshotSchema() map[string]any {
@@ -1684,7 +1721,9 @@ func completeSnapshotSchema() map[string]any {
 			"mimeType":    stringSchema(),
 			"description": stringSchema(),
 		}, []string{"type"})),
-		"allowDirty": boolSchema(),
+		"allowDirty":   boolSchema(),
+		"planId":       stringSchema(),
+		"planRevision": map[string]any{"type": "integer", "minimum": 1},
 	}, []string{"title", "type", "summary"})
 }
 
@@ -1792,6 +1831,42 @@ func (server runtimeServer) callMCPTool(ctx context.Context, params json.RawMess
 			return toolError(err.Error()), nil
 		}
 		return toolResult(pendingSnapshotResponse{Pending: pending != nil, PendingSnapshot: pending}), nil
+	case "declare_plan":
+		var input declarePlanInput
+		if err := json.Unmarshal(call.Arguments, &input); err != nil {
+			return nil, &mcpError{Code: -32602, Message: err.Error()}
+		}
+		repo, err := server.resolveToolRepo(input.CWD, input.RepoID)
+		if err != nil {
+			return toolError(err.Error()), nil
+		}
+		request, err := repo.createOrResumePlanRequest(ctx, input)
+		if err != nil {
+			return toolError(err.Error()), nil
+		}
+		if request.State == "pending_approval" {
+			request, err = repo.waitForPlanRequest(ctx, request.PlanRequestID)
+			if err != nil {
+				return toolError(err.Error()), nil
+			}
+		}
+		return toolResult(request), nil
+	case "get_plan_request":
+		var input struct {
+			CWD, RepoID, PlanRequestID string
+		}
+		if err := json.Unmarshal(call.Arguments, &input); err != nil {
+			return nil, &mcpError{Code: -32602, Message: err.Error()}
+		}
+		repo, err := server.resolveToolRepo(input.CWD, input.RepoID)
+		if err != nil {
+			return toolError(err.Error()), nil
+		}
+		request, err := repo.refreshPlanRequestState(ctx, input.PlanRequestID)
+		if err != nil {
+			return toolError(err.Error()), nil
+		}
+		return toolResult(request), nil
 	case "start_suite":
 		var input struct{ CWD, RepoID, Commit, Suite, ActorClaim string }
 		if err := json.Unmarshal(call.Arguments, &input); err != nil {
@@ -1942,6 +2017,8 @@ type completeSnapshotInputRaw struct {
 	Validation        json.RawMessage `json:"validation"`
 	Artifacts         json.RawMessage `json:"artifacts"`
 	AllowDirty        bool            `json:"allowDirty"`
+	PlanID            string          `json:"planId"`
+	PlanRevision      int             `json:"planRevision"`
 }
 
 type completeSnapshotInput struct {
@@ -1958,6 +2035,8 @@ type completeSnapshotInput struct {
 	Validation        []eve.Validation
 	Artifacts         []eve.Artifact
 	AllowDirty        bool
+	PlanID            string
+	PlanRevision      int
 }
 
 func normalizeCompleteSnapshotInput(raw completeSnapshotInputRaw) (completeSnapshotInput, error) {
@@ -1990,6 +2069,9 @@ func normalizeCompleteSnapshotInput(raw completeSnapshotInputRaw) (completeSnaps
 	if err != nil {
 		return completeSnapshotInput{}, fmt.Errorf("artifacts: %w", err)
 	}
+	if (strings.TrimSpace(raw.PlanID) == "") != (raw.PlanRevision == 0) {
+		return completeSnapshotInput{}, errors.New("planId and planRevision must be provided together")
+	}
 
 	return completeSnapshotInput{
 		CWD:               raw.CWD,
@@ -2005,6 +2087,8 @@ func normalizeCompleteSnapshotInput(raw completeSnapshotInputRaw) (completeSnaps
 		Validation:        validation,
 		Artifacts:         artifacts,
 		AllowDirty:        raw.AllowDirty,
+		PlanID:            strings.TrimSpace(raw.PlanID),
+		PlanRevision:      raw.PlanRevision,
 	}, nil
 }
 

@@ -7,7 +7,7 @@
   "required": ["id", "schemaVersion", "title", "type", "summary", "relationships", "risks", "timeline", "decisions", "validation", "artifacts", "implementation", "createdAt"],
   "properties": {
     "id": { "type": "string" },
-    "schemaVersion": { "type": "string", "enum": ["0.1.0", "0.2.0"] },
+    "schemaVersion": { "type": "string", "enum": ["0.1.0", "0.2.0", "0.3.0"] },
     "title": { "type": "string" },
     "type": { "type": "string", "enum": ["feature", "bugfix", "experiment", "refactor", "release"] },
     "summary": { "type": "string" },
@@ -18,6 +18,8 @@
     "decisions": { "type": "array", "items": { "$ref": "#/$defs/decision" } },
     "validation": { "type": "array", "items": { "$ref": "#/$defs/validation" } },
     "verification": { "$ref": "#/$defs/verification" },
+    "plan": { "$ref": "#/$defs/plan_reference" },
+    "planConformance": { "$ref": "#/$defs/plan_conformance" },
     "artifacts": { "type": "array", "items": { "$ref": "#/$defs/artifact" } },
     "implementation": { "$ref": "#/$defs/implementation" },
     "createdAt": { "type": "string", "format": "date-time" }
@@ -96,6 +98,30 @@
         "refContext": { "type": "object" },
         "policyChange": { "$ref": "#/$defs/policy_change" },
         "integrity": { "type": "string" }
+      }
+    },
+    "plan_reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "revision"],
+      "properties": {
+        "id": { "type": "string" },
+        "revision": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "plan_conformance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "noPlanOnFile", "policyMatched", "checkDefinitionsMatch", "scopeDrift", "changedPaths", "outOfScopePaths"],
+      "properties": {
+        "status": { "type": "string", "enum": ["matched", "failed", "incomplete", "no_plan"] },
+        "noPlanOnFile": { "type": "boolean" },
+        "requiredChecksStatus": { "type": "string" },
+        "policyMatched": { "type": "boolean" },
+        "checkDefinitionsMatch": { "type": "boolean" },
+        "scopeDrift": { "type": "boolean" },
+        "changedPaths": { "$ref": "#/$defs/id_list" },
+        "outOfScopePaths": { "$ref": "#/$defs/id_list" }
       }
     },
     "policy_change": {

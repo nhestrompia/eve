@@ -6,6 +6,7 @@ import type {
   Evolution,
   EvolutionSummary,
   OpenEditorResponse,
+  PlanRecord,
   PendingSnapshotResponse,
   RepositorySummary,
   SearchResponse,
@@ -47,6 +48,7 @@ type RepoAPI = {
 type SnapshotDetailAPI = {
   repository: string;
   snapshot: Snapshot;
+  planRecord?: PlanRecord;
   summary: SnapshotSummary;
   sessions?: SessionRecord[];
   providers?: DetailResponse['providers'];
@@ -222,6 +224,7 @@ async function snapshotDetail(id: string, repo?: string): Promise<DetailResponse
   return {
     repository: detail.repository || detail.summary.repository || repo || '',
     snapshot: detail.snapshot,
+    planRecord: detail.planRecord,
     evolution: snapshotToEvolution(detail.snapshot, sessions),
     summary,
     sessions,

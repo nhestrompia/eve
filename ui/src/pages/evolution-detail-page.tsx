@@ -9,6 +9,7 @@ import { EvolutionShell } from '../components/evolution-shell';
 import { EvolutionHero } from '../components/evolution-hero';
 import { ImplementationRail } from '../components/implementation-rail';
 import { LoadingState } from '../components/loading-state';
+import { PlanAlignmentSection } from '../components/plan-alignment-section';
 import { VerificationSummarySection } from '../components/verification-summary-section';
 
 export function EvolutionDetailPage() {
@@ -28,6 +29,7 @@ export function EvolutionDetailPage() {
           <main className="min-w-0 px-5 sm:px-7 lg:px-9">
             <EvolutionHero detail={detail.data} snapshot={snapshot.data} evolutions={rows} />
             <BehaviorSummarySection behavior={detail.data.evolution.behavior} />
+            <PlanAlignmentSection snapshot={detail.data.snapshot} plan={detail.data.planRecord} />
             <VerificationSummarySection values={detail.data.evolution.verification} evolutionId={detail.data.summary.id} />
             <DetailActionTiles detail={detail.data} />
           </main>

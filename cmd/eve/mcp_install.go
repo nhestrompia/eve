@@ -215,7 +215,7 @@ func (installer mcpConfigInstaller) installCodex() (string, error) {
 		"command = " + tomlQuote(installer.eveBin),
 		"args = " + tomlArray(args),
 		"startup_timeout_sec = 20",
-		"tool_timeout_sec = 120",
+		"tool_timeout_sec = 3600",
 		"",
 	}
 	if installer.dryRun {

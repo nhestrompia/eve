@@ -374,7 +374,7 @@ func validateVerificationConfig(config verificationConfig) error {
 		return nil
 	}
 	if config.SchemaVersion == 2 {
-		if config.SnapshotSchema != "0.1.0" && config.SnapshotSchema != eve.SnapshotSchemaVersion {
+		if config.SnapshotSchema != "0.1.0" && config.SnapshotSchema != "0.2.0" && config.SnapshotSchema != eve.SnapshotSchemaVersion {
 			return fmt.Errorf("configuration schemaVersion 2 has unsupported snapshotSchema %q", config.SnapshotSchema)
 		}
 		if configured {
@@ -385,8 +385,8 @@ func validateVerificationConfig(config verificationConfig) error {
 	if config.SchemaVersion != 3 {
 		return fmt.Errorf("unsupported EVE configuration schemaVersion %d", config.SchemaVersion)
 	}
-	if config.SnapshotSchema != eve.SnapshotSchemaVersion {
-		return fmt.Errorf("configuration schemaVersion 3 requires snapshotSchema %q", eve.SnapshotSchemaVersion)
+	if config.SnapshotSchema != eve.SnapshotSchemaVersion && config.SnapshotSchema != "0.2.0" {
+		return fmt.Errorf("configuration schemaVersion 3 requires snapshotSchema %q or legacy-compatible %q", eve.SnapshotSchemaVersion, "0.2.0")
 	}
 	if !configured {
 		return nil

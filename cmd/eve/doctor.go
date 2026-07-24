@@ -142,11 +142,11 @@ func validateDoctorRepository(repo repository) error {
 	if version != 1 && version != 2 && version != configFileVersion {
 		return fmt.Errorf("configuration schemaVersion is %d; supported versions are 1, 2, and %d", version, configFileVersion)
 	}
-	if version == configFileVersion && config.SnapshotSchema != eve.SnapshotSchemaVersion {
-		return fmt.Errorf("configuration snapshotSchema is %q; expected %q", config.SnapshotSchema, eve.SnapshotSchemaVersion)
+	if version == configFileVersion && config.SnapshotSchema != eve.SnapshotSchemaVersion && config.SnapshotSchema != "0.2.0" {
+		return fmt.Errorf("configuration snapshotSchema is %q; expected %q or legacy-compatible %q", config.SnapshotSchema, eve.SnapshotSchemaVersion, "0.2.0")
 	}
-	if version == 2 && config.SnapshotSchema != "0.1.0" && config.SnapshotSchema != eve.SnapshotSchemaVersion {
-		return fmt.Errorf("configuration snapshotSchema is %q; supported version-2 values are %q and %q", config.SnapshotSchema, "0.1.0", eve.SnapshotSchemaVersion)
+	if version == 2 && config.SnapshotSchema != "0.1.0" && config.SnapshotSchema != "0.2.0" && config.SnapshotSchema != eve.SnapshotSchemaVersion {
+		return fmt.Errorf("configuration snapshotSchema is %q; supported version-2 values are %q, %q, and %q", config.SnapshotSchema, "0.1.0", "0.2.0", eve.SnapshotSchemaVersion)
 	}
 	for _, dir := range []string{repo.snapshotsDir(), repo.skipsDir(), repo.artifactsDir(), repo.cacheDir()} {
 		info, err := os.Stat(dir)

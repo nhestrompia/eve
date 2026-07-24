@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://eve.local/schema/eve.plan.v0.schema.json",
+  "title": "EVE Plan v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "schemaVersion", "planRequestId", "repository", "status", "revisions", "lockedRevision", "lockedAt", "approvedBy", "fulfilledBySnapshot"],
+  "properties": {
+    "id": { "type": "string" },
+    "schemaVersion": { "const": "0.1.0" },
+    "planRequestId": { "type": "string" },
+    "repository": { "type": "string" },
+    "status": { "const": "fulfilled" },
+    "revisions": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/revision" } },
+    "lockedRevision": { "type": "integer", "minimum": 1 },
+    "lockedAt": { "type": "string", "format": "date-time" },
+    "approvedBy": { "const": "local_ui" },
+    "fulfilledBySnapshot": { "type": "string" }
+  },
+  "$defs": {
+    "revision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision", "source", "goal", "acceptanceCriteria", "allowedPathGlobs", "milestones", "resolvedChecks", "resolvedCheckIds", "policyHash", "checkDefinitionsHash", "suiteDigest", "baseCommit", "branch", "treeFingerprint", "createdAt"],
+      "properties": {
+        "revision": { "type": "integer", "minimum": 1 },
+        "source": { "type": "string", "enum": ["agent", "human"] },
+        "goal": { "type": "string", "minLength": 1 },
+        "acceptanceCriteria": { "type": "string", "minLength": 1 },
+        "allowedPathGlobs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!\\!)[^?\\[\\]{}\\\\]+$"
+          }
+        },
+        "milestones": { "type": "array", "items": { "$ref": "#/$defs/milestone" } },
+        "configuredSuite": { "type": "string" },
+        "resolvedSuite": { "type": "string" },
+        "resolvedChecks": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/check" }
+        },
+        "resolvedCheckIds": { "type": "array", "items": { "type": "string" } },
+        "policyHash": { "type": "string" },
+        "checkDefinitionsHash": { "type": "string" },
+        "suiteDigest": { "type": "string" },
+        "baseCommit": { "type": "string" },
+        "branch": { "type": "string" },
+        "treeFingerprint": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "milestone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1 },
+        "goal": { "type": "string" }
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["argv", "workingDirectory", "timeoutSeconds", "successExitCodes", "outputLimitBytes", "inheritEnvironment", "environment"],
+      "properties": {
+        "argv": { "type": "array", "items": { "type": "string" } },
+        "workingDirectory": { "type": "string" },
+        "timeoutSeconds": { "type": "integer", "minimum": 0 },
+        "successExitCodes": { "type": "array", "items": { "type": "integer" } },
+        "outputLimitBytes": { "type": "integer", "minimum": 0 },
+        "inheritEnvironment": { "type": "array", "items": { "type": "string" } },
+        "environment": { "type": "object", "additionalProperties": { "type": "string" } }
+      }
+    }
+  }
+}

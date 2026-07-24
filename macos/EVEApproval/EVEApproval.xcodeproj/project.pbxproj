@@ -1,0 +1,329 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		200000000000000000000001 /* EVEApprovalApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000001 /* EVEApprovalApp.swift */; };
+		200000000000000000000002 /* EVEClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000002 /* EVEClient.swift */; };
+		200000000000000000000003 /* PlanModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000003 /* PlanModels.swift */; };
+		200000000000000000000004 /* PlanQueueStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000004 /* PlanQueueStore.swift */; };
+		200000000000000000000005 /* PlanModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000005 /* PlanModelsTests.swift */; };
+		200000000000000000000006 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 100000000000000000000008 /* XCTest.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		400000000000000000000003 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 000000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 400000000000000000000001;
+			remoteInfo = EVEApproval;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		100000000000000000000001 /* EVEApprovalApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EVEApprovalApp.swift; sourceTree = "<group>"; };
+		100000000000000000000002 /* EVEClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EVEClient.swift; sourceTree = "<group>"; };
+		100000000000000000000003 /* PlanModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanModels.swift; sourceTree = "<group>"; };
+		100000000000000000000004 /* PlanQueueStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanQueueStore.swift; sourceTree = "<group>"; };
+		100000000000000000000005 /* PlanModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanModelsTests.swift; sourceTree = "<group>"; };
+		100000000000000000000006 /* EVEApproval.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EVEApproval.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		100000000000000000000007 /* EVEApprovalTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EVEApprovalTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		100000000000000000000008 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = System/Library/Frameworks/XCTest.framework; sourceTree = SDKROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		300000000000000000000003 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		300000000000000000000004 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				200000000000000000000006 /* XCTest.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		000000000000000000000002 = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000004 /* EVEApproval */,
+				000000000000000000000005 /* EVEApprovalTests */,
+				000000000000000000000006 /* Frameworks */,
+				000000000000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		000000000000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000000006 /* EVEApproval.app */,
+				100000000000000000000007 /* EVEApprovalTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		000000000000000000000004 /* EVEApproval */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000000001 /* EVEApprovalApp.swift */,
+				100000000000000000000002 /* EVEClient.swift */,
+				100000000000000000000003 /* PlanModels.swift */,
+				100000000000000000000004 /* PlanQueueStore.swift */,
+			);
+			name = EVEApproval;
+			path = Sources/EVEApproval;
+			sourceTree = "<group>";
+		};
+		000000000000000000000005 /* EVEApprovalTests */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000000005 /* PlanModelsTests.swift */,
+			);
+			name = EVEApprovalTests;
+			path = Tests/EVEApprovalTests;
+			sourceTree = "<group>";
+		};
+		000000000000000000000006 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000000008 /* XCTest.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		400000000000000000000001 /* EVEApproval */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 600000000000000000000002 /* Build configuration list for PBXNativeTarget "EVEApproval" */;
+			buildPhases = (
+				300000000000000000000001 /* Sources */,
+				300000000000000000000003 /* Frameworks */,
+				300000000000000000000005 /* Resources */,
+			);
+			buildRules = ();
+			dependencies = ();
+			name = EVEApproval;
+			productName = EVEApproval;
+			productReference = 100000000000000000000006 /* EVEApproval.app */;
+			productType = "com.apple.product-type.application";
+		};
+		400000000000000000000002 /* EVEApprovalTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 600000000000000000000003 /* Build configuration list for PBXNativeTarget "EVEApprovalTests" */;
+			buildPhases = (
+				300000000000000000000002 /* Sources */,
+				300000000000000000000004 /* Frameworks */,
+				300000000000000000000006 /* Resources */,
+			);
+			buildRules = ();
+			dependencies = (
+				400000000000000000000004 /* PBXTargetDependency */,
+			);
+			name = EVEApprovalTests;
+			productName = EVEApprovalTests;
+			productReference = 100000000000000000000007 /* EVEApprovalTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		000000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					400000000000000000000001 = {CreatedOnToolsVersion = 16.0; };
+					400000000000000000000002 = {CreatedOnToolsVersion = 16.0; TestTargetID = 400000000000000000000001; };
+				};
+			};
+			buildConfigurationList = 600000000000000000000001 /* Build configuration list for PBXProject "EVEApproval" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (en, Base);
+			mainGroup = 000000000000000000000002;
+			productRefGroup = 000000000000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				400000000000000000000001 /* EVEApproval */,
+				400000000000000000000002 /* EVEApprovalTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		300000000000000000000005 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		300000000000000000000006 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		300000000000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				200000000000000000000001 /* EVEApprovalApp.swift in Sources */,
+				200000000000000000000002 /* EVEClient.swift in Sources */,
+				200000000000000000000003 /* PlanModels.swift in Sources */,
+				200000000000000000000004 /* PlanQueueStore.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		300000000000000000000002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				200000000000000000000005 /* PlanModelsTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		400000000000000000000004 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 400000000000000000000001 /* EVEApproval */;
+			targetProxy = 400000000000000000000003 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		500000000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				ENABLE_TESTABILITY = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				SDKROOT = macosx;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		500000000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		500000000000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_TESTABILITY = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				INFOPLIST_KEY_LSUIElement = YES;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = local.eve.approval;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		500000000000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				INFOPLIST_KEY_LSUIElement = YES;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = local.eve.approval;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		500000000000000000000005 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = local.eve.approval.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/EVEApproval.app/Contents/MacOS/EVEApproval";
+			};
+			name = Debug;
+		};
+		500000000000000000000006 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = local.eve.approval.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/EVEApproval.app/Contents/MacOS/EVEApproval";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		600000000000000000000001 /* Build configuration list for PBXProject "EVEApproval" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				500000000000000000000001 /* Debug */,
+				500000000000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		600000000000000000000002 /* Build configuration list for PBXNativeTarget "EVEApproval" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				500000000000000000000003 /* Debug */,
+				500000000000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		600000000000000000000003 /* Build configuration list for PBXNativeTarget "EVEApprovalTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				500000000000000000000005 /* Debug */,
+				500000000000000000000006 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 000000000000000000000001 /* Project object */;
+}

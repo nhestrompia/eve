@@ -90,7 +90,7 @@ func TestInstructionInstallProtectsModifiedAndMalformedBlocks(t *testing.T) {
 	repoRoot := initTempGitRepo(t)
 	repo := repoFromRoot(repoRoot)
 	path := filepath.Join(repoRoot, "AGENTS.md")
-	modified := strings.Replace(canonicalInstructionTemplateV1, "completed product work", "custom product work", 1) + "\n"
+	modified := strings.Replace(canonicalInstructionTemplateV2, "approve implementation plans", "review implementation plans", 1) + "\n"
 	if err := os.WriteFile(path, []byte(modified), 0o644); err != nil {
 		t.Fatalf("write modified block: %v", err)
 	}
@@ -106,7 +106,7 @@ func TestInstructionInstallProtectsModifiedAndMalformedBlocks(t *testing.T) {
 	if result.Err != nil || result.Action != "updated" {
 		t.Fatalf("forced result = %#v", result)
 	}
-	if got := readTextFile(t, path); !strings.Contains(got, "completed product work") {
+	if got := readTextFile(t, path); !strings.Contains(got, "approve implementation plans") {
 		t.Fatalf("forced content = %q", got)
 	}
 
@@ -145,7 +145,7 @@ func TestInstructionInstallUpgradesExactKnownStaleBlock(t *testing.T) {
 		t.Fatalf("stale result = %#v", result)
 	}
 	updated := readTextFile(t, path)
-	if !strings.HasPrefix(updated, "# Existing\n\n") || !strings.HasSuffix(updated, "\n\nAfter block.\n") || !strings.Contains(updated, `version="1"`) {
+	if !strings.HasPrefix(updated, "# Existing\n\n") || !strings.HasSuffix(updated, "\n\nAfter block.\n") || !strings.Contains(updated, `version="2"`) {
 		t.Fatalf("updated stale content = %q", updated)
 	}
 }
@@ -261,7 +261,7 @@ func TestInstructionsCLIStatusDiffTargetForceAndTrackedOutput(t *testing.T) {
 		t.Fatalf("diff code/stdout = %d/%q stderr = %q", code, stdout.String(), stderr.String())
 	}
 
-	modified := strings.Replace(canonicalInstructionTemplateV1, "completed product work", "custom product work", 1)
+	modified := strings.Replace(canonicalInstructionTemplateV2, "approve implementation plans", "review implementation plans", 1)
 	if err := os.WriteFile(filepath.Join(repo, "AGENTS.md"), []byte(modified), 0o644); err != nil {
 		t.Fatalf("write modified: %v", err)
 	}
@@ -280,7 +280,7 @@ func TestInstructionsCLIStatusDiffTargetForceAndTrackedOutput(t *testing.T) {
 func TestInitPreservesModifiedBlockWithWarning(t *testing.T) {
 	repo := initTempGitRepo(t)
 	t.Chdir(repo)
-	modified := strings.Replace(canonicalInstructionTemplateV1, "completed product work", "custom product work", 1)
+	modified := strings.Replace(canonicalInstructionTemplateV2, "approve implementation plans", "review implementation plans", 1)
 	if err := os.WriteFile(filepath.Join(repo, "AGENTS.md"), []byte(modified), 0o644); err != nil {
 		t.Fatalf("write modified: %v", err)
 	}
