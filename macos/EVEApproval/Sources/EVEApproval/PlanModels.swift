@@ -42,6 +42,10 @@ struct PlanRequest: Codable, Identifiable, Hashable {
     var suiteOptions: [String] {
         availableSuites ?? []
     }
+
+    var isPendingApproval: Bool {
+        state == "pending_approval"
+    }
 }
 
 struct PlanProposal: Codable, Equatable {
@@ -104,8 +108,30 @@ func rejectionValidationMessage(_ feedback: String) -> String? {
 func preferredPlanSelection(currentID: PlanRequest.ID?, requests: [PlanRequest]) -> PlanRequest.ID? {
     if let currentID,
        let current = requests.first(where: { $0.id == currentID }),
-       current.state == "pending_approval" {
+       current.isPendingApproval {
         return currentID
     }
-    return requests.first(where: { $0.state == "pending_approval" })?.id ?? requests.first?.id
+    return requests.first(where: \.isPendingApproval)?.id ?? requests.first?.id
+}
+
+func orderedPlanRequests(_ requests: [PlanRequest]) -> [PlanRequest] {
+    requests.sorted { left, right in
+        let leftRank = left.isPendingApproval ? 0 : 1
+        let rightRank = right.isPendingApproval ? 0 : 1
+        if leftRank != rightRank { return leftRank < rightRank }
+        if left.repository != right.repository { return left.repository < right.repository }
+        if left.branch != right.branch { return left.branch < right.branch }
+        return left.id < right.id
+    }
+}
+
+func newPendingPlanIDs(
+    previous: Set<PlanRequest.ID>,
+    requests: [PlanRequest]
+) -> Set<PlanRequest.ID> {
+    Set(
+        requests
+            .filter { $0.isPendingApproval && !previous.contains($0.id) }
+            .map(\.id)
+    )
 }

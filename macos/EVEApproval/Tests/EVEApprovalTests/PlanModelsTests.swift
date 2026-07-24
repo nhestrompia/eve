@@ -80,11 +80,46 @@ final class PlanModelsTests: XCTestCase {
         )
     }
 
-    private func decodeRequest(id: String, state: String) throws -> PlanRequest {
+    func testNewPendingRequestDoesNotStealTheActivePendingSelection() throws {
+        let active = try decodeRequest(id: "planreq_pending01", state: "pending_approval")
+        let incoming = try decodeRequest(id: "planreq_pending02", state: "pending_approval")
+
+        XCTAssertEqual(
+            preferredPlanSelection(currentID: active.id, requests: [incoming, active]),
+            active.id
+        )
+    }
+
+    func testMultiplePendingRequestsAreKeptAheadOfStaleRequests() throws {
+        let stale = try decodeRequest(id: "planreq_stale001", state: "stale", repository: "alpha")
+        let second = try decodeRequest(id: "planreq_pending02", state: "pending_approval", repository: "zeta")
+        let first = try decodeRequest(id: "planreq_pending01", state: "pending_approval", repository: "alpha")
+
+        XCTAssertEqual(
+            orderedPlanRequests([stale, second, first]).map(\.id),
+            [first.id, second.id, stale.id]
+        )
+    }
+
+    func testAttentionOnlyIncludesNewPendingRequests() throws {
+        let existing = try decodeRequest(id: "planreq_pending01", state: "pending_approval")
+        let fresh = try decodeRequest(id: "planreq_pending02", state: "pending_approval")
+        let stale = try decodeRequest(id: "planreq_stale001", state: "stale")
+
+        XCTAssertEqual(
+            newPendingPlanIDs(previous: [existing.id], requests: [existing, fresh, stale]),
+            [fresh.id]
+        )
+        XCTAssertTrue(
+            newPendingPlanIDs(previous: [existing.id, fresh.id], requests: [existing, fresh]).isEmpty
+        )
+    }
+
+    private func decodeRequest(id: String, state: String, repository: String = "eve") throws -> PlanRequest {
         let data = Data("""
         {
           "planRequestId":"\(id)",
-          "repository":"eve",
+          "repository":"\(repository)",
           "repositoryRoot":"/tmp/eve",
           "branch":"main",
           "state":"\(state)",

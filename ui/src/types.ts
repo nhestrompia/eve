@@ -149,6 +149,23 @@ export type PlanRecord = {
   fulfilledBySnapshot?: string;
 };
 
+export type PlanRequest = {
+  planRequestId: string;
+  planId?: string;
+  repository: string;
+  repositoryRoot: string;
+  branch: string;
+  state: 'pending_approval' | 'locked' | 'rejected' | 'stale' | 'superseded' | 'fulfilled' | string;
+  currentRevision: number;
+  lockedRevision?: number;
+  revisions: PlanRevision[];
+  availableSuites?: string[];
+  rejectionFeedback?: string;
+  staleReasons?: string[];
+  supersededBy?: string;
+  fulfilledSnapshotId?: string;
+};
+
 export type SnapshotArtifact = {
   type: string;
   uri?: string;

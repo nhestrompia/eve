@@ -95,7 +95,7 @@ func writePlanMutationError(w http.ResponseWriter, err error) {
 }
 
 func (server runtimeServer) planRequests(ctx context.Context, status string) ([]*planRequest, error) {
-	var result []*planRequest
+	result := make([]*planRequest, 0)
 	for _, repo := range server.repositories() {
 		requests, err := repo.listPlanRequests()
 		if err != nil {

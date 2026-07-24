@@ -7,6 +7,7 @@ import type {
   EvolutionSummary,
   OpenEditorResponse,
   PlanRecord,
+  PlanRequest,
   PendingSnapshotResponse,
   RepositorySummary,
   SearchResponse,
@@ -308,6 +309,8 @@ function localArtifactHref(repo: string, artifactPath?: string) {
 
 export const api = {
   config: () => request<ConfigResponse>('/api/config'),
+  planRequests: (status = 'pending_approval') =>
+    request<PlanRequest[]>(`/api/plan-requests?status=${encodeURIComponent(status)}`),
   pendingSnapshot: (repo: string) => request<PendingSnapshotResponse>(`/api/repos/${encodeURIComponent(repo)}/pending`),
   repositories: async () => (await repositoriesRaw()).map(adaptRepo),
   repository,

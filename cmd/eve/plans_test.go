@@ -379,6 +379,24 @@ func TestPlanApprovalAPIStatusCodesAndHumanRevision(t *testing.T) {
 	}
 }
 
+func TestPlanApprovalAPIEmptyQueueIsAnArray(t *testing.T) {
+	repo := setupPlanTestRepo(t)
+	handler := newRuntimeServer(repo, "").routes()
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(
+		recorder,
+		httptest.NewRequest(http.MethodGet, "/api/plan-requests?status=pending_approval", nil),
+	)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("empty pending queue = %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if got := strings.TrimSpace(recorder.Body.String()); got != "[]" {
+		t.Fatalf("empty pending queue = %s, want []", got)
+	}
+}
+
 func TestPlanRejectionAPIReturnsConflictForStaleRepositoryContext(t *testing.T) {
 	repo := setupPlanTestRepo(t)
 	request, err := repo.createOrResumePlanRequest(context.Background(), testPlanInput("planreq_apistale01"))

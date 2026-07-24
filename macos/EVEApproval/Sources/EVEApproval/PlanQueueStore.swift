@@ -7,8 +7,11 @@ final class PlanQueueStore: ObservableObject {
     @Published var selectedID: PlanRequest.ID?
     @Published var notice: String?
 
+    var onNewPendingRequests: (([PlanRequest]) -> Void)?
+
     private let client: EVEClient
     private var refreshTask: Task<Void, Never>?
+    private var seenPendingIDs: Set<PlanRequest.ID> = []
 
     init(client: EVEClient = EVEClient()) {
         self.client = client
@@ -16,6 +19,10 @@ final class PlanQueueStore: ObservableObject {
 
     var selected: PlanRequest? {
         requests.first { $0.id == selectedID } ?? requests.first
+    }
+
+    var pendingCount: Int {
+        requests.filter(\.isPendingApproval).count
     }
 
     func start() {
@@ -35,9 +42,20 @@ final class PlanQueueStore: ObservableObject {
 
     func refresh() async {
         do {
-            requests = try await client.reviewQueue()
+            let refreshed = orderedPlanRequests(try await client.reviewQueue())
+            let newIDs = newPendingPlanIDs(previous: seenPendingIDs, requests: refreshed)
+            requests = refreshed
+            seenPendingIDs = Set(
+                refreshed
+                    .filter(\.isPendingApproval)
+                    .map(\.id)
+            )
             selectedID = preferredPlanSelection(currentID: selectedID, requests: requests)
             state = .online
+            if !newIDs.isEmpty {
+                let newRequests = refreshed.filter { newIDs.contains($0.id) }
+                onNewPendingRequests?(newRequests)
+            }
         } catch {
             state = .offline(error.localizedDescription)
         }
