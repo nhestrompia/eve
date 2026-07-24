@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "0.1.0",
+  "id": "skip_5da6232d0fe686e1",
+  "repoId": "eve",
+  "branch": "feat/plan-shapshots",
+  "reason": "The only unresolved commit a7ce897 is the generated .eve Plan/Snapshot record for implementation commit 762487c; it is product-history bookkeeping and does not require a second Snapshot.",
+  "range": {
+    "from": "762487c911fbdd31e0bb23f5f8928dde56c65ac7",
+    "to": "a7ce89736a5649fc610e496b326fd8b94f95403c",
+    "commits": [
+      "a7ce89736a5649fc610e496b326fd8b94f95403c"
+    ]
+  },
+  "createdAt": "2026-07-24T09:26:21Z",
+  "agent": {}
+}
