@@ -259,6 +259,7 @@ struct PlanReviewView: View {
     @State private var rejecting = false
     @State private var proposal: PlanProposal
     @State private var feedback = ""
+    @StateObject private var voiceFeedback = VoiceFeedbackTranscriber()
 
     init(request: PlanRequest, store: PlanQueueStore) {
         self.request = request
@@ -296,6 +297,8 @@ struct PlanReviewView: View {
                                 .lineLimit(3...6)
                                 .textFieldStyle(.roundedBorder)
                                 .accessibilityLabel("Rejection feedback")
+                                .disabled(voiceFeedback.state.blocksFeedbackEditing)
+                            voiceFeedbackControls
                             if let message = rejectionValidationMessage(feedback) {
                                 Text(message).font(.caption).foregroundStyle(.red)
                             }
@@ -308,6 +311,9 @@ struct PlanReviewView: View {
             actionBar
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onDisappear {
+            voiceFeedback.cancel()
+        }
     }
 
     private var repositoryHeader: some View {
@@ -437,11 +443,13 @@ struct PlanReviewView: View {
         HStack(spacing: 10) {
             if rejecting {
                 Button("Cancel") {
+                    voiceFeedback.cancel()
                     rejecting = false
                     feedback = ""
                 }
                 Spacer()
                 Button("Send rejection") {
+                    voiceFeedback.cancel()
                     Task { await store.reject(request, feedback: feedback) }
                 }
                 .buttonStyle(.borderedProminent)
@@ -472,6 +480,67 @@ struct PlanReviewView: View {
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
         .background(.bar)
+    }
+
+    private var voiceFeedbackControls: some View {
+        HStack(spacing: 10) {
+            Button {
+                if voiceFeedback.state.isRecording {
+                    voiceFeedback.stop()
+                } else if voiceFeedback.state.isBusy {
+                    voiceFeedback.cancel()
+                } else {
+                    Task {
+                        await voiceFeedback.start(existingText: feedback) { transcript in
+                            feedback = transcript
+                        }
+                    }
+                }
+            } label: {
+                Label(
+                    voiceFeedback.state.actionTitle,
+                    systemImage: voiceFeedback.state.actionSymbol
+                )
+            }
+            .buttonStyle(.bordered)
+            .tint(voiceFeedback.state.isRecording ? .red : .accentColor)
+            .accessibilityLabel(voiceFeedback.state.actionTitle)
+            .accessibilityValue(voiceFeedback.state.statusMessage)
+            .help("Dictate rejection feedback using on-device speech recognition")
+
+            if voiceFeedback.state == .requestingPermission
+                || voiceFeedback.state == .transcribing {
+                ProgressView()
+                    .controlSize(.small)
+                    .accessibilityHidden(true)
+            } else if voiceFeedback.state.isRecording {
+                Circle()
+                    .fill(.red)
+                    .frame(width: 8, height: 8)
+                    .accessibilityHidden(true)
+            } else {
+                Image(systemName: "lock.fill")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
+            }
+
+            Text(voiceFeedback.state.statusMessage)
+                .font(.caption)
+                .foregroundStyle(voiceStatusColor)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var voiceStatusColor: Color {
+        switch voiceFeedback.state.presentation.tone {
+        case .secondary:
+            return .secondary
+        case .primary:
+            return .primary
+        case .error:
+            return .red
+        }
     }
 }
 

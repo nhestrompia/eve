@@ -12,6 +12,8 @@
 		200000000000000000000004 /* PlanQueueStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000004 /* PlanQueueStore.swift */; };
 		200000000000000000000005 /* PlanModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000005 /* PlanModelsTests.swift */; };
 		200000000000000000000006 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 100000000000000000000008 /* XCTest.framework */; };
+		200000000000000000000007 /* VoiceFeedbackTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000009 /* VoiceFeedbackTranscriber.swift */; };
+		200000000000000000000008 /* VoiceFeedbackTranscriberTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10000000000000000000000B /* VoiceFeedbackTranscriberTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -33,6 +35,9 @@
 		100000000000000000000006 /* EVEApproval.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EVEApproval.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		100000000000000000000007 /* EVEApprovalTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EVEApprovalTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		100000000000000000000008 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = System/Library/Frameworks/XCTest.framework; sourceTree = SDKROOT; };
+		100000000000000000000009 /* VoiceFeedbackTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceFeedbackTranscriber.swift; sourceTree = "<group>"; };
+		10000000000000000000000A /* EVEApproval.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = EVEApproval.entitlements; sourceTree = "<group>"; };
+		10000000000000000000000B /* VoiceFeedbackTranscriberTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceFeedbackTranscriberTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -60,6 +65,7 @@
 				000000000000000000000005 /* EVEApprovalTests */,
 				000000000000000000000006 /* Frameworks */,
 				000000000000000000000003 /* Products */,
+				10000000000000000000000A /* EVEApproval.entitlements */,
 			);
 			sourceTree = "<group>";
 		};
@@ -79,6 +85,7 @@
 				100000000000000000000002 /* EVEClient.swift */,
 				100000000000000000000003 /* PlanModels.swift */,
 				100000000000000000000004 /* PlanQueueStore.swift */,
+				100000000000000000000009 /* VoiceFeedbackTranscriber.swift */,
 			);
 			name = EVEApproval;
 			path = Sources/EVEApproval;
@@ -88,6 +95,7 @@
 			isa = PBXGroup;
 			children = (
 				100000000000000000000005 /* PlanModelsTests.swift */,
+				10000000000000000000000B /* VoiceFeedbackTranscriberTests.swift */,
 			);
 			name = EVEApprovalTests;
 			path = Tests/EVEApprovalTests;
@@ -180,6 +188,7 @@
 				200000000000000000000002 /* EVEClient.swift in Sources */,
 				200000000000000000000003 /* PlanModels.swift in Sources */,
 				200000000000000000000004 /* PlanQueueStore.swift in Sources */,
+				200000000000000000000007 /* VoiceFeedbackTranscriber.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -188,6 +197,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				200000000000000000000005 /* PlanModelsTests.swift in Sources */,
+				200000000000000000000008 /* VoiceFeedbackTranscriberTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -229,6 +239,7 @@
 		500000000000000000000003 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = EVEApproval.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -236,6 +247,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "EVE uses the microphone only while you dictate Plan feedback.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "EVE uses Apple Speech for on-device Plan feedback dictation.";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				PRODUCT_BUNDLE_IDENTIFIER = local.eve.approval;
@@ -249,12 +262,15 @@
 		500000000000000000000004 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = EVEApproval.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "EVE uses the microphone only while you dictate Plan feedback.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "EVE uses Apple Speech for on-device Plan feedback dictation.";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				PRODUCT_BUNDLE_IDENTIFIER = local.eve.approval;
