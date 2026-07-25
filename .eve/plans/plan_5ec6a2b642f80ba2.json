@@ -1,0 +1,43 @@
+{
+  "id": "plan_5ec6a2b642f80ba2",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_smoke-hello-eve-2026-07-24-v3",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Create the requested EVE smoke-test greeting file and capture the verified change in an EVE Snapshot.",
+      "acceptanceCriteria": "Create smoke/hello.txt containing exactly \"hello from EVE\" and one trailing newline. Verify the exact bytes before committing. Commit the file change first, then create the EVE Snapshot with the verification result and commit its .eve record separately.",
+      "allowedPathGlobs": [
+        "smoke/hello.txt",
+        ".eve/**"
+      ],
+      "milestones": [
+        {
+          "title": "Add greeting file",
+          "goal": "Add smoke/hello.txt with the requested single-line message."
+        },
+        {
+          "title": "Validate and record",
+          "goal": "Verify exact contents, commit the implementation, complete the Snapshot, and commit the generated EVE record."
+        }
+      ],
+      "configuredSuite": "test \"$(cat smoke/hello.txt)\" = \"hello from EVE\" \u0026\u0026 test \"$(wc -l \u003c smoke/hello.txt | tr -d ' ')\" = \"1\"",
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "5f0038631cc5624d7d7ada2b901f7ae88f3194a4",
+      "branch": "feat/plan-shapshots",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-24T02:55:02Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-24T02:55:29Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_17bc028b1b3cd154"
+}

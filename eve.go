@@ -95,8 +95,8 @@ func ValidateSnapshot(snapshot *Snapshot) error {
 	if strings.TrimSpace(snapshot.ID) == "" {
 		problems = append(problems, "id is required")
 	}
-	if snapshot.SchemaVersion != SnapshotSchemaVersion && snapshot.SchemaVersion != "0.1.0" {
-		problems = append(problems, fmt.Sprintf("schemaVersion must be %q or %q", SnapshotSchemaVersion, "0.1.0"))
+	if snapshot.SchemaVersion != SnapshotSchemaVersion && snapshot.SchemaVersion != "0.2.0" && snapshot.SchemaVersion != "0.1.0" {
+		problems = append(problems, fmt.Sprintf("schemaVersion must be %q, %q, or %q", SnapshotSchemaVersion, "0.2.0", "0.1.0"))
 	}
 	if strings.TrimSpace(snapshot.Title) == "" {
 		problems = append(problems, "title is required")
@@ -160,6 +160,35 @@ func ValidateSnapshot(snapshot *Snapshot) error {
 			problems = append(problems, fmt.Sprintf("verification.status has invalid value %q", snapshot.Verification.Status))
 		}
 	}
+	if snapshot.Plan != nil {
+		if strings.TrimSpace(snapshot.Plan.ID) == "" {
+			problems = append(problems, "plan.id is required")
+		}
+		if snapshot.Plan.Revision <= 0 {
+			problems = append(problems, "plan.revision must be positive")
+		}
+	}
+	if snapshot.PlanConformance != nil {
+		validStatuses := map[string]bool{"matched": true, "failed": true, "incomplete": true, "no_plan": true}
+		if !validStatuses[snapshot.PlanConformance.Status] {
+			problems = append(problems, fmt.Sprintf("planConformance.status has invalid value %q", snapshot.PlanConformance.Status))
+		}
+		if snapshot.PlanConformance.ChangedPaths == nil {
+			problems = append(problems, "planConformance.changedPaths is required")
+		}
+		if snapshot.PlanConformance.OutOfScopePaths == nil {
+			problems = append(problems, "planConformance.outOfScopePaths is required")
+		}
+		if snapshot.PlanConformance.NoPlanOnFile != (snapshot.PlanConformance.Status == "no_plan") {
+			problems = append(problems, "planConformance.noPlanOnFile must match no_plan status")
+		}
+		if snapshot.Plan == nil && snapshot.PlanConformance.Status != "no_plan" {
+			problems = append(problems, "planConformance requires a plan reference unless status is no_plan")
+		}
+	}
+	if snapshot.Plan != nil && snapshot.PlanConformance == nil {
+		problems = append(problems, "planConformance is required when plan is present")
+	}
 	for i, artifact := range snapshot.Artifacts {
 		if _, ok := artifactTypes[artifact.Type]; !ok {
 			problems = append(problems, fmt.Sprintf("artifacts[%d].type must be one of screenshot, video, preview, url, note, log, conversation", i))
@@ -171,6 +200,70 @@ func ValidateSnapshot(snapshot *Snapshot) error {
 
 	if len(problems) > 0 {
 		return ValidationError{Problems: problems}
+	}
+	return nil
+}
+
+func ValidatePlanRecord(plan *PlanRecord) error {
+	if plan == nil {
+		return errors.New("plan is nil")
+	}
+	var problems []string
+	if strings.TrimSpace(plan.ID) == "" {
+		problems = append(problems, "id is required")
+	}
+	if plan.SchemaVersion != PlanSchemaVersion {
+		problems = append(problems, fmt.Sprintf("schemaVersion must be %q", PlanSchemaVersion))
+	}
+	if strings.TrimSpace(plan.PlanRequestID) == "" {
+		problems = append(problems, "planRequestId is required")
+	}
+	if strings.TrimSpace(plan.Repository) == "" {
+		problems = append(problems, "repository is required")
+	}
+	if plan.Status != "fulfilled" {
+		problems = append(problems, "status must be fulfilled")
+	}
+	if len(plan.Revisions) == 0 {
+		problems = append(problems, "revisions requires at least one revision")
+	}
+	if plan.LockedRevision < 1 || plan.LockedRevision > len(plan.Revisions) {
+		problems = append(problems, "lockedRevision must identify an immutable revision")
+	}
+	if strings.TrimSpace(plan.LockedAt) == "" {
+		problems = append(problems, "lockedAt is required")
+	}
+	if plan.ApprovedBy != "local_ui" {
+		problems = append(problems, "approvedBy must be local_ui")
+	}
+	if strings.TrimSpace(plan.FulfilledBy) == "" {
+		problems = append(problems, "fulfilledBySnapshot is required")
+	}
+	for index, revision := range plan.Revisions {
+		if revision.Revision != index+1 {
+			problems = append(problems, fmt.Sprintf("revisions[%d].revision must be %d", index, index+1))
+		}
+		if revision.Source != "agent" && revision.Source != "human" {
+			problems = append(problems, fmt.Sprintf("revisions[%d].source must be agent or human", index))
+		}
+		if strings.TrimSpace(revision.Goal) == "" {
+			problems = append(problems, fmt.Sprintf("revisions[%d].goal is required", index))
+		}
+		if strings.TrimSpace(revision.AcceptanceCriteria) == "" {
+			problems = append(problems, fmt.Sprintf("revisions[%d].acceptanceCriteria is required", index))
+		}
+		if len(revision.AllowedPathGlobs) == 0 {
+			problems = append(problems, fmt.Sprintf("revisions[%d].allowedPathGlobs is required", index))
+		}
+		if strings.TrimSpace(revision.PolicyHash) == "" || strings.TrimSpace(revision.CheckDefinitionsHash) == "" || strings.TrimSpace(revision.SuiteDigest) == "" {
+			problems = append(problems, fmt.Sprintf("revisions[%d] policy and suite digests are required", index))
+		}
+		if strings.TrimSpace(revision.BaseCommit) == "" || strings.TrimSpace(revision.Branch) == "" || strings.TrimSpace(revision.TreeFingerprint) == "" {
+			problems = append(problems, fmt.Sprintf("revisions[%d] repository context is required", index))
+		}
+	}
+	if len(problems) > 0 {
+		return errors.New(strings.Join(problems, "; "))
 	}
 	return nil
 }
@@ -201,7 +294,7 @@ func (err ValidationError) Error() string {
 }
 
 func normalizeSnapshot(snapshot Snapshot) Snapshot {
-	if snapshot.SchemaVersion == "" || snapshot.SchemaVersion == "0.1.0" {
+	if snapshot.SchemaVersion == "" || snapshot.SchemaVersion == "0.1.0" || snapshot.SchemaVersion == "0.2.0" {
 		snapshot.SchemaVersion = SnapshotSchemaVersion
 	}
 	if snapshot.Relationships.Corrects == nil {
@@ -236,6 +329,14 @@ func normalizeSnapshot(snapshot Snapshot) Snapshot {
 	}
 	if snapshot.Implementation.Commits == nil {
 		snapshot.Implementation.Commits = []string{}
+	}
+	if snapshot.PlanConformance != nil {
+		if snapshot.PlanConformance.ChangedPaths == nil {
+			snapshot.PlanConformance.ChangedPaths = []string{}
+		}
+		if snapshot.PlanConformance.OutOfScopePaths == nil {
+			snapshot.PlanConformance.OutOfScopePaths = []string{}
+		}
 	}
 	return snapshot
 }

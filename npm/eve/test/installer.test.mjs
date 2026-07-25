@@ -1,13 +1,18 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { mkdtemp, readFile, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
 import {
+  defaultMacOSAppInstallPath,
   defaultInstallDir,
+  downloadMacOSAppReleaseAsset,
   downloadReleaseAsset,
+  installMacOSApprovalApp,
+  macOSAppAssetName,
   main,
   normalizeVersion,
   parseChecksums,
@@ -40,6 +45,8 @@ test("chooses user-owned install directories", () => {
   assert.equal(defaultInstallDir({ env: {}, platform: "darwin", home: "/Users/eve" }), path.join("/Users/eve", ".local", "bin"));
   assert.equal(defaultInstallDir({ env: { LOCALAPPDATA: "C:\\Users\\eve\\AppData\\Local" }, platform: "win32", home: "C:\\Users\\eve" }), path.join("C:\\Users\\eve\\AppData\\Local", "EVE", "bin"));
   assert.equal(defaultInstallDir({ env: { EVE_INSTALL_DIR: "/custom/bin" }, platform: "linux", home: "/home/eve" }), "/custom/bin");
+  assert.equal(defaultMacOSAppInstallPath({ env: {}, home: "/Users/eve" }), path.join("/Users/eve", "Applications", "eve.app"));
+  assert.equal(defaultMacOSAppInstallPath({ env: { EVE_APP_INSTALL_PATH: "/tmp/eve.app" }, home: "/Users/eve" }), "/tmp/eve.app");
 });
 
 test("normalizes published release versions", () => {
@@ -80,6 +87,91 @@ test("downloads the binary and checksum manifest from one release", async () => 
   });
   assert.equal(result.assetName, "eve-linux-amd64");
   assert.deepEqual(result.bytes, bytes);
+});
+
+test("downloads the macOS approval app release asset", async () => {
+  const bytes = Buffer.from("zipped app");
+  const digest = createHash("sha256").update(bytes).digest("hex");
+  const responses = new Map([
+    ["https://releases.example/v1/SHA256SUMS", Buffer.from(`${digest}  ${macOSAppAssetName()}\n`)],
+    [`https://releases.example/v1/${macOSAppAssetName()}`, bytes],
+  ]);
+  const fetchImpl = async (url) => ({
+    ok: responses.has(url),
+    status: responses.has(url) ? 200 : 404,
+    statusText: responses.has(url) ? "OK" : "Not Found",
+    arrayBuffer: async () => responses.get(url),
+  });
+
+  const result = await downloadMacOSAppReleaseAsset({
+    version: "1.0.0",
+    baseUrl: "https://releases.example/v1/",
+    fetchImpl,
+  });
+
+  assert.equal(result.assetName, "eve-macos-app.zip");
+  assert.deepEqual(result.bytes, bytes);
+});
+
+test("skips approval app installation outside macOS", async () => {
+  let output = "";
+  const destination = await installMacOSApprovalApp({
+    version: "1.0.0",
+    env: {},
+    platform: "linux",
+    home: "/home/eve",
+    baseUrl: "https://releases.example/v1",
+    fetchImpl: async () => {
+      throw new Error("should not download");
+    },
+    spawn: () => {
+      throw new Error("should not spawn");
+    },
+    stdout: { write: (value) => { output += value; } },
+  });
+
+  assert.equal(destination, undefined);
+  assert.match(output, /macOS only/);
+});
+
+test("installs the approval app on macOS", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "eve-app-test-"));
+  const destination = path.join(root, "Applications", "eve.app");
+  const bytes = Buffer.from("zipped app");
+  const digest = createHash("sha256").update(bytes).digest("hex");
+  const responses = new Map([
+    ["https://releases.example/v1/SHA256SUMS", Buffer.from(`${digest}  eve-macos-app.zip\n`)],
+    ["https://releases.example/v1/eve-macos-app.zip", bytes],
+  ]);
+  const fetchImpl = async (url) => ({
+    ok: responses.has(url),
+    status: responses.has(url) ? 200 : 404,
+    statusText: responses.has(url) ? "OK" : "Not Found",
+    arrayBuffer: async () => responses.get(url),
+  });
+  const spawn = (command, args) => {
+    assert.equal(command, "ditto");
+    const extractPath = args[3];
+    mkdirSync(path.join(extractPath, "eve.app", "Contents"), { recursive: true });
+    writeFileSync(path.join(extractPath, "eve.app", "Contents", "Info.plist"), "plist");
+    return { status: 0, stdout: "" };
+  };
+  let output = "";
+
+  const installed = await installMacOSApprovalApp({
+    version: "1.0.0",
+    env: { EVE_APP_INSTALL_PATH: destination },
+    platform: "darwin",
+    home: root,
+    baseUrl: "https://releases.example/v1",
+    fetchImpl,
+    spawn,
+    stdout: { write: (value) => { output += value; } },
+  });
+
+  assert.equal(installed, destination);
+  assert.equal(await readFile(path.join(destination, "Contents", "Info.plist"), "utf8"), "plist");
+  assert.match(output, /Installed eve approval app/);
 });
 
 test("installs, verifies, and configures a downloaded release", async () => {
@@ -130,6 +222,7 @@ test("installs, verifies, and configures a downloaded release", async () => {
     command: destination,
     args: ["install-mcp", "--eve-bin", destination, "--clients", "codex"],
   });
-  assert.match(output, /Installed EVE at/);
+  assert.match(output, /Installed eve at/);
+  assert.match(output, /Skipping eve approval app install: macOS only/);
   assert.match(output, /Next: open a Git repository/);
 });

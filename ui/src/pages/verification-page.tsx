@@ -5,6 +5,7 @@ import { api } from '../api';
 import { ErrorState } from '../components/error-state';
 import { EvolutionShell } from '../components/evolution-shell';
 import { LoadingState } from '../components/loading-state';
+import { PlanAlignmentSection } from '../components/plan-alignment-section';
 import type { Snapshot } from '../types';
 import type { Verification } from '../types';
 
@@ -21,6 +22,7 @@ export function VerificationPage() {
         <section className="space-y-6">
           <Header eyebrow={id} title="Verification" subtitle="Checks and evidence recorded for this product state." />
           <TrustBoundary />
+          <PlanAlignmentSection snapshot={detail.data.snapshot} plan={detail.data.planRecord} />
           {detail.data.snapshot.verification ? (
             <AggregatePanel snapshot={detail.data.snapshot} />
           ) : <EmptyPanel text="No EVE-executed verification is recorded in this Snapshot." />}

@@ -1,0 +1,45 @@
+{
+  "id": "plan_e208e3c248d9ebe4",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_voice_feedback_20260724",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Add private on-device voice dictation for Plan review feedback in the macOS approval app.",
+      "acceptanceCriteria": "- The rejection-feedback area includes an accessible microphone control that starts and stops dictation without leaving the selected Plan.\n- Transcription uses the current locale and requires on-device recognition; EVE never silently falls back to network speech recognition.\n- Speech and microphone permissions are requested only after the user invokes dictation.\n- Unsupported locale, unavailable recognizer, denied permission, recording, transcribing, and failure states are explained inline.\n- Partial speech results update the rejection feedback field while preserving text already entered before dictation.\n- Starting or stopping dictation cannot discard the selected Plan, existing feedback, or inline Plan edits.\n- macOS privacy usage descriptions and audio-input entitlement are configured for Debug and Release builds.\n- Swift and Xcode tests/build pass.",
+      "allowedPathGlobs": [
+        "macos/EVEApproval/**"
+      ],
+      "milestones": [
+        {
+          "title": "On-device transcription service",
+          "goal": "Capture microphone audio and stream it to SFSpeechRecognizer with on-device recognition required."
+        },
+        {
+          "title": "Inline voice feedback UX",
+          "goal": "Add accessible recording controls and explicit permission/availability/error states to the rejection flow."
+        },
+        {
+          "title": "Privacy configuration and verification",
+          "goal": "Configure usage descriptions and entitlement, then test state transitions and build the macOS target."
+        }
+      ],
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "bb50b2c8bff0c5b5b5a538493f332ce8c1b47c1e",
+      "branch": "feat/plan-shapshots",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-24T09:27:15Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-24T09:27:35Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_b978bdaf3f3f9229"
+}

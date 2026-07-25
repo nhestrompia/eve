@@ -1399,6 +1399,23 @@ func TestRuntimeListsRegisteredRepositories(t *testing.T) {
 	}
 }
 
+func TestRepositoryVisibilityHidesTempReposForNormalPrimary(t *testing.T) {
+	primary := repository{ID: "eve", Root: filepath.Join(string(os.PathSeparator), "Users", "eve", "repo")}
+	tempRepo := repository{ID: "eve-plan-smoke", Root: filepath.Join(os.TempDir(), "eve-plan-smoke")}
+	tempPrimary := repository{ID: "scratch", Root: filepath.Join(os.TempDir(), "scratch")}
+	sibling := repository{ID: "astronomy", Root: filepath.Join(string(os.PathSeparator), "Users", "eve", "astronomy")}
+
+	if repoVisibleFromPrimary(primary, tempRepo) {
+		t.Fatalf("temp repo should be hidden when primary is not temporary")
+	}
+	if !repoVisibleFromPrimary(tempPrimary, tempRepo) {
+		t.Fatalf("temp repo should remain visible when the primary repo is temporary")
+	}
+	if !repoVisibleFromPrimary(primary, sibling) {
+		t.Fatalf("normal sibling repo should remain visible")
+	}
+}
+
 func TestRuntimeDiscoversUnregisteredSiblingRepositories(t *testing.T) {
 	parent := t.TempDir()
 	primary := initTempGitRepoAt(t, filepath.Join(parent, "primary"))
