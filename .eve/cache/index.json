@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 65,
-  "commitCount": 71,
+  "snapshotCount": 66,
+  "commitCount": 72,
   "decisionCount": 120,
   "riskCount": 44,
   "artifactCount": 35,
-  "latestAt": "2026-07-25T21:14:32Z",
-  "latestSnapshot": "snap_fc40c1ae49afe99e",
-  "latestTitle": "Collapse duplicate approval queue entries",
-  "branch": "feat/plan-shapshots",
-  "head": "a00a68311909427a50fd23566edde0d60bd1532a",
+  "latestAt": "2026-07-25T23:29:29Z",
+  "latestSnapshot": "snap_d628ae1b46a52694",
+  "latestTitle": "Dashboard overview, plans, and repositories UI",
+  "branch": "feat/landing",
+  "head": "bde2f5313f94b2f48cb369d05cf230e55631bd1c",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "a00a68311909427a50fd23566edde0d60bd1532a"
+  "latestGitState": "bde2f5313f94b2f48cb369d05cf230e55631bd1c"
 }
