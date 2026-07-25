@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "0.1.0",
+  "id": "skip_caf6cdaec8566ec4",
+  "repoId": "eve",
+  "branch": "feat/plan-shapshots",
+  "reason": "Bookkeeping-only EVE record commit for the previous completed product change.",
+  "range": {
+    "from": "ee18c80fe9c41f9f566a08007e710c6def57f39a",
+    "to": "a69f2118cf8ef0bbe1829aa08a65b3de3beed3d7",
+    "commits": [
+      "a69f2118cf8ef0bbe1829aa08a65b3de3beed3d7"
+    ]
+  },
+  "createdAt": "2026-07-25T19:28:25Z",
+  "agent": {}
+}
