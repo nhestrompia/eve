@@ -40,35 +40,52 @@ export default function HomePage() {
             </div>
           </div>
 
-          <aside className="eve-specimen" aria-label="Example eve snapshot">
-            <div className="eve-specimen-head">
-              <span>snapshot</span>
-              <code>.eve/snapshots/snap_123.json</code>
+          <aside className="eve-flow" aria-label="Animated eve product-history flow">
+            <p className="eve-flow-summary">
+              Plans become implementation evidence, snapshots, and review records in the repository.
+            </p>
+            <div className="eve-flow-stage" aria-hidden="true">
+              <div className="eve-flow-orbit" />
+              <div className="eve-flow-spine">
+                <span />
+                <span />
+                <span />
+              </div>
+
+              <div className="eve-flow-card" data-kind="plan">
+                <span>plan</span>
+                <strong>Scope locked</strong>
+                <p>acceptance criteria, checks, affected paths</p>
+              </div>
+              <div className="eve-flow-card" data-kind="implementation">
+                <span>implementation</span>
+                <strong>Git state linked</strong>
+                <p>branch, diff, commit, changed files</p>
+              </div>
+              <div className="eve-flow-card" data-kind="snapshot">
+                <span>snapshot</span>
+                <strong>Evidence captured</strong>
+                <p>validation output, links, decisions</p>
+              </div>
+              <div className="eve-flow-card" data-kind="review">
+                <span>review</span>
+                <strong>History readable</strong>
+                <p>what changed, why it changed, proof</p>
+              </div>
+
+              <div className="eve-flow-packet" data-packet="plan">
+                <span>plan</span>
+                <code>plan.locked</code>
+              </div>
+              <div className="eve-flow-packet" data-packet="snapshot">
+                <span>snapshot</span>
+                <code>snap_123.json</code>
+              </div>
+              <div className="eve-flow-packet" data-packet="evidence">
+                <span>evidence</span>
+                <code>go test ./...</code>
+              </div>
             </div>
-            <dl className="eve-specimen-list">
-              <div>
-                <dt>product change</dt>
-                <dd>Users can sign in with GitHub.</dd>
-              </div>
-              <div>
-                <dt>user-visible change</dt>
-                <dd>The login screen includes a GitHub sign-in option.</dd>
-              </div>
-              <div>
-                <dt>validation</dt>
-                <dd>
-                  <code>go test ./...</code>
-                  <span>passed</span>
-                </dd>
-              </div>
-              <div>
-                <dt>implementation</dt>
-                <dd>
-                  <code>branch main</code>
-                  <code>gitState abc123</code>
-                </dd>
-              </div>
-            </dl>
           </aside>
         </section>
 

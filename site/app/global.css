@@ -7,6 +7,7 @@
   --eve-blue: oklch(0.52 0.18 258);
   --eve-green: oklch(0.56 0.13 155);
   --eve-amber: oklch(0.66 0.13 74);
+  --eve-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --color-fd-background: var(--eve-surface);
   --color-fd-foreground: var(--eve-ink);
   --color-fd-muted: oklch(0.955 0.008 247);
@@ -254,8 +255,7 @@ body {
 }
 
 .eve-hero-note code,
-.eve-start code,
-.eve-specimen code {
+.eve-start code {
   border-radius: 5px;
   background: color-mix(in oklch, var(--eve-line) 58%, transparent);
   padding: 2px 5px;
@@ -270,65 +270,242 @@ body {
   margin-top: 34px;
 }
 
-.eve-specimen {
+.eve-flow {
+  position: relative;
+  min-height: 520px;
+}
+
+.eve-flow-summary {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.eve-flow-stage {
+  position: relative;
+  min-height: 520px;
   border: 1px solid var(--eve-line);
   border-radius: 8px;
-  background: color-mix(in oklch, var(--eve-paper) 96%, var(--eve-blue));
+  background:
+    radial-gradient(circle at 74% 18%, color-mix(in oklch, var(--eve-blue) 16%, transparent), transparent 30%),
+    radial-gradient(circle at 20% 78%, color-mix(in oklch, var(--eve-green) 14%, transparent), transparent 34%),
+    linear-gradient(90deg, color-mix(in oklch, var(--eve-line) 58%, transparent) 1px, transparent 1px) 0 0 / 56px 56px,
+    linear-gradient(180deg, color-mix(in oklch, var(--eve-paper) 96%, var(--eve-blue)), var(--eve-paper));
   box-shadow:
     0 1px 0 rgba(15, 23, 42, 0.04),
     0 28px 80px rgba(15, 23, 42, 0.1);
+  contain: layout paint;
   overflow: hidden;
 }
 
-.eve-specimen-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  border-bottom: 1px solid var(--eve-line);
-  padding: 15px 18px;
-  color: var(--eve-muted);
-  font-size: 13px;
+.eve-flow-stage::before,
+.eve-flow-stage::after {
+  position: absolute;
+  inset: 32px;
+  border: 1px solid color-mix(in oklch, var(--eve-line) 68%, transparent);
+  border-radius: 8px;
+  content: "";
+  pointer-events: none;
 }
 
-.eve-specimen-list {
+.eve-flow-stage::after {
+  inset: 72px 58px;
+  opacity: 0.72;
+}
+
+.eve-flow-orbit {
+  position: absolute;
+  inset: 56px 48px;
+  border: 1px dashed color-mix(in oklch, var(--eve-blue) 38%, var(--eve-line));
+  border-radius: 999px;
+  opacity: 0.52;
+  animation: eve-flow-breathe 8s var(--eve-ease) infinite;
+}
+
+.eve-flow-spine {
+  position: absolute;
+  inset: 74px auto 74px 50%;
+  width: 1px;
+  background: color-mix(in oklch, var(--eve-blue) 42%, var(--eve-line));
+}
+
+.eve-flow-spine span {
+  position: absolute;
+  left: 50%;
+  width: 11px;
+  height: 11px;
+  border: 1px solid var(--eve-blue);
+  border-radius: 999px;
+  background: var(--eve-paper);
+  transform: translateX(-50%);
+}
+
+.eve-flow-spine span:nth-child(1) {
+  top: 13%;
+}
+
+.eve-flow-spine span:nth-child(2) {
+  top: 48%;
+}
+
+.eve-flow-spine span:nth-child(3) {
+  top: 78%;
+}
+
+.eve-flow-card,
+.eve-flow-packet {
+  position: absolute;
+  border: 1px solid color-mix(in oklch, var(--eve-line) 86%, var(--eve-blue));
+  border-radius: 8px;
+  background: color-mix(in oklch, var(--eve-paper) 92%, transparent);
+  box-shadow:
+    0 1px 0 rgba(15, 23, 42, 0.04),
+    0 18px 48px rgba(15, 23, 42, 0.09);
+  will-change: transform, opacity;
+}
+
+.eve-flow-card {
   display: grid;
-  margin: 0;
+  width: min(250px, 48%);
+  gap: 7px;
+  padding: 17px 18px;
+  animation: eve-card-flow 12s cubic-bezier(0.22, 1, 0.36, 1) infinite;
 }
 
-.eve-specimen-list div {
-  display: grid;
-  grid-template-columns: 132px minmax(0, 1fr);
-  gap: 24px;
-  border-bottom: 1px solid var(--eve-line);
-  padding: 22px 24px;
-}
-
-.eve-specimen-list div:last-child {
-  border-bottom: 0;
-}
-
-.eve-specimen dt {
+.eve-flow-card span,
+.eve-flow-packet span {
   color: var(--eve-muted);
   font-size: 12px;
-  font-weight: 680;
-  letter-spacing: 0;
+  font-weight: 720;
 }
 
-.eve-specimen dd {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 0;
+.eve-flow-card strong {
   color: var(--eve-ink);
   font-size: 17px;
-  font-weight: 660;
-  line-height: 1.35;
+  line-height: 1.22;
 }
 
-.eve-specimen dd span {
+.eve-flow-card p {
+  margin: 0;
   color: var(--eve-muted);
-  font-weight: 560;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.eve-flow-card[data-kind='plan'] {
+  top: 58px;
+  left: 42px;
+  animation-delay: -1s;
+}
+
+.eve-flow-card[data-kind='implementation'] {
+  top: 166px;
+  right: 40px;
+  animation-delay: -8.8s;
+}
+
+.eve-flow-card[data-kind='snapshot'] {
+  top: 288px;
+  left: 70px;
+  border-color: color-mix(in oklch, var(--eve-blue) 46%, var(--eve-line));
+  animation-delay: -6.2s;
+}
+
+.eve-flow-card[data-kind='review'] {
+  right: 52px;
+  bottom: 44px;
+  animation-delay: -3.7s;
+}
+
+.eve-flow-packet {
+  display: flex;
+  min-width: 142px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 11px;
+  animation: eve-packet-run 9s linear infinite;
+}
+
+.eve-flow-packet code {
+  border-radius: 5px;
+  background: color-mix(in oklch, var(--eve-line) 58%, transparent);
+  padding: 2px 5px;
+  color: var(--eve-ink);
+  font-size: 12px;
+}
+
+.eve-flow-packet[data-packet='plan'] {
+  top: 113px;
+  left: 52%;
+  animation-delay: -0.4s;
+}
+
+.eve-flow-packet[data-packet='snapshot'] {
+  top: 244px;
+  left: 13%;
+  animation-delay: -3.2s;
+}
+
+.eve-flow-packet[data-packet='evidence'] {
+  top: 385px;
+  left: 47%;
+  animation-delay: -6.1s;
+}
+
+@keyframes eve-card-flow {
+  0%,
+  100% {
+    opacity: 0.18;
+    transform: translate3d(28px, -18px, 0) scale(0.96);
+  }
+
+  11%,
+  35% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  46% {
+    opacity: 0.18;
+    transform: translate3d(-24px, 18px, 0) scale(0.98);
+  }
+}
+
+@keyframes eve-packet-run {
+  0% {
+    opacity: 0;
+    transform: translate3d(-36px, -18px, 0) scale(0.95);
+  }
+
+  12%,
+  36% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  56%,
+  100% {
+    opacity: 0;
+    transform: translate3d(74px, 28px, 0) scale(0.98);
+  }
+}
+
+@keyframes eve-flow-breathe {
+  0%,
+  100% {
+    opacity: 0.38;
+    transform: scale(0.98);
+  }
+
+  50% {
+    opacity: 0.68;
+    transform: scale(1.02);
+  }
 }
 
 .eve-proof {
@@ -468,13 +645,136 @@ body {
     padding-inline: 8px;
   }
 
-  .eve-specimen-list div,
   .eve-proof-rows article {
     grid-template-columns: 1fr;
     gap: 8px;
   }
 
+  .eve-flow,
+  .eve-flow-stage {
+    min-height: 470px;
+  }
+
+  .eve-flow-card {
+    width: min(230px, 54%);
+    padding: 15px 16px;
+  }
+
+  .eve-flow-card[data-kind='plan'] {
+    top: 44px;
+    left: 22px;
+  }
+
+  .eve-flow-card[data-kind='implementation'] {
+    top: 147px;
+    right: 22px;
+  }
+
+  .eve-flow-card[data-kind='snapshot'] {
+    top: 255px;
+    left: 34px;
+  }
+
+  .eve-flow-card[data-kind='review'] {
+    right: 28px;
+    bottom: 32px;
+  }
+
+  .eve-flow-packet[data-packet='plan'] {
+    top: 103px;
+    left: 44%;
+  }
+
+  .eve-flow-packet[data-packet='snapshot'] {
+    top: 225px;
+    left: 7%;
+  }
+
+  .eve-flow-packet[data-packet='evidence'] {
+    top: 350px;
+    left: 38%;
+  }
+
   .eve-proof-rows article {
     padding: 22px 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .eve-flow,
+  .eve-flow-stage {
+    min-height: 560px;
+  }
+
+  .eve-flow-stage::before {
+    inset: 20px;
+  }
+
+  .eve-flow-stage::after,
+  .eve-flow-orbit {
+    inset-inline: 28px;
+  }
+
+  .eve-flow-spine {
+    left: 28px;
+  }
+
+  .eve-flow-card {
+    left: 56px;
+    right: auto;
+    width: calc(100% - 80px);
+  }
+
+  .eve-flow-card[data-kind='plan'] {
+    top: 42px;
+    left: 56px;
+  }
+
+  .eve-flow-card[data-kind='implementation'] {
+    top: 154px;
+    right: auto;
+    left: 56px;
+  }
+
+  .eve-flow-card[data-kind='snapshot'] {
+    top: 268px;
+    left: 56px;
+  }
+
+  .eve-flow-card[data-kind='review'] {
+    right: auto;
+    bottom: 42px;
+    left: 56px;
+  }
+
+  .eve-flow-packet {
+    min-width: 0;
+    width: calc(100% - 96px);
+  }
+
+  .eve-flow-packet[data-packet='plan'],
+  .eve-flow-packet[data-packet='snapshot'],
+  .eve-flow-packet[data-packet='evidence'] {
+    left: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eve-flow-orbit,
+  .eve-flow-card,
+  .eve-flow-packet {
+    animation: none;
+  }
+
+  .eve-flow-orbit {
+    opacity: 0.52;
+    transform: none;
+  }
+
+  .eve-flow-card,
+  .eve-flow-packet {
+    opacity: 1;
+    transform: none;
+    will-change: auto;
   }
 }
