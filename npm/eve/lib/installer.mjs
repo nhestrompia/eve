@@ -72,7 +72,7 @@ export async function main(options = {}) {
   }
 
   printPathGuidance(stdout, installDir, env, platform);
-  stdout.write("\nNext: open a Git repository and run `eve init`.\n");
+  stdout.write("\nNext: open a Git repository, run `eve init`, then run `eve`.\n");
   return 0;
 }
 

@@ -29,6 +29,7 @@ After installation, open a Git repository and run:
 ```sh
 eve init
 eve doctor
+eve
 ```
 
 eve installs to `~/.local/bin/eve` on macOS and Linux and to

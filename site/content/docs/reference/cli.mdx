@@ -6,8 +6,13 @@ description: The main commands available in the eve CLI.
 ## Usage
 
 ```sh
+eve
 eve <command>
 ```
+
+Running `eve` without a subcommand starts the local runtime, product UI, local
+API, and HTTP MCP endpoint for the current or most recently known initialized
+repository.
 
 ## Commands
 
@@ -93,11 +98,24 @@ eve commit --allow-dirty
 
 ### dev
 
-Start the local runtime, product UI, local API, and HTTP MCP endpoint.
+Start the local runtime, product UI, local API, and HTTP MCP endpoint from the
+current repository. This is equivalent to the default `eve` runtime command
+when run from a repository.
 
 ```sh
 eve dev
 eve dev --addr localhost:4317
+```
+
+### daemon
+
+Start the same local runtime, falling back to a known initialized repository
+when the current directory is not inside one.
+
+```sh
+eve daemon
+eve daemon --addr 127.0.0.1:4317
+eve daemon --cwd /path/to/repo
 ```
 
 ### mcp-stdio
