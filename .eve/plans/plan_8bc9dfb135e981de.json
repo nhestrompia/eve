@@ -1,0 +1,47 @@
+{
+  "id": "plan_8bc9dfb135e981de",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_fix_approval_state_icon_20260725",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Fix the plan approval UI state messaging and show a toolbar/menu-bar waiting indicator when plans are pending.",
+      "acceptanceCriteria": "- A stale plan never shows contradictory locked/approved copy or an active approve button\n- Locked and stale status rendering is mutually exclusive and reflects the current request state\n- The macOS menu-bar icon visibly indicates when one or more plans are waiting\n- Tests cover stale/locked UI state selection and pending icon state where practical",
+      "allowedPathGlobs": [
+        "macos/EVEApproval/**",
+        "ui/src/**",
+        "cmd/eve/ui_dist/**"
+      ],
+      "milestones": [
+        {
+          "title": "Fix approval copy/actions",
+          "goal": "Make stale and locked states render consistent status and disabled actions"
+        },
+        {
+          "title": "Add waiting icon indicator",
+          "goal": "Change the menu-bar icon when pending plan count is non-zero"
+        },
+        {
+          "title": "Verify UI behavior",
+          "goal": "Run focused UI and macOS tests plus build checks"
+        }
+      ],
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "e4502b6493e39cb7c9f860a0c3531a1035e5379e",
+      "branch": "feat/plan-shapshots",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-25T20:11:44Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-25T20:11:54Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_baa266c1ea5eb14f"
+}

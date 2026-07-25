@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 63,
-  "commitCount": 69,
-  "decisionCount": 114,
-  "riskCount": 42,
+  "snapshotCount": 64,
+  "commitCount": 70,
+  "decisionCount": 117,
+  "riskCount": 43,
   "artifactCount": 35,
-  "latestAt": "2026-07-25T20:09:01Z",
-  "latestSnapshot": "snap_f0dab45ca58886ae",
-  "latestTitle": "Refresh bundled repository UI",
+  "latestAt": "2026-07-25T20:17:10Z",
+  "latestSnapshot": "snap_baa266c1ea5eb14f",
+  "latestTitle": "Fix plan approval state indicators",
   "branch": "feat/plan-shapshots",
-  "head": "a35e4791ff8fe3a2fc942f340bf25ea9b7ebf2ec",
+  "head": "4c01edb5e55ce3186259b29f097aa8add79b8b74",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "a35e4791ff8fe3a2fc942f340bf25ea9b7ebf2ec"
+  "latestGitState": "4c01edb5e55ce3186259b29f097aa8add79b8b74"
 }
