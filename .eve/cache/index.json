@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 68,
-  "commitCount": 74,
-  "decisionCount": 123,
-  "riskCount": 45,
-  "artifactCount": 37,
-  "latestAt": "2026-07-25T23:52:23Z",
-  "latestSnapshot": "snap_25ea07be638c8eff",
-  "latestTitle": "Dashboard pages match supplied UI references",
+  "snapshotCount": 69,
+  "commitCount": 75,
+  "decisionCount": 127,
+  "riskCount": 46,
+  "artifactCount": 39,
+  "latestAt": "2026-07-25T23:54:25Z",
+  "latestSnapshot": "snap_fd821bee190ad4f2",
+  "latestTitle": "Match landing page reference design",
   "branch": "feat/landing",
-  "head": "609c6c8f59e3bd9c2f18ddbf3ae6f931af9435ce",
+  "head": "868b6df2cfcd7ae249141ec60e74ea5c7ad947d2",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "609c6c8f59e3bd9c2f18ddbf3ae6f931af9435ce"
+  "latestGitState": "868b6df2cfcd7ae249141ec60e74ea5c7ad947d2"
 }
