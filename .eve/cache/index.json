@@ -1,17 +1,17 @@
 {
-  "id": "eve",
-  "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 59,
-  "commitCount": 65,
-  "decisionCount": 108,
+  "id": "eve-skeleton-record",
+  "root": "/private/tmp/eve-skeleton-record",
+  "snapshotCount": 60,
+  "commitCount": 66,
+  "decisionCount": 110,
   "riskCount": 39,
   "artifactCount": 35,
-  "latestAt": "2026-07-25T19:35:00Z",
-  "latestSnapshot": "snap_364941553b64f6ef",
-  "latestTitle": "Polish eve approval window empty state",
+  "latestAt": "2026-07-25T19:55:53Z",
+  "latestSnapshot": "snap_885f0b3e00f4adb6",
+  "latestTitle": "Improve web loading skeletons",
   "branch": "feat/plan-shapshots",
-  "head": "9391a4c2649db60d2eb3705644519ebef319eead",
+  "head": "863182bc7a3e5948ca7aae685fbc9b67d1e372a4",
   "dirty": true,
-  "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "9391a4c2649db60d2eb3705644519ebef319eead"
+  "remoteUrl": "/Users/nhestrompia/Documents/eve",
+  "latestGitState": "863182bc7a3e5948ca7aae685fbc9b67d1e372a4"
 }
