@@ -71,6 +71,19 @@ final class PlanModelsTests: XCTestCase {
         XCTAssertEqual(QueueState.offline("Port 4317 is busy"), .offline("Port 4317 is busy"))
     }
 
+    func testPlanStatusCopyIsMutuallyExclusive() throws {
+        let stale = try decodeRequest(id: "planreq_stale001", state: "stale")
+        let locked = try decodeRequest(id: "planreq_locked01", state: "locked")
+        let pending = try decodeRequest(id: "planreq_pending01", state: "pending_approval")
+
+        XCTAssertEqual(stale.statusTitle, "Stale")
+        XCTAssertEqual(stale.terminalActionMessage, "Approval is disabled because the repository changed. Ask the agent to declare a fresh plan.")
+        XCTAssertEqual(locked.statusTitle, "Locked")
+        XCTAssertEqual(locked.terminalActionMessage, "This plan is locked. The agent can continue with implementation.")
+        XCTAssertEqual(pending.statusTitle, "Awaiting approval")
+        XCTAssertNil(pending.terminalActionMessage)
+    }
+
     func testFreshPendingRequestReplacesStaleSelection() throws {
         let stale = try decodeRequest(id: "planreq_stale001", state: "stale")
         let pending = try decodeRequest(id: "planreq_pending01", state: "pending_approval")
@@ -128,6 +141,11 @@ final class PlanModelsTests: XCTestCase {
     func testMenuBarApprovalWindowUsesCompactEmptySize() {
         XCTAssertEqual(approvalWindowSize(hasRequests: false), CGSize(width: 420, height: 260))
         XCTAssertEqual(approvalWindowSize(hasRequests: true), CGSize(width: 760, height: 680))
+    }
+
+    func testMenuBarIconChangesWhenPlansAreWaiting() {
+        XCTAssertEqual(menuBarSystemImageName(pendingCount: 0), "checkmark.shield")
+        XCTAssertEqual(menuBarSystemImageName(pendingCount: 2), "checkmark.shield.fill")
     }
 
     private func decodeRequest(id: String, state: String, repository: String = "eve") throws -> PlanRequest {

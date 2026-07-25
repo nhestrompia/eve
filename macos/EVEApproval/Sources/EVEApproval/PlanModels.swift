@@ -46,6 +46,58 @@ struct PlanRequest: Codable, Identifiable, Hashable {
     var isPendingApproval: Bool {
         state == "pending_approval"
     }
+
+    var isStale: Bool {
+        state == "stale" || !(staleReasons ?? []).isEmpty
+    }
+
+    var canApprove: Bool {
+        isPendingApproval && !isStale
+    }
+
+    var statusTitle: String {
+        if isStale {
+            return "Stale"
+        }
+        switch state {
+        case "pending_approval":
+            return "Awaiting approval"
+        case "locked":
+            return "Locked"
+        case "stale":
+            return "Stale"
+        case "rejected":
+            return "Rejected"
+        case "superseded":
+            return "Superseded"
+        case "fulfilled":
+            return "Fulfilled"
+        default:
+            return state.replacingOccurrences(of: "_", with: " ").capitalized
+        }
+    }
+
+    var terminalActionMessage: String? {
+        if isStale {
+            return "Approval is disabled because the repository changed. Ask the agent to declare a fresh plan."
+        }
+        switch state {
+        case "pending_approval":
+            return nil
+        case "stale":
+            return "Approval is disabled because the repository changed. Ask the agent to declare a fresh plan."
+        case "locked":
+            return "This plan is locked. The agent can continue with implementation."
+        case "rejected":
+            return "This plan was rejected. The agent needs to declare a revised plan."
+        case "superseded":
+            return "This plan was superseded by a newer request."
+        case "fulfilled":
+            return "This plan has already been fulfilled by a snapshot."
+        default:
+            return "This plan is no longer waiting for approval."
+        }
+    }
 }
 
 struct PlanProposal: Codable, Equatable {
@@ -101,6 +153,12 @@ enum QueueState: Equatable {
     case offline(String)
 }
 
+struct QueueNotice: Equatable {
+    var requestID: PlanRequest.ID
+    var state: String
+    var message: String
+}
+
 func rejectionValidationMessage(_ feedback: String) -> String? {
     feedback.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Rejection feedback is required." : nil
 }
@@ -108,16 +166,16 @@ func rejectionValidationMessage(_ feedback: String) -> String? {
 func preferredPlanSelection(currentID: PlanRequest.ID?, requests: [PlanRequest]) -> PlanRequest.ID? {
     if let currentID,
        let current = requests.first(where: { $0.id == currentID }),
-       current.isPendingApproval {
+       current.canApprove {
         return currentID
     }
-    return requests.first(where: \.isPendingApproval)?.id ?? requests.first?.id
+    return requests.first(where: \.canApprove)?.id ?? requests.first?.id
 }
 
 func orderedPlanRequests(_ requests: [PlanRequest]) -> [PlanRequest] {
     requests.sorted { left, right in
-        let leftRank = left.isPendingApproval ? 0 : 1
-        let rightRank = right.isPendingApproval ? 0 : 1
+        let leftRank = left.canApprove ? 0 : 1
+        let rightRank = right.canApprove ? 0 : 1
         if leftRank != rightRank { return leftRank < rightRank }
         if left.repository != right.repository { return left.repository < right.repository }
         if left.branch != right.branch { return left.branch < right.branch }
@@ -131,11 +189,15 @@ func newPendingPlanIDs(
 ) -> Set<PlanRequest.ID> {
     Set(
         requests
-            .filter { $0.isPendingApproval && !previous.contains($0.id) }
+            .filter { $0.canApprove && !previous.contains($0.id) }
             .map(\.id)
     )
 }
 
 func didReviewQueueEmptyAfterPendingRequests(previousPendingCount: Int, requests: [PlanRequest]) -> Bool {
     previousPendingCount > 0 && requests.isEmpty
+}
+
+func menuBarSystemImageName(pendingCount: Int) -> String {
+    pendingCount > 0 ? "checkmark.shield.fill" : "checkmark.shield"
 }

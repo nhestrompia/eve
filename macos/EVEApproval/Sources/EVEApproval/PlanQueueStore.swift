@@ -5,7 +5,7 @@ final class PlanQueueStore: ObservableObject {
     @Published private(set) var requests: [PlanRequest] = []
     @Published private(set) var state: QueueState = .loading
     @Published var selectedID: PlanRequest.ID?
-    @Published var notice: String?
+    @Published private(set) var notice: QueueNotice?
 
     var onNewPendingRequests: (([PlanRequest]) -> Void)?
     var onPendingQueueDrained: (() -> Void)?
@@ -23,7 +23,7 @@ final class PlanQueueStore: ObservableObject {
     }
 
     var pendingCount: Int {
-        requests.filter(\.isPendingApproval).count
+        requests.filter(\.canApprove).count
     }
 
     func start() {
@@ -49,7 +49,7 @@ final class PlanQueueStore: ObservableObject {
             requests = refreshed
             seenPendingIDs = Set(
                 refreshed
-                    .filter(\.isPendingApproval)
+                    .filter(\.canApprove)
                     .map(\.id)
             )
             selectedID = preferredPlanSelection(currentID: selectedID, requests: requests)
@@ -68,8 +68,12 @@ final class PlanQueueStore: ObservableObject {
 
     func approve(_ request: PlanRequest, proposal: PlanProposal?) async {
         do {
-            _ = try await client.approve(request, proposal: proposal)
-            notice = "Plan approved and locked."
+            let updated = try await client.approve(request, proposal: proposal)
+            notice = QueueNotice(
+                requestID: request.id,
+                state: updated.state,
+                message: noticeMessage(afterApproving: updated)
+            )
             await refresh()
         } catch {
             await recoverTerminalState(for: request, fallback: error)
@@ -79,11 +83,22 @@ final class PlanQueueStore: ObservableObject {
     func reject(_ request: PlanRequest, feedback: String) async {
         do {
             _ = try await client.reject(request, feedback: feedback)
-            notice = "Plan rejected with feedback."
+            notice = QueueNotice(
+                requestID: request.id,
+                state: "rejected",
+                message: "Plan rejected with feedback."
+            )
             await refresh()
         } catch {
             await recoverTerminalState(for: request, fallback: error)
         }
+    }
+
+    func noticeMessage(for request: PlanRequest) -> String? {
+        guard request.canApprove else {
+            return nil
+        }
+        notice?.requestID == request.id && notice?.state == request.state ? notice?.message : nil
     }
 
     private func recoverTerminalState(for request: PlanRequest, fallback error: Error) async {
@@ -92,10 +107,25 @@ final class PlanQueueStore: ObservableObject {
             requests.removeAll { $0.id == refreshed.id }
             requests.insert(refreshed, at: 0)
             selectedID = refreshed.id
-            notice = "Repository context changed. Review the exact stale reasons and declare a fresh plan."
+            notice = QueueNotice(
+                requestID: refreshed.id,
+                state: refreshed.state,
+                message: "Repository context changed. Review the exact stale reasons and declare a fresh plan."
+            )
             state = .online
             return
         }
         state = .offline(error.localizedDescription)
+    }
+
+    private func noticeMessage(afterApproving request: PlanRequest) -> String {
+        switch request.state {
+        case "locked":
+            return "Plan approved and locked."
+        case "stale":
+            return "Repository context changed. Review the exact stale reasons and declare a fresh plan."
+        default:
+            return "Plan state changed to \(request.statusTitle.lowercased())."
+        }
     }
 }

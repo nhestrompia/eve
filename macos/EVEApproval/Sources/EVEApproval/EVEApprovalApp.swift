@@ -15,15 +15,30 @@ struct EVEApprovalApp: App {
             PlanQueueView(store: coordinator.store)
                 .approvalWindowFrame(hasRequests: !coordinator.store.requests.isEmpty)
         } label: {
-            Label(
-                "eve plans",
-                systemImage: coordinator.store.pendingCount == 0
-                    ? "checkmark.shield"
-                    : "checkmark.shield.fill"
-            )
-            .accessibilityLabel("\(coordinator.store.pendingCount) eve plans pending approval")
+            MenuBarPlanIcon(pendingCount: coordinator.store.pendingCount)
+                .accessibilityLabel("\(coordinator.store.pendingCount) eve plans pending approval")
         }
         .menuBarExtraStyle(.window)
+    }
+}
+
+private struct MenuBarPlanIcon: View {
+    let pendingCount: Int
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            Image(systemName: menuBarSystemImageName(pendingCount: pendingCount))
+            if pendingCount > 0 {
+                Circle()
+                    .fill(.orange)
+                    .frame(width: 7, height: 7)
+                    .overlay {
+                        Circle().stroke(.white, lineWidth: 1)
+                    }
+                    .offset(x: 4, y: -3)
+                    .accessibilityHidden(true)
+            }
+        }
     }
 }
 
@@ -202,7 +217,7 @@ private struct PlanQueueSidebar: View {
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("\(request.repository), \(request.current?.goal ?? "Plan request")")
-                        .accessibilityValue(request.isPendingApproval ? "Awaiting approval" : request.state)
+                        .accessibilityValue(request.statusTitle)
                     }
                 }
                 .padding(.horizontal, 8)
@@ -220,7 +235,7 @@ private struct QueueRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 9) {
             Circle()
-                .fill(request.isPendingApproval ? Color.accentColor : Color.orange)
+                .fill(request.canApprove ? Color.accentColor : Color.orange)
                 .frame(width: 7, height: 7)
                 .padding(.top, 5)
                 .accessibilityHidden(true)
@@ -299,7 +314,7 @@ struct PlanReviewView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     repositoryHeader
-                    if let notice = store.notice {
+                    if request.canApprove, let notice = store.noticeMessage(for: request) {
                         MessagePanel(title: "Status", lines: [notice], color: .accentColor)
                     }
                     if let stale = request.staleReasons, !stale.isEmpty {
@@ -348,13 +363,13 @@ struct PlanReviewView: View {
                 .foregroundStyle(.secondary)
             }
             Spacer()
-            Text(request.isPendingApproval ? "Awaiting approval" : request.state.replacingOccurrences(of: "_", with: " ").capitalized)
+            Text(request.statusTitle)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(request.isPendingApproval ? Color.accentColor : Color.orange)
+                .foregroundStyle(request.canApprove ? Color.accentColor : Color.orange)
                 .padding(.horizontal, 9)
                 .padding(.vertical, 5)
                 .background(
-                    (request.isPendingApproval ? Color.accentColor : Color.orange).opacity(0.1),
+                    (request.canApprove ? Color.accentColor : Color.orange).opacity(0.1),
                     in: Capsule()
                 )
         }
@@ -459,7 +474,14 @@ struct PlanReviewView: View {
 
     private var actionBar: some View {
         HStack(spacing: 10) {
-            if rejecting {
+            if let message = request.terminalActionMessage {
+                Label(message, systemImage: request.isStale ? "exclamationmark.triangle.fill" : "info.circle")
+                    .font(.callout)
+                    .foregroundStyle(request.isStale ? .orange : .secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityLabel(message)
+                Spacer(minLength: 0)
+            } else if rejecting {
                 Button("Cancel") {
                     voiceFeedback.cancel()
                     rejecting = false
@@ -489,7 +511,7 @@ struct PlanReviewView: View {
                 .keyboardShortcut(.return, modifiers: [.command])
                 .buttonStyle(.borderedProminent)
                 .disabled(
-                    !request.isPendingApproval
+                    !request.canApprove
                         || (editing && proposal.validationMessage != nil)
                 )
             }
