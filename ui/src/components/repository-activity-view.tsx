@@ -178,10 +178,10 @@ function RepositoryOverviewCard({
       params={{ repo: repo.name }}
       className={`min-w-0 rounded-lg bg-white p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.1)] transition-[background-color,box-shadow,scale] duration-150 hover:bg-slate-50 active:scale-[0.96] ${selected ? "ring-2 ring-blue-500/20" : ""}`}
     >
-      <div className="flex items-center justify-between gap-3">
-        <span className="flex min-w-0 flex-1 items-center gap-2">
-          <span className={`size-2.5 rounded-full ${tone.bg}`} />
-          <span className="min-w-0 truncate text-sm font-semibold">
+      <div className="flex items-start justify-between gap-3">
+        <span className="grid min-w-0 flex-1 grid-cols-[10px_minmax(0,1fr)] gap-2">
+          <span className={`mt-1.5 size-2.5 rounded-full ${tone.bg}`} />
+          <span className="min-w-0 break-words text-sm font-semibold leading-5">
             {repo.name}
           </span>
         </span>
@@ -646,15 +646,15 @@ function VelocityPanel({
           return (
             <div
               key={repo.name}
-              className="grid grid-cols-[72px_minmax(0,1fr)_24px] items-center gap-3"
+              className="grid grid-cols-[minmax(140px,180px)_minmax(120px,1fr)_32px] items-center gap-3"
             >
-              <span className="flex items-center gap-2 text-sm font-semibold">
+              <span className="flex min-w-0 items-center gap-2 text-sm font-semibold">
                 <span
                   className={`flex size-4 items-center justify-center rounded-full ${tone.soft} ${tone.text}`}
                 >
                   <Zap className="size-3" />
                 </span>
-                <span className="truncate">{repo.name}</span>
+                <span className="min-w-0 break-words leading-tight">{repo.name}</span>
               </span>
               <MiniBars tone={tone} values={values} />
               <span className="text-right text-sm font-semibold tabular-nums">
