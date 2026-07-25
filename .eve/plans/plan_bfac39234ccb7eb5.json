@@ -1,0 +1,45 @@
+{
+  "id": "plan_bfac39234ccb7eb5",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_menubar_empty_close_brand_20260725",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Polish the macOS eve approval UI so it closes automatically when the last plan is resolved, uses a compact empty popover, and uses lowercase eve branding.",
+      "acceptanceCriteria": "- After approving or rejecting the final pending plan, the approval window/popup closes automatically instead of staying open empty.\n- When the menu bar UI is manually opened with no waiting plans, the empty state uses a smaller compact window/popover size.\n- Visible product copy uses lowercase `eve` instead of uppercase `EVE` in the macOS approval app.\n- Existing multiple-plan queue behavior remains intact.",
+      "allowedPathGlobs": [
+        "macos/EVEApproval/**"
+      ],
+      "milestones": [
+        {
+          "title": "Inspect approval window lifecycle",
+          "goal": "Find how the SwiftUI app tracks pending plans, window visibility, and empty state sizing."
+        },
+        {
+          "title": "Implement UI polish",
+          "goal": "Close the popup after final resolution, compact empty state, and lowercase visible eve copy."
+        },
+        {
+          "title": "Verify and record",
+          "goal": "Run Swift/Xcode checks, commit implementation, record EVE snapshot, and commit generated .eve record."
+        }
+      ],
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "23838a3d633ed92a235c371f6066f0a3dbe4c06b",
+      "branch": "feat/plan-shapshots",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-25T19:28:45Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-25T19:28:59Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_364941553b64f6ef"
+}

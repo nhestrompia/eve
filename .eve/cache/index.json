@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 58,
-  "commitCount": 64,
-  "decisionCount": 106,
+  "snapshotCount": 59,
+  "commitCount": 65,
+  "decisionCount": 108,
   "riskCount": 39,
   "artifactCount": 35,
-  "latestAt": "2026-07-24T09:40:43Z",
-  "latestSnapshot": "snap_b978bdaf3f3f9229",
-  "latestTitle": "Add private on-device voice feedback",
+  "latestAt": "2026-07-25T19:35:00Z",
+  "latestSnapshot": "snap_364941553b64f6ef",
+  "latestTitle": "Polish eve approval window empty state",
   "branch": "feat/plan-shapshots",
-  "head": "ee18c80fe9c41f9f566a08007e710c6def57f39a",
+  "head": "9391a4c2649db60d2eb3705644519ebef319eead",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "ee18c80fe9c41f9f566a08007e710c6def57f39a"
+  "latestGitState": "9391a4c2649db60d2eb3705644519ebef319eead"
 }
