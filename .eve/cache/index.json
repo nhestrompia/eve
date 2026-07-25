@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 67,
-  "commitCount": 73,
+  "snapshotCount": 68,
+  "commitCount": 74,
   "decisionCount": 123,
   "riskCount": 45,
   "artifactCount": 37,
-  "latestAt": "2026-07-25T23:34:53Z",
-  "latestSnapshot": "snap_2e60ecbe39e3199a",
-  "latestTitle": "Animate landing page hero product-history flow",
+  "latestAt": "2026-07-25T23:52:23Z",
+  "latestSnapshot": "snap_25ea07be638c8eff",
+  "latestTitle": "Dashboard pages match supplied UI references",
   "branch": "feat/landing",
-  "head": "f89560090c4dd26431449e82c1a2d536ed22083b",
+  "head": "609c6c8f59e3bd9c2f18ddbf3ae6f931af9435ce",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "f89560090c4dd26431449e82c1a2d536ed22083b"
+  "latestGitState": "609c6c8f59e3bd9c2f18ddbf3ae6f931af9435ce"
 }
