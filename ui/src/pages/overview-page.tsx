@@ -17,6 +17,7 @@ import {
   ViewAllLink,
   relativeTime,
   shortHash,
+  snapshotVisualStatus,
   verificationPercent,
 } from "../components/dashboard-chrome";
 import { ErrorState } from "../components/error-state";
@@ -69,32 +70,36 @@ function OverviewContent({
   const failed = snapshots.filter((snapshot) => snapshot.failedValidationCount > 0).length;
   const percent = verificationPercent(snapshots.length, failed);
   const activeAgents = buildAgentRows(snapshots);
+  const agentsPaused = pendingPlans.length;
+  const showAttention = pendingPlans.length > 0 || failed > 0 || agentsPaused > 0;
 
   return (
     <div className="mt-14 grid gap-8 xl:grid-cols-[minmax(0,1fr)_274px] xl:gap-11">
       <section className="min-w-0">
-        <div className="flex flex-col gap-5 border-b border-slate-200 pb-11 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
-            <AlertTriangle className="size-7 shrink-0 text-slate-950" strokeWidth={1.6} />
-            <div className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-2 text-sm font-semibold text-slate-950">
-              <span>{pendingPlans.length || 0} {pendingPlans.length === 1 ? "plan" : "plans"} waiting for your approval</span>
-              <span className="hidden text-slate-400 sm:inline">•</span>
-              <span>{failed} snapshots awaiting decisions</span>
-              <span className="hidden text-slate-400 sm:inline">•</span>
-              <span>{pendingPlans.length || 0} agents paused</span>
+        {showAttention ? (
+          <div className="flex flex-col gap-5 border-b border-slate-200 pb-11 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+              <AlertTriangle className="size-7 shrink-0 text-slate-950" strokeWidth={1.6} />
+              <div className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-2 text-sm font-semibold text-slate-950">
+                <span>{pendingPlans.length} {pendingPlans.length === 1 ? "plan" : "plans"} waiting for your approval</span>
+                <span className="hidden text-slate-400 sm:inline">•</span>
+                <span>{failed} snapshots awaiting decisions</span>
+                <span className="hidden text-slate-400 sm:inline">•</span>
+                <span>{agentsPaused} {agentsPaused === 1 ? "agent" : "agents"} paused</span>
+              </div>
             </div>
+            <button
+              type="button"
+              onClick={() => setApprovalOpen(true)}
+              className="inline-flex h-10 w-fit items-center justify-center gap-3 rounded-lg bg-slate-950 px-5 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(15,23,42,0.16)] transition-colors hover:bg-slate-800"
+            >
+              Review
+              <ArrowRight className="size-4" strokeWidth={1.8} />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => setApprovalOpen(true)}
-            className="inline-flex h-10 w-fit items-center justify-center gap-3 rounded-lg bg-slate-950 px-5 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(15,23,42,0.16)] transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Review
-            <ArrowRight className="size-4" strokeWidth={1.8} />
-          </button>
-        </div>
+        ) : null}
 
-        <section className="mt-10">
+        <section className={showAttention ? "mt-10" : "mt-0"}>
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-xl font-semibold tracking-[-0.01em] text-slate-950">Recent snapshots</h2>
             <ViewAllLink to="/snapshots" />
@@ -116,7 +121,7 @@ function OverviewContent({
         </div>
       </section>
 
-      <aside className="grid min-w-0 gap-5 md:grid-cols-2 xl:-mt-[66px] xl:block xl:space-y-5">
+      <aside className={`grid min-w-0 gap-5 md:grid-cols-2 xl:block xl:space-y-5 ${showAttention ? "xl:-mt-[66px]" : ""}`}>
         <OverviewCard>
           <div className="flex items-center justify-between gap-3">
             <h2 className="font-semibold text-slate-950">System overview</h2>
@@ -192,7 +197,7 @@ function OverviewContent({
 }
 
 function SnapshotRow({ snapshot }: { snapshot: EvolutionSummary }) {
-  const status = snapshotStatus(snapshot);
+  const status = snapshotVisualStatus(snapshot);
   const agent = agentName(snapshot);
   return (
     <a
@@ -265,20 +270,6 @@ function AgentProgress({ agent, label, percent }: { agent: string; label: string
       </div>
     </div>
   );
-}
-
-function snapshotStatus(snapshot: EvolutionSummary): { tone: "verified" | "waiting" | "progress" | "pending"; label: string; markerClass: string } {
-  const state = `${snapshot.verificationState} ${snapshot.verificationSummary}`.toLowerCase();
-  if (snapshot.failedValidationCount > 0 || state.includes("failed")) {
-    return { tone: "waiting", label: "Awaiting decision", markerClass: "size-4 rounded border-2 border-orange-400" };
-  }
-  if (state.includes("passed") || state.includes("required_checks_passed")) {
-    return { tone: "verified", label: "Verified", markerClass: "size-4 rounded bg-emerald-500" };
-  }
-  if (state.includes("pending") || state.includes("progress")) {
-    return { tone: "progress", label: "In progress", markerClass: "size-4 rounded bg-slate-200" };
-  }
-  return { tone: "pending", label: "Pending", markerClass: "size-4 rounded border border-dashed border-slate-500" };
 }
 
 function agentName(snapshot: EvolutionSummary) {

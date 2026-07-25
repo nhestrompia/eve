@@ -104,9 +104,9 @@ function isActive(pathname: string, to: string) {
 
 function navClassName(active: boolean) {
   return [
-    "relative flex h-12 shrink-0 items-center gap-4 rounded-lg px-4 text-[15px] font-medium transition-colors md:w-full",
+    "relative flex h-12 shrink-0 items-center gap-4 rounded-lg px-4 text-[15px] font-medium transition-[background-color,box-shadow,color] md:w-full",
     active
-      ? "bg-slate-100 text-slate-950 shadow-[0_1px_2px_rgba(15,23,42,0.04)] before:absolute before:-left-4 before:top-0 before:h-full before:w-1 before:rounded-r-full before:bg-slate-950"
+      ? "bg-white text-slate-950 shadow-[0_0_0_1px_rgba(15,23,42,0.08),0_10px_24px_rgba(15,23,42,0.05)]"
       : "text-slate-950 hover:bg-slate-100",
   ].join(" ");
 }

@@ -14,7 +14,7 @@ import { RepositoryPage } from './pages/repository-page';
 import { RelationshipsPage } from './pages/relationships-page';
 import { RisksPage } from './pages/risks-page';
 import { SnapshotPage } from './pages/snapshot-page';
-import { TimelinePage } from './pages/timeline-page';
+import { SnapshotsPage } from './pages/snapshots-page';
 import { VerificationPage } from './pages/verification-page';
 
 const rootRoute = createRootRoute({ component: AppShell });
@@ -34,7 +34,7 @@ const plansRoute = createRoute({
 const snapshotsIndexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/snapshots',
-  component: TimelinePage
+  component: SnapshotsPage
 });
 
 const repositoriesIndexRoute = createRoute({

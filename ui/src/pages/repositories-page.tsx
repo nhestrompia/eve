@@ -4,15 +4,13 @@ import {
   Activity,
   ArrowDown,
   ArrowRight,
-  Boxes,
   CheckCircle2,
   Database,
   ExternalLink,
   FileText,
   GitBranch,
-  Sparkles,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { api } from "../api";
 import {
   DashboardShell,
@@ -62,8 +60,7 @@ function RepositoriesContent({
   plans: PlanRequest[];
 }) {
   const rows = useMemo(() => enrichRepositories(repositories, snapshots), [repositories, snapshots]);
-  const [selectedName, setSelectedName] = useState(rows[0]?.name ?? "");
-  const selected = rows.find((row) => row.name === selectedName) ?? rows[0];
+  const selected = rows[0];
   const failed = snapshots.filter((snapshot) => snapshot.failedValidationCount > 0).length;
   const percent = verificationPercent(snapshots.length, failed);
   const activePlans = plans.filter((plan) => !["fulfilled", "rejected", "superseded"].includes(plan.state)).length;
@@ -88,16 +85,14 @@ function RepositoriesContent({
             <span className="hidden 2xl:block" />
           </div>
           {rows.map((repo, index) => (
-            <button
-              type="button"
+            <Link
               key={repo.name}
-              onClick={() => setSelectedName(repo.name)}
-              className={`grid w-full grid-cols-1 gap-4 border-b border-slate-200 px-5 py-5 text-left transition-colors last:border-b-0 hover:bg-white lg:min-h-[96px] lg:grid-cols-[minmax(220px,1.25fr)_120px_82px_105px] lg:items-center lg:gap-5 lg:px-7 2xl:grid-cols-[minmax(250px,1.3fr)_150px_110px_160px_110px_24px] ${
-                selected?.name === repo.name ? "bg-white" : ""
-              }`}
+              to="/repositories/$repo"
+              params={{ repo: repo.name }}
+              className="grid w-full grid-cols-1 gap-4 border-b border-slate-200 px-5 py-5 text-left transition-colors last:border-b-0 hover:bg-white lg:min-h-[96px] lg:grid-cols-[minmax(220px,1.25fr)_120px_82px_105px] lg:items-center lg:gap-5 lg:px-7 2xl:grid-cols-[minmax(250px,1.3fr)_150px_110px_160px_110px_24px]"
             >
               <span className="flex min-w-0 items-center gap-4">
-                <RepositoryMark repo={repo} index={index} />
+                <RepositoryMark repo={repo} />
                 <span className="min-w-0">
                   <span className="flex min-w-0 items-center gap-2">
                     <span className="truncate text-[15px] font-semibold text-slate-950">{repo.name}</span>
@@ -121,7 +116,7 @@ function RepositoriesContent({
               </span>
               <span className="hidden text-sm text-slate-600 2xl:block">{relativeTime(repo.latestAt)}</span>
               <ChevronRightIcon />
-            </button>
+            </Link>
           ))}
           <div className="px-5 py-5 text-sm text-slate-600 lg:px-7">
             Showing 1-{rows.length} of {rows.length} repositories
@@ -161,7 +156,7 @@ function RepositoryDetailPanel({
     <aside className="rounded-lg border border-slate-200 bg-white/55 p-6 xl:sticky xl:top-8 xl:self-start">
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 items-center gap-4">
-          <RepositoryMark repo={repo} index={0} />
+          <RepositoryMark repo={repo} />
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-2">
               <h2 className="truncate text-xl font-semibold text-slate-950">{repo.name}</h2>
@@ -263,14 +258,19 @@ function TrendChart({ value }: { value: number }) {
   );
 }
 
-function RepositoryMark({ repo, index }: { repo: Pick<EnrichedRepository, "name">; index: number }) {
-  const icons = [null, Sparkles, Boxes, Activity, CheckCircle2];
-  const Icon = icons[index % icons.length];
+function RepositoryMark({ repo }: { repo: Pick<EnrichedRepository, "name"> }) {
   return (
     <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-black text-white shadow-[0_6px_18px_rgba(15,23,42,0.15)]">
-      {repo.name === "eve" ? <span className="text-[15px] font-semibold">eve</span> : Icon ? <Icon className="size-6" strokeWidth={1.7} /> : <Boxes className="size-6" />}
+      <span className="max-w-9 truncate px-1 text-center text-[15px] font-semibold lowercase">{repositoryInitials(repo.name)}</span>
     </span>
   );
+}
+
+function repositoryInitials(name: string) {
+  if (name.toLowerCase() === "eve") return "eve";
+  const parts = name.split(/[-_.\s]+/).filter(Boolean);
+  if (parts.length >= 2) return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toLowerCase();
+  return name.slice(0, 2).toLowerCase();
 }
 
 function ChevronRightIcon() {

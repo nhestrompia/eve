@@ -143,3 +143,49 @@ export function verificationPercent(total: number, failed: number) {
   if (total <= 0) return 100;
   return Math.max(0, Math.round(((total - failed) / total) * 100));
 }
+
+export type SnapshotVisualStatus = {
+  tone: "verified" | "waiting" | "progress" | "pending";
+  label: string;
+  markerClass: string;
+  dotClass: string;
+};
+
+export function snapshotVisualStatus(snapshot: {
+  failedValidationCount?: number;
+  verificationState?: string;
+  verificationSummary?: string;
+  status?: string;
+}): SnapshotVisualStatus {
+  const state = `${snapshot.status ?? ""} ${snapshot.verificationState ?? ""} ${snapshot.verificationSummary ?? ""}`.toLowerCase();
+  if ((snapshot.failedValidationCount ?? 0) > 0 || state.includes("failed")) {
+    return {
+      tone: "waiting",
+      label: "Awaiting decision",
+      markerClass: "size-4 rounded border-2 border-orange-400",
+      dotClass: "bg-orange-500",
+    };
+  }
+  if (state.includes("progress") || state.includes("running")) {
+    return {
+      tone: "progress",
+      label: "In progress",
+      markerClass: "size-4 rounded border border-indigo-500 border-dashed",
+      dotClass: "bg-indigo-500",
+    };
+  }
+  if (state.includes("pending") || state.includes("waiting")) {
+    return {
+      tone: "pending",
+      label: "Pending",
+      markerClass: "size-4 rounded border border-dashed border-slate-400",
+      dotClass: "bg-slate-500",
+    };
+  }
+  return {
+    tone: "verified",
+    label: "Verified",
+    markerClass: "size-4 rounded border-2 border-emerald-500",
+    dotClass: "bg-emerald-500",
+  };
+}
