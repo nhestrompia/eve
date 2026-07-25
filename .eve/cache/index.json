@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 62,
-  "commitCount": 68,
-  "decisionCount": 113,
-  "riskCount": 41,
+  "snapshotCount": 63,
+  "commitCount": 69,
+  "decisionCount": 114,
+  "riskCount": 42,
   "artifactCount": 35,
-  "latestAt": "2026-07-25T20:08:17Z",
-  "latestSnapshot": "snap_a6c7310c9e21b73e",
-  "latestTitle": "Tighten repository list presentation",
+  "latestAt": "2026-07-25T20:09:01Z",
+  "latestSnapshot": "snap_f0dab45ca58886ae",
+  "latestTitle": "Refresh bundled repository UI",
   "branch": "feat/plan-shapshots",
-  "head": "130c297b65cd76a0ae467c05e3c62dcfc41ad4dc",
+  "head": "a35e4791ff8fe3a2fc942f340bf25ea9b7ebf2ec",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "130c297b65cd76a0ae467c05e3c62dcfc41ad4dc"
+  "latestGitState": "a35e4791ff8fe3a2fc942f340bf25ea9b7ebf2ec"
 }
