@@ -1,0 +1,53 @@
+{
+  "id": "plan_d24e361b10d13be0",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_app_rename_install_web_approval_20260725",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Rename the macOS approval app to eve, install it from the npx nhestrompia/eve installer only on macOS, document the app install path, and add a web UI approval flow with a pending-plan banner and modal for viewing, editing, rejecting, and approving plans.",
+      "acceptanceCriteria": "- The macOS approval app presents and builds as `eve` instead of `EVEApproval` for the delivered app name.\n- The npm installer used by the npx command detects macOS and installs or builds the macOS approval app there, while skipping app installation gracefully on non-macOS platforms.\n- README installation docs mention the macOS-only approval app install behavior.\n- The React UI shows a banner when there are pending plan approvals.\n- Clicking the banner opens a modal where the user can review the plan, edit goal/criteria/scope/suite where supported, reject with required feedback, or approve.\n- The web UI supports multiple pending plans without hiding or overwriting them.\n- Relevant Go/npm/Swift/UI tests and builds pass, and generated UI dist is refreshed if the UI changes.",
+      "allowedPathGlobs": [
+        "macos/EVEApproval/**",
+        "npm/eve/**",
+        "README.md",
+        "ui/**",
+        "cmd/eve/ui_dist/**"
+      ],
+      "milestones": [
+        {
+          "title": "Inspect install and UI surfaces",
+          "goal": "Understand the npm installer, macOS project naming, existing plan API, and pending-plan banner."
+        },
+        {
+          "title": "Implement app rename and installer",
+          "goal": "Rename the delivered app to eve and add macOS-only app installation to the npx installer."
+        },
+        {
+          "title": "Implement web approval modal",
+          "goal": "Add pending plan queue banner and modal with review, edit, reject, and approve actions."
+        },
+        {
+          "title": "Verify and record",
+          "goal": "Run relevant tests/builds, refresh dist if needed, commit implementation, record EVE snapshot, and commit the record."
+        }
+      ],
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "223d3c2290c88075f9449ea1f9ea3ee5a69e1965",
+      "branch": "feat/plan-shapshots",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-25T19:45:17Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-25T19:45:39Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_d1cc858e33963034"
+}
