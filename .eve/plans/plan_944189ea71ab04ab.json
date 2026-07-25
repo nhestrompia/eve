@@ -1,0 +1,54 @@
+{
+  "id": "plan_944189ea71ab04ab",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_uxqueue_20260724",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Make awaiting Plan approvals impossible to miss and improve native and web queue usability for multiple concurrent agents and responsive repository dashboards.",
+      "acceptanceCriteria": "- A newly pending Plan actively alerts the user and opens a review surface without requiring discovery through the menu bar.\n- The macOS approval surface displays multiple pending or stale Plans with clear selection, repository context, and status.\n- Plan edits happen inline within the selected Plan detail without navigating to a contextless second page, while milestones and resolved checks remain visible.\n- The web UI displays a prominent awaiting-Plan banner linked to actionable request details.\n- Recent repositories render only complete cards that fit the available width, showing more at larger widths and never clipping a partial card.\n- Native and React tests cover attention/queue selection, inline editing state, multiple requests, the banner, and responsive repository selection.\n- Go, React, and macOS build/test verification passes.",
+      "allowedPathGlobs": [
+        "macos/EVEApproval/**",
+        "ui/src/**",
+        "cmd/eve/ui_dist/**",
+        "cmd/eve/plan_api.go",
+        "cmd/eve/plans.go",
+        "cmd/eve/plans_test.go"
+      ],
+      "milestones": [
+        {
+          "title": "Native attention and queue",
+          "goal": "Add automatic attention behavior and a multi-request master-detail queue."
+        },
+        {
+          "title": "Inline Plan editing",
+          "goal": "Keep editing within the selected Plan detail with preserved context."
+        },
+        {
+          "title": "Web pending banner and responsive repositories",
+          "goal": "Surface waiting Plans and prevent partial repository cards at every width."
+        },
+        {
+          "title": "Regression verification",
+          "goal": "Cover multiple agents, alert transitions, and responsive rendering in automated tests."
+        }
+      ],
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "45313f44ba1b9113dc5e8f7b3a21bc3e00c62f9e",
+      "branch": "feat/plan-shapshots",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-24T02:31:21Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-24T02:33:07Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_3ba787e940bc2d19"
+}

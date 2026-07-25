@@ -198,7 +198,8 @@ The following shape encodes the configuration contract; it is a schema decision 
 
 ### Snapshot schema and completion
 
-- New snapshots use snapshot schema version `0.2.0`.
+- Verification was introduced in snapshot schema `0.2.0`; new snapshots use
+  `0.3.0`, which retains this verification shape and adds Plan conformance.
 - Snapshot verification is a server-computed object. Agent input cannot set aggregate state, selected run ID, executed provenance, policy diff, configuration hash, or executor fingerprint.
 - The verification object contains aggregate state, profile, required check IDs, executed check IDs, selected run ID/digest when present, resolution evidence, policy-change evidence, and integrity state.
 - Agent-provided validation remains a separate set of reported claims and requires `reported_by_agent` provenance. The server rejects attempts to label agent input `executed_by_eve`.
@@ -236,7 +237,7 @@ The following shape encodes the snapshot verification contract:
 
 ### Read-time legacy migration
 
-- Snapshot schema `0.1.0` remains readable.
+- Snapshot schemas `0.1.0` and `0.2.0` remain readable.
 - Historical validation without provenance is interpreted as `legacy_unattributed` at read time.
 - Historical files are not rewritten merely to add provenance.
 - Legacy `passed` values never contribute to the new aggregate or render as `executed_by_eve`.
@@ -265,7 +266,7 @@ The following shape encodes the snapshot verification contract:
 - Tests assert public behavior rather than helper implementation. The primary seam is the existing runtime/MCP harness: call the public suite lifecycle and snapshot tools, then inspect API responses and durable canonical records.
 - CLI tests cover `run-suite` polling behavior, cancellation signals, diagnostics, suggestions, and actionable error messages.
 - UI tests cover aggregate labels, failed-state precedence, provenance separation, integrity mismatches, policy-change disclosure, and accessible trust-boundary copy.
-- Schema tests cover supported configuration versions, controlled migration, invalid references, path escape rejection, unknown versions, snapshot `0.1.0` reads, and snapshot `0.2.0` canonicalization.
+- Schema tests cover supported configuration versions, controlled migration, invalid references, path escape rejection, unknown versions, historical `0.1.0`/`0.2.0` reads, and `0.3.0` canonicalization.
 - Process tests use bounded fixture commands that deterministically pass, fail, time out, emit output, handle cancellation, modify tracked files, and create untracked output.
 - Tests do not depend on network access or real package registries.
 - Existing runtime API/MCP tests, snapshot canonicalization tests, dirty-tree tests, and UI verification component tests are the prior art to extend.

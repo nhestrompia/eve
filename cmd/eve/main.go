@@ -11,12 +11,14 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/nhestrompia/eve"
@@ -53,6 +55,8 @@ func runWithIO(args []string, stdin io.Reader, stdout io.Writer, stderr io.Write
 		return runSuite(args[1:], stdout, stderr)
 	case "dev":
 		return runDev(args[1:], stdout, stderr)
+	case "daemon":
+		return runDaemon(args[1:], stdout, stderr)
 	case "mcp-stdio":
 		return runMCPStdio(args[1:], stdin, stdout, stderr)
 	case "install-mcp":
@@ -94,6 +98,7 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  commit [--allow-dirty]")
 	fmt.Fprintln(w, "  run-suite [--cwd /path/to/repo] [--suite <name>] [--commit <sha>]")
 	fmt.Fprintln(w, "  dev [--addr localhost:4317]")
+	fmt.Fprintln(w, "  daemon [--addr 127.0.0.1:4317]")
 	fmt.Fprintln(w, "  mcp-stdio [--cwd /path/to/repo]")
 	fmt.Fprintln(w, "  install-mcp [--install] [--clients codex,claude,opencode]")
 	fmt.Fprintln(w, "  snapshot <snapshot-id>")
@@ -128,7 +133,7 @@ func runInit(args []string, stdout io.Writer, stderr io.Writer) int {
 		return 1
 	}
 	if !*instructionsOnly {
-		for _, dir := range []string{repo.eveDir, repo.snapshotsDir(), repo.skipsDir(), repo.artifactsDir(), repo.cacheDir()} {
+		for _, dir := range []string{repo.eveDir, repo.snapshotsDir(), repo.plansDir(), repo.skipsDir(), repo.artifactsDir(), repo.cacheDir()} {
 			if err := os.MkdirAll(dir, 0o755); err != nil {
 				fmt.Fprintf(stderr, "create %s: %v\n", dir, err)
 				return 1
@@ -181,6 +186,8 @@ func runAdd(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) 
 	summary := fs.String("summary", "", "snapshot summary")
 	userVisibleChange := fs.String("user-visible-change", "", "user-visible change")
 	allowDirty := fs.Bool("allow-dirty", false, "allow committing a dirty implementation state")
+	planID := fs.String("plan-id", "", "locked Plan Snapshot id")
+	planRevision := fs.Int("plan-revision", 0, "locked Plan Snapshot revision")
 	var decisions, risks, timeline, validation, artifacts stringListFlag
 	var corrects, supersedes, reverts, dependsOn, related stringListFlag
 	fs.Var(&decisions, "decision", "decision title; repeatable")
@@ -247,6 +254,14 @@ func runAdd(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) 
 	}
 	if flagWasSet(fs, "allow-dirty") {
 		draft.AllowDirty = *allowDirty
+		changed = true
+	}
+	if flagWasSet(fs, "plan-id") {
+		draft.PlanID = *planID
+		changed = true
+	}
+	if flagWasSet(fs, "plan-revision") {
+		draft.PlanRevision = *planRevision
 		changed = true
 	}
 	if appendStringRawArray(&draft.Decisions, []string(decisions)) {
@@ -496,13 +511,57 @@ func runDev(args []string, stdout io.Writer, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "%v\n", err)
 		return 1
 	}
+	return serveRuntime(repo, *addr, stdout, stderr)
+}
+
+func runDaemon(args []string, stdout io.Writer, stderr io.Writer) int {
+	fs := flag.NewFlagSet("daemon", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	addr := fs.String("addr", "127.0.0.1:4317", "local daemon listen address")
+	cwd := fs.String("cwd", "", "optional repository working directory")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	if fs.NArg() != 0 {
+		fmt.Fprintln(stderr, "eve daemon takes no positional arguments")
+		return 2
+	}
+	if !isLocalhostAddr(*addr) {
+		fmt.Fprintln(stderr, "eve daemon only binds to localhost")
+		return 2
+	}
+	repo, err := resolveRepo(repoRequest{CWD: *cwd})
+	if err != nil {
+		registry, registryErr := loadRepositoryRegistry()
+		if registryErr != nil {
+			fmt.Fprintln(stderr, "no initialized EVE repository is known; run eve init in a repository first")
+			return 1
+		}
+		found := false
+		for _, entry := range registry.Repositories {
+			candidate := repoFromRoot(entry.Root)
+			if repoLooksUsable(candidate) {
+				repo = candidate
+				found = true
+				break
+			}
+		}
+		if !found {
+			fmt.Fprintln(stderr, "no initialized EVE repository is known; run eve init in a repository first")
+			return 1
+		}
+	}
+	return serveRuntime(repo, *addr, stdout, stderr)
+}
+
+func serveRuntime(repo repository, addr string, stdout io.Writer, stderr io.Writer) int {
 	if err := repo.ensureDirs(); err != nil {
 		fmt.Fprintf(stderr, "%v\n", err)
 		return 1
 	}
 	rememberRepository(repo)
 
-	server := newRuntimeServer(repo, strings.TrimSpace(*addr))
+	server := newRuntimeServer(repo, strings.TrimSpace(addr))
 	fmt.Fprintf(stdout, "EVE Runtime listening on http://%s\n", server.addr)
 	fmt.Fprintf(stdout, "MCP Streamable HTTP endpoint: http://%s/mcp\n", server.addr)
 	if err := http.ListenAndServe(server.addr, server.routes()); err != nil {
@@ -530,16 +589,58 @@ func runMCPStdio(args []string, stdin io.Reader, stdout io.Writer, stderr io.Wri
 	}
 	server := newRuntimeServer(repo, "")
 	scanner := bufio.NewScanner(stdin)
+	var writerMu sync.Mutex
+	var waitersMu sync.Mutex
+	var waiters sync.WaitGroup
+	cancellations := map[string]context.CancelFunc{}
 	for scanner.Scan() {
-		line := bytes.TrimSpace(scanner.Bytes())
+		line := bytes.Clone(bytes.TrimSpace(scanner.Bytes()))
 		if len(line) == 0 {
 			continue
 		}
-		response := server.handleMCPMessage(context.Background(), line)
-		if len(response) > 0 {
-			fmt.Fprintln(stdout, string(response))
+		var request mcpRequest
+		if err := json.Unmarshal(line, &request); err == nil && request.Method == "notifications/cancelled" {
+			var params struct {
+				RequestID json.RawMessage `json:"requestId"`
+			}
+			if json.Unmarshal(request.Params, &params) == nil {
+				waitersMu.Lock()
+				cancel := cancellations[string(params.RequestID)]
+				waitersMu.Unlock()
+				if cancel != nil {
+					cancel()
+				}
+			}
+			continue
 		}
+		ctx, cancel := context.WithCancel(context.Background())
+		key := string(request.ID)
+		if key != "" {
+			waitersMu.Lock()
+			cancellations[key] = cancel
+			waitersMu.Unlock()
+		}
+		waiters.Add(1)
+		go func(data []byte, requestKey string) {
+			defer waiters.Done()
+			defer cancel()
+			response := server.handleMCPMessage(ctx, data)
+			waitersMu.Lock()
+			delete(cancellations, requestKey)
+			waitersMu.Unlock()
+			if len(response) > 0 {
+				writerMu.Lock()
+				fmt.Fprintln(stdout, string(response))
+				writerMu.Unlock()
+			}
+		}(line, key)
 	}
+	waitersMu.Lock()
+	for _, cancel := range cancellations {
+		cancel()
+	}
+	waitersMu.Unlock()
+	waiters.Wait()
 	if err := scanner.Err(); err != nil {
 		fmt.Fprintf(stderr, "read mcp stdio: %v\n", err)
 		return 1
@@ -749,7 +850,7 @@ func (repo repository) cacheDir() string     { return filepath.Join(repo.eveDir,
 func (repo repository) stagedDir() string    { return filepath.Join(repo.eveDir, "staged") }
 
 func (repo repository) ensureDirs() error {
-	for _, dir := range []string{repo.snapshotsDir(), repo.skipsDir(), repo.artifactsDir(), repo.cacheDir()} {
+	for _, dir := range []string{repo.snapshotsDir(), repo.plansDir(), repo.skipsDir(), repo.artifactsDir(), repo.cacheDir()} {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return fmt.Errorf("create %s: %w", dir, err)
 		}
@@ -1032,7 +1133,7 @@ func deriveGitFactsIgnoring(repo repository, ignoredStatusPaths []string) (gitFa
 }
 
 func latestCommittedEVEChange(repo repository) string {
-	commit, err := gitOutput(repo.Root, "log", "-n", "1", "--format=%H", "--", ".eve/snapshots", ".eve/evolutions", ".eve/skips")
+	commit, err := gitOutput(repo.Root, "log", "-n", "1", "--format=%H", "--", ".eve/snapshots", ".eve/plans", ".eve/evolutions", ".eve/skips")
 	if err == nil && strings.TrimSpace(commit) != "" {
 		return strings.TrimSpace(commit)
 	}
@@ -1148,8 +1249,34 @@ func completeSnapshot(repo repository, input completeSnapshotInput, ignoredStatu
 		return nil, err
 	}
 	snapshot.Verification = verification
+	var lockedPlan *planRequest
+	if input.PlanID == "" {
+		snapshot.PlanConformance = noPlanConformance()
+	} else {
+		lockedPlan, err = repo.findLockedPlan(input.PlanID, input.PlanRevision)
+		if err != nil {
+			return nil, err
+		}
+		conformance, err := repo.evaluatePlanConformance(lockedPlan, facts, verification)
+		if err != nil {
+			return nil, err
+		}
+		snapshot.Plan = &eve.PlanReference{ID: input.PlanID, Revision: input.PlanRevision}
+		snapshot.PlanConformance = conformance
+		if _, err := repo.savePlanRecord(lockedPlan, snapshot.ID); err != nil {
+			return nil, err
+		}
+	}
 	if err := repo.saveSnapshot(snapshot); err != nil {
+		if lockedPlan != nil {
+			_ = os.Remove(repo.planPath(lockedPlan.PlanID))
+		}
 		return nil, err
+	}
+	if lockedPlan != nil {
+		if err := repo.fulfillPlanRequest(context.Background(), lockedPlan, snapshot.ID); err != nil {
+			return nil, err
+		}
 	}
 	if err := repo.resolvePendingBranch(facts.Branch, facts.GitState); err != nil {
 		return nil, err
@@ -1352,6 +1479,9 @@ func nowUTC() string {
 }
 
 func isLocalhostAddr(addr string) bool {
-	host := strings.Split(strings.TrimSpace(addr), ":")[0]
-	return host == "localhost" || host == "127.0.0.1" || host == "[::1]" || host == ""
+	host, _, err := net.SplitHostPort(strings.TrimSpace(addr))
+	if err != nil {
+		return false
+	}
+	return host == "localhost" || host == "127.0.0.1" || host == "::1"
 }

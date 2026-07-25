@@ -122,12 +122,35 @@ func TestCanonicalSnapshotJSONNormalizesCollections(t *testing.T) {
 }
 
 func TestSnapshotSchemaDocumentIsValidJSON(t *testing.T) {
-	data, err := os.ReadFile("schema/eve.snapshot.v0.schema.json")
-	if err != nil {
-		t.Fatalf("read schema: %v", err)
+	for _, path := range []string{"schema/eve.snapshot.v0.schema.json", "schema/eve.plan.v0.schema.json"} {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read schema: %v", err)
+		}
+		if !json.Valid(data) {
+			t.Fatalf("%s is not valid JSON", path)
+		}
 	}
-	if !json.Valid(data) {
-		t.Fatal("schema/eve.snapshot.v0.schema.json is not valid JSON")
+}
+
+func TestValidatePlanRecordRejectsMutableOrIncompleteHistory(t *testing.T) {
+	plan := &PlanRecord{
+		ID: "plan_123", SchemaVersion: PlanSchemaVersion, PlanRequestID: "planreq_12345678",
+		Repository: "eve", Status: "fulfilled", LockedRevision: 1,
+		LockedAt: "2026-07-24T00:00:00Z", ApprovedBy: "local_ui", FulfilledBy: "snap_123",
+		Revisions: []PlanRevision{{
+			Revision: 1, Source: "agent", Goal: "Ship", AcceptanceCriteria: "- works",
+			AllowedPathGlobs: []string{"cmd/**"}, PolicyHash: "sha256:policy",
+			CheckDefinitionsHash: "sha256:checks", SuiteDigest: "sha256:checks",
+			BaseCommit: "abc", Branch: "main", TreeFingerprint: "sha256:tree",
+		}},
+	}
+	if err := ValidatePlanRecord(plan); err != nil {
+		t.Fatalf("valid plan: %v", err)
+	}
+	plan.Revisions[0].Source = "mutable"
+	if err := ValidatePlanRecord(plan); err == nil {
+		t.Fatal("invalid revision source was accepted")
 	}
 }
 

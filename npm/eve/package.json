@@ -1,7 +1,7 @@
 {
   "name": "@nhestrompia/eve",
   "version": "0.0.0-development",
-  "description": "Install the EVE product-history CLI from npm.",
+  "description": "Install the eve product-history CLI from npm.",
   "type": "module",
   "bin": {
     "eve": "bin/eve.mjs"

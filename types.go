@@ -1,26 +1,93 @@
 package eve
 
 const (
-	SnapshotSchemaVersion = "0.2.0"
-	CLIVersion            = "0.2.0"
+	SnapshotSchemaVersion = "0.3.0"
+	PlanSchemaVersion     = "0.1.0"
+	CLIVersion            = "0.3.0"
 )
 
 type Snapshot struct {
-	ID                string          `json:"id"`
-	SchemaVersion     string          `json:"schemaVersion"`
-	Title             string          `json:"title"`
-	Type              string          `json:"type"`
-	Summary           string          `json:"summary"`
-	UserVisibleChange string          `json:"userVisibleChange,omitempty"`
-	Relationships     Relationships   `json:"relationships"`
-	Risks             []Risk          `json:"risks"`
-	Timeline          []TimelineEntry `json:"timeline"`
-	Decisions         []Decision      `json:"decisions"`
-	Validation        []Validation    `json:"validation"`
-	Verification      *Verification   `json:"verification,omitempty"`
-	Artifacts         []Artifact      `json:"artifacts"`
-	Implementation    Implementation  `json:"implementation"`
-	CreatedAt         string          `json:"createdAt"`
+	ID                string           `json:"id"`
+	SchemaVersion     string           `json:"schemaVersion"`
+	Title             string           `json:"title"`
+	Type              string           `json:"type"`
+	Summary           string           `json:"summary"`
+	UserVisibleChange string           `json:"userVisibleChange,omitempty"`
+	Relationships     Relationships    `json:"relationships"`
+	Risks             []Risk           `json:"risks"`
+	Timeline          []TimelineEntry  `json:"timeline"`
+	Decisions         []Decision       `json:"decisions"`
+	Validation        []Validation     `json:"validation"`
+	Verification      *Verification    `json:"verification,omitempty"`
+	Plan              *PlanReference   `json:"plan,omitempty"`
+	PlanConformance   *PlanConformance `json:"planConformance,omitempty"`
+	Artifacts         []Artifact       `json:"artifacts"`
+	Implementation    Implementation   `json:"implementation"`
+	CreatedAt         string           `json:"createdAt"`
+}
+
+type PlanReference struct {
+	ID       string `json:"id"`
+	Revision int    `json:"revision"`
+}
+
+type PlanConformance struct {
+	Status                string   `json:"status"`
+	NoPlanOnFile          bool     `json:"noPlanOnFile"`
+	RequiredChecksStatus  string   `json:"requiredChecksStatus,omitempty"`
+	PolicyMatched         bool     `json:"policyMatched"`
+	CheckDefinitionsMatch bool     `json:"checkDefinitionsMatch"`
+	ScopeDrift            bool     `json:"scopeDrift"`
+	ChangedPaths          []string `json:"changedPaths"`
+	OutOfScopePaths       []string `json:"outOfScopePaths"`
+}
+
+type PlanRecord struct {
+	ID             string         `json:"id"`
+	SchemaVersion  string         `json:"schemaVersion"`
+	PlanRequestID  string         `json:"planRequestId"`
+	Repository     string         `json:"repository"`
+	Status         string         `json:"status"`
+	Revisions      []PlanRevision `json:"revisions"`
+	LockedRevision int            `json:"lockedRevision"`
+	LockedAt       string         `json:"lockedAt"`
+	ApprovedBy     string         `json:"approvedBy"`
+	FulfilledBy    string         `json:"fulfilledBySnapshot"`
+}
+
+type PlanRevision struct {
+	Revision             int                          `json:"revision"`
+	Source               string                       `json:"source"`
+	Goal                 string                       `json:"goal"`
+	AcceptanceCriteria   string                       `json:"acceptanceCriteria"`
+	AllowedPathGlobs     []string                     `json:"allowedPathGlobs"`
+	Milestones           []PlanMilestone              `json:"milestones"`
+	ConfiguredSuite      string                       `json:"configuredSuite,omitempty"`
+	ResolvedSuite        string                       `json:"resolvedSuite,omitempty"`
+	ResolvedChecks       map[string]PlanResolvedCheck `json:"resolvedChecks"`
+	ResolvedCheckIDs     []string                     `json:"resolvedCheckIds"`
+	PolicyHash           string                       `json:"policyHash"`
+	CheckDefinitionsHash string                       `json:"checkDefinitionsHash"`
+	SuiteDigest          string                       `json:"suiteDigest"`
+	BaseCommit           string                       `json:"baseCommit"`
+	Branch               string                       `json:"branch"`
+	TreeFingerprint      string                       `json:"treeFingerprint"`
+	CreatedAt            string                       `json:"createdAt"`
+}
+
+type PlanMilestone struct {
+	Title string `json:"title"`
+	Goal  string `json:"goal,omitempty"`
+}
+
+type PlanResolvedCheck struct {
+	Argv               []string          `json:"argv"`
+	WorkingDirectory   string            `json:"workingDirectory"`
+	TimeoutSeconds     int               `json:"timeoutSeconds"`
+	SuccessExitCodes   []int             `json:"successExitCodes"`
+	OutputLimitBytes   int               `json:"outputLimitBytes"`
+	InheritEnvironment []string          `json:"inheritEnvironment"`
+	Environment        map[string]string `json:"environment"`
 }
 
 type Relationships struct {

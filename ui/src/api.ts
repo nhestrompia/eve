@@ -6,6 +6,9 @@ import type {
   Evolution,
   EvolutionSummary,
   OpenEditorResponse,
+  PlanRecord,
+  PlanProposal,
+  PlanRequest,
   PendingSnapshotResponse,
   RepositorySummary,
   SearchResponse,
@@ -47,6 +50,7 @@ type RepoAPI = {
 type SnapshotDetailAPI = {
   repository: string;
   snapshot: Snapshot;
+  planRecord?: PlanRecord;
   summary: SnapshotSummary;
   sessions?: SessionRecord[];
   providers?: DetailResponse['providers'];
@@ -64,8 +68,8 @@ type SearchAPI = {
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
-    headers: { Accept: 'application/json', ...(init?.headers ?? {}) },
-    ...init
+    ...init,
+    headers: { Accept: 'application/json', ...(init?.headers ?? {}) }
   });
   const data = await response.json().catch(() => undefined);
   if (!response.ok) {
@@ -222,6 +226,7 @@ async function snapshotDetail(id: string, repo?: string): Promise<DetailResponse
   return {
     repository: detail.repository || detail.summary.repository || repo || '',
     snapshot: detail.snapshot,
+    planRecord: detail.planRecord,
     evolution: snapshotToEvolution(detail.snapshot, sessions),
     summary,
     sessions,
@@ -305,6 +310,26 @@ function localArtifactHref(repo: string, artifactPath?: string) {
 
 export const api = {
   config: () => request<ConfigResponse>('/api/config'),
+  planRequests: (status = 'pending_approval') =>
+    request<PlanRequest[]>(`/api/plan-requests?status=${encodeURIComponent(status)}`),
+  approvePlanRequest: (plan: PlanRequest, proposal?: PlanProposal) =>
+    request<PlanRequest>(`/api/plan-requests/${encodeURIComponent(plan.planRequestId)}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        expectedRevision: plan.currentRevision,
+        proposal
+      })
+    }),
+  rejectPlanRequest: (plan: PlanRequest, feedback: string) =>
+    request<PlanRequest>(`/api/plan-requests/${encodeURIComponent(plan.planRequestId)}/reject`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        expectedRevision: plan.currentRevision,
+        feedback
+      })
+    }),
   pendingSnapshot: (repo: string) => request<PendingSnapshotResponse>(`/api/repos/${encodeURIComponent(repo)}/pending`),
   repositories: async () => (await repositoriesRaw()).map(adaptRepo),
   repository,

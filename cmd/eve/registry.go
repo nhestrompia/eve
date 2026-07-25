@@ -33,7 +33,7 @@ func knownRepositories(primary repository) []repository {
 	seenIDs := map[string]bool{primary.ID: true}
 	add := func(repo repository) {
 		root := cleanRegistryRoot(repo.Root)
-		if root == "" || seenRoots[root] || seenIDs[repo.ID] || !repoLooksUsable(repo) {
+		if root == "" || seenRoots[root] || seenIDs[repo.ID] || !repoVisibleFromPrimary(primary, repo) || !repoLooksUsable(repo) {
 			return
 		}
 		seenRoots[root] = true
@@ -239,6 +239,40 @@ func repoLooksUsable(repo repository) bool {
 		return false
 	}
 	return true
+}
+
+func repoVisibleFromPrimary(primary, candidate repository) bool {
+	primaryRoot := cleanRegistryRoot(primary.Root)
+	candidateRoot := cleanRegistryRoot(candidate.Root)
+	if primaryRoot == "" || candidateRoot == "" || primaryRoot == candidateRoot {
+		return true
+	}
+	return isTemporaryRepositoryRoot(primaryRoot) || !isTemporaryRepositoryRoot(candidateRoot)
+}
+
+func isTemporaryRepositoryRoot(root string) bool {
+	root = cleanRegistryRoot(root)
+	for _, tempRoot := range temporaryRepositoryRoots() {
+		if root == tempRoot || strings.HasPrefix(root, tempRoot+string(os.PathSeparator)) {
+			return true
+		}
+	}
+	return false
+}
+
+func temporaryRepositoryRoots() []string {
+	roots := []string{os.TempDir(), "/tmp", "/private/tmp"}
+	seen := map[string]bool{}
+	cleaned := make([]string, 0, len(roots))
+	for _, root := range roots {
+		root = cleanRegistryRoot(root)
+		if root == "" || seen[root] {
+			continue
+		}
+		seen[root] = true
+		cleaned = append(cleaned, root)
+	}
+	return cleaned
 }
 
 func cleanRegistryRoot(root string) string {

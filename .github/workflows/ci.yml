@@ -55,3 +55,19 @@ jobs:
 
       - name: Build site
         run: npm --prefix site run build
+
+  macos-approval:
+    name: macOS approval app
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Test native approval app
+        working-directory: macos/EVEApproval
+        run: xcodebuild -project EVEApproval.xcodeproj -scheme EVEApproval -destination 'platform=macOS' -derivedDataPath "$RUNNER_TEMP/eveapproval-derived" test CODE_SIGNING_ALLOWED=NO
+
+      - name: Build native approval app
+        working-directory: macos/EVEApproval
+        run: xcodebuild -project EVEApproval.xcodeproj -scheme EVEApproval -destination 'platform=macOS' -configuration Release -derivedDataPath "$RUNNER_TEMP/eveapproval-derived" build CODE_SIGNING_ALLOWED=NO

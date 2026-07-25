@@ -62,6 +62,8 @@ export function RepositoryActivityView({
       ? repositories
       : buildFallbackRepositories(evolutions, selectedRepo);
   const latestRepoRows = sortRepositoriesByLatestUse(repoRows);
+  const [repositoryGridRef, visibleRepositoryCount] =
+    useFittingRepositoryCount(latestRepoRows.length);
   const detailRows = details.data ?? [];
   const stats = buildPlatformStats(evolutions, detailRows, repoRows);
 
@@ -79,7 +81,7 @@ export function RepositoryActivityView({
               </h1>
               <p className="mt-3 max-w-[54ch] text-sm leading-6 text-muted-foreground text-pretty">
                 {selectedRepo
-                  ? "Review the product states EVE has recorded for this repository, including snapshots, verification, and implementation history."
+                  ? "Review the product states eve has recorded for this repository, including snapshots, verification, and implementation history."
                   : "Review recorded product states and jump back into the repositories you touched most recently."}
               </p>
             </div>
@@ -92,12 +94,21 @@ export function RepositoryActivityView({
                   Recent repositories
                 </h2>
                 <span className="text-xs text-muted-foreground">
-                  {latestRepoRows.length}{" "}
-                  {latestRepoRows.length === 1 ? "repo" : "repos"}
+                  {visibleRepositoryCount < latestRepoRows.length
+                    ? `${visibleRepositoryCount} of ${latestRepoRows.length} repos`
+                    : `${latestRepoRows.length} ${latestRepoRows.length === 1 ? "repo" : "repos"}`}
                 </span>
               </div>
-              <div className="scrollbar-none -mx-4 flex min-w-0 snap-x gap-3 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-                {latestRepoRows.map((repo, index) => (
+              <div
+                ref={repositoryGridRef}
+                className="grid min-w-0 gap-3"
+                style={{
+                  gridTemplateColumns: `repeat(${Math.max(1, visibleRepositoryCount)}, minmax(0, 1fr))`,
+                }}
+              >
+                {latestRepoRows
+                  .slice(0, visibleRepositoryCount)
+                  .map((repo, index) => (
                   <RepositoryOverviewCard
                     key={repo.name}
                     repo={repo}
@@ -109,7 +120,7 @@ export function RepositoryActivityView({
                       repoRows,
                     )}
                   />
-                ))}
+                  ))}
               </div>
             </section>
           </header>
@@ -165,12 +176,12 @@ function RepositoryOverviewCard({
     <Link
       to="/repositories/$repo"
       params={{ repo: repo.name }}
-      className={`min-w-[224px] w-[224px] snap-start rounded-lg bg-white p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.1)] transition-[background-color,box-shadow,scale] duration-150 hover:bg-slate-50 active:scale-[0.96] sm:min-w-[252px] sm:w-[252px] ${selected ? "ring-2 ring-blue-500/20" : ""}`}
+      className={`min-w-0 rounded-lg bg-white p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.1)] transition-[background-color,box-shadow,scale] duration-150 hover:bg-slate-50 active:scale-[0.96] ${selected ? "ring-2 ring-blue-500/20" : ""}`}
     >
-      <div className="flex items-center justify-between gap-3">
-        <span className="flex min-w-0 flex-1 items-center gap-2">
-          <span className={`size-2.5 rounded-full ${tone.bg}`} />
-          <span className="min-w-0 truncate text-sm font-semibold">
+      <div className="flex items-start justify-between gap-3">
+        <span className="grid min-w-0 flex-1 grid-cols-[10px_minmax(0,1fr)] gap-2">
+          <span className={`mt-1.5 size-2.5 rounded-full ${tone.bg}`} />
+          <span className="min-w-0 break-words text-sm font-semibold leading-5">
             {repo.name}
           </span>
         </span>
@@ -189,6 +200,45 @@ function RepositoryOverviewCard({
       </p>
     </Link>
   );
+}
+
+const REPOSITORY_CARD_MIN_WIDTH = 252;
+const REPOSITORY_CARD_GAP = 12;
+
+export function fittingRepositoryCount(
+  containerWidth: number,
+  total: number,
+  minimumCardWidth = REPOSITORY_CARD_MIN_WIDTH,
+  gap = REPOSITORY_CARD_GAP,
+) {
+  if (total <= 0) return 0;
+  const fit = Math.floor((Math.max(0, containerWidth) + gap) / (minimumCardWidth + gap));
+  return Math.min(total, Math.max(1, fit));
+}
+
+function useFittingRepositoryCount(total: number) {
+  const measureRef = useRef<HTMLDivElement>(null);
+  const [visibleCount, setVisibleCount] = useState(Math.min(total, 4));
+
+  useEffect(() => {
+    const element = measureRef.current;
+    if (!element) return;
+
+    const update = () => {
+      const next = fittingRepositoryCount(
+        element.getBoundingClientRect().width,
+        total,
+      );
+      setVisibleCount((current) => (current === next ? current : next));
+    };
+
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [total]);
+
+  return [measureRef, visibleCount] as const;
 }
 
 type RepoTone = {
@@ -596,15 +646,15 @@ function VelocityPanel({
           return (
             <div
               key={repo.name}
-              className="grid grid-cols-[72px_minmax(0,1fr)_24px] items-center gap-3"
+              className="grid grid-cols-[minmax(140px,180px)_minmax(120px,1fr)_32px] items-center gap-3"
             >
-              <span className="flex items-center gap-2 text-sm font-semibold">
+              <span className="flex min-w-0 items-center gap-2 text-sm font-semibold">
                 <span
                   className={`flex size-4 items-center justify-center rounded-full ${tone.soft} ${tone.text}`}
                 >
                   <Zap className="size-3" />
                 </span>
-                <span className="truncate">{repo.name}</span>
+                <span className="min-w-0 break-words leading-tight">{repo.name}</span>
               </span>
               <MiniBars tone={tone} values={values} />
               <span className="text-right text-sm font-semibold tabular-nums">
