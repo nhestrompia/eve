@@ -21,7 +21,6 @@ import type {
   EvolutionSummary,
   RepositorySummary,
 } from "../types";
-import { PendingPlanBanner } from "./pending-plan-banner";
 import { StatusBadge } from "./status-badge";
 
 export function RepositoryActivityView({
@@ -53,12 +52,6 @@ export function RepositoryActivityView({
     enabled: evolutions.length > 0,
     staleTime: 30_000,
   });
-  const pendingPlans = useQuery({
-    queryKey: ["pending-plan-requests"],
-    queryFn: () => api.planRequests("pending_approval"),
-    refetchInterval: 2_000,
-    retry: false,
-  });
   const rows = [...evolutions].sort(
     (left, right) =>
       timestamp(right.updatedAt || right.createdAt) -
@@ -88,11 +81,10 @@ export function RepositoryActivityView({
               </h1>
               <p className="mt-3 max-w-[54ch] text-sm leading-6 text-muted-foreground text-pretty">
                 {selectedRepo
-                  ? "Review the product states EVE has recorded for this repository, including snapshots, verification, and implementation history."
+                  ? "Review the product states eve has recorded for this repository, including snapshots, verification, and implementation history."
                   : "Review recorded product states and jump back into the repositories you touched most recently."}
               </p>
             </div>
-            <PendingPlanBanner plans={pendingPlans.data ?? []} />
             <section
               className="min-w-0 space-y-2.5"
               aria-label="Recently used repositories"

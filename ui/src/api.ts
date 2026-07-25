@@ -7,6 +7,7 @@ import type {
   EvolutionSummary,
   OpenEditorResponse,
   PlanRecord,
+  PlanProposal,
   PlanRequest,
   PendingSnapshotResponse,
   RepositorySummary,
@@ -67,8 +68,8 @@ type SearchAPI = {
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
-    headers: { Accept: 'application/json', ...(init?.headers ?? {}) },
-    ...init
+    ...init,
+    headers: { Accept: 'application/json', ...(init?.headers ?? {}) }
   });
   const data = await response.json().catch(() => undefined);
   if (!response.ok) {
@@ -311,6 +312,24 @@ export const api = {
   config: () => request<ConfigResponse>('/api/config'),
   planRequests: (status = 'pending_approval') =>
     request<PlanRequest[]>(`/api/plan-requests?status=${encodeURIComponent(status)}`),
+  approvePlanRequest: (plan: PlanRequest, proposal?: PlanProposal) =>
+    request<PlanRequest>(`/api/plan-requests/${encodeURIComponent(plan.planRequestId)}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        expectedRevision: plan.currentRevision,
+        proposal
+      })
+    }),
+  rejectPlanRequest: (plan: PlanRequest, feedback: string) =>
+    request<PlanRequest>(`/api/plan-requests/${encodeURIComponent(plan.planRequestId)}/reject`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        expectedRevision: plan.currentRevision,
+        feedback
+      })
+    }),
   pendingSnapshot: (repo: string) => request<PendingSnapshotResponse>(`/api/repos/${encodeURIComponent(repo)}/pending`),
   repositories: async () => (await repositoriesRaw()).map(adaptRepo),
   repository,

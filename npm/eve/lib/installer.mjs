@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { readFile, mkdir, chmod, rename, rm, writeFile } from "node:fs/promises";
+import { readFile, mkdir, chmod, rename, rm, writeFile, mkdtemp } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -29,7 +29,7 @@ export async function main(options = {}) {
   const binaryName = platform === "win32" ? "eve.exe" : "eve";
   const destination = path.join(installDir, binaryName);
 
-  stdout.write(`Installing EVE ${version} for ${platform}/${arch}...\n`);
+  stdout.write(`Installing eve ${version} for ${platform}/${arch}...\n`);
   const asset = await downloadReleaseAsset({
     version,
     platform,
@@ -44,7 +44,18 @@ export async function main(options = {}) {
   } finally {
     await rm(temporary, { force: true });
   }
-  stdout.write(`Installed EVE at ${destination}\n`);
+  stdout.write(`Installed eve at ${destination}\n`);
+
+  await installMacOSApprovalApp({
+    version,
+    env,
+    platform,
+    home: os.homedir(),
+    baseUrl: env.EVE_RELEASE_BASE_URL,
+    fetchImpl,
+    spawn,
+    stdout,
+  });
 
   if (!parsed.noMCP) {
     const args = ["install-mcp", "--eve-bin", destination];
@@ -113,7 +124,7 @@ export function parseInstallArgs(argv) {
 export function normalizeVersion(value) {
   const version = String(value).trim().replace(/^v/, "");
   if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(version) || version.includes("development")) {
-    throw new Error(`npm package version ${JSON.stringify(value)} is not tied to a published EVE release`);
+    throw new Error(`npm package version ${JSON.stringify(value)} is not tied to a published eve release`);
   }
   return version;
 }
@@ -142,14 +153,85 @@ export function defaultInstallDir({ env, platform, home }) {
 }
 
 export async function downloadReleaseAsset({ version, platform, arch, baseUrl, fetchImpl }) {
-  const assetName = releaseAssetName(platform, arch);
-  const releaseRoot = (baseUrl || `https://github.com/${repository}/releases/download/v${version}`).replace(/\/$/, "");
+  return downloadChecksummedReleaseAsset({
+    assetName: releaseAssetName(platform, arch),
+    version,
+    baseUrl,
+    fetchImpl,
+  });
+}
+
+export function macOSAppAssetName() {
+  return "eve-macos-app.zip";
+}
+
+export function defaultMacOSAppInstallPath({ env, home }) {
+  return env.EVE_APP_INSTALL_PATH || path.join(home, "Applications", "eve.app");
+}
+
+export async function downloadMacOSAppReleaseAsset({ version, baseUrl, fetchImpl }) {
+  return downloadChecksummedReleaseAsset({
+    assetName: macOSAppAssetName(),
+    version,
+    baseUrl,
+    fetchImpl,
+  });
+}
+
+async function downloadChecksummedReleaseAsset({ assetName, version, baseUrl, fetchImpl }) {
+  const releaseRoot = releaseRootURL(version, baseUrl);
   const [checksums, bytes] = await Promise.all([
     fetchBytes(`${releaseRoot}/SHA256SUMS`, fetchImpl),
     fetchBytes(`${releaseRoot}/${assetName}`, fetchImpl),
   ]);
   verifyReleaseAsset(assetName, bytes, checksums.toString("utf8"));
   return { assetName, bytes };
+}
+
+export async function installMacOSApprovalApp({
+  version,
+  env,
+  platform,
+  home,
+  baseUrl,
+  fetchImpl,
+  spawn,
+  stdout,
+}) {
+  if (platform !== "darwin") {
+    stdout.write("Skipping eve approval app install: macOS only.\n");
+    return undefined;
+  }
+
+  const destination = path.resolve(defaultMacOSAppInstallPath({ env, home }));
+  stdout.write(`Installing eve approval app at ${destination}...\n`);
+  const asset = await downloadMacOSAppReleaseAsset({ version, baseUrl, fetchImpl });
+  const stagingRoot = await mkdtemp(path.join(os.tmpdir(), "eve-app-install-"));
+  const archivePath = path.join(stagingRoot, asset.assetName);
+  const extractPath = path.join(stagingRoot, "expanded");
+  try {
+    await mkdir(extractPath, { recursive: true });
+    await writeFile(archivePath, asset.bytes);
+    const result = spawn("ditto", ["-x", "-k", archivePath, extractPath], { encoding: "utf8" });
+    if (result.error) {
+      throw new Error(`could not expand eve approval app: ${result.error.message}`);
+    }
+    if (result.status !== 0) {
+      throw new Error(`ditto exited with status ${result.status}`);
+    }
+    const extractedApp = path.join(extractPath, "eve.app");
+    await mkdir(path.dirname(destination), { recursive: true });
+    await rm(destination, { recursive: true, force: true });
+    await rename(extractedApp, destination);
+  } finally {
+    await rm(stagingRoot, { recursive: true, force: true });
+  }
+  stdout.write(`Installed eve approval app at ${destination}\n`);
+  return destination;
+}
+
+function releaseRootURL(version, baseUrl) {
+  return (baseUrl || `https://github.com/${repository}/releases/download/v${version}`).replace(/\/$/, "");
 }
 
 export function verifyReleaseAsset(assetName, bytes, checksums) {
@@ -176,7 +258,7 @@ export function parseChecksums(value) {
 
 async function fetchBytes(url, fetchImpl) {
   if (typeof fetchImpl !== "function") {
-    throw new Error("Node.js 20 or newer is required to download EVE");
+    throw new Error("Node.js 20 or newer is required to download eve");
   }
   const response = await fetchImpl(url, {
     headers: { "user-agent": "@nhestrompia/eve installer" },
@@ -213,7 +295,7 @@ function verifyBinary(destination, version, spawn) {
     throw new Error(`installed binary could not run: ${result.error.message}`);
   }
   if (result.status !== 0 || !String(result.stdout).includes(`eve ${version}`)) {
-    throw new Error(`installed binary did not report EVE ${version}`);
+    throw new Error(`installed binary did not report eve ${version}`);
   }
 }
 
@@ -231,7 +313,7 @@ function printPathGuidance(stdout, installDir, env, platform) {
 }
 
 function helpText() {
-  return `Install EVE globally from its checksummed release artifacts.
+  return `Install eve globally from its checksummed release artifacts.
 
 Usage:
   npx @nhestrompia/eve@latest install [options]

@@ -149,6 +149,14 @@ export type PlanRecord = {
   fulfilledBySnapshot?: string;
 };
 
+export type PlanProposal = {
+  goal: string;
+  acceptanceCriteria: string;
+  allowedPathGlobs: string[];
+  milestones: PlanMilestone[];
+  requiredSuite?: string;
+};
+
 export type PlanRequest = {
   planRequestId: string;
   planId?: string;

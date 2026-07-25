@@ -32,7 +32,7 @@
 		100000000000000000000003 /* PlanModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanModels.swift; sourceTree = "<group>"; };
 		100000000000000000000004 /* PlanQueueStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanQueueStore.swift; sourceTree = "<group>"; };
 		100000000000000000000005 /* PlanModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanModelsTests.swift; sourceTree = "<group>"; };
-		100000000000000000000006 /* EVEApproval.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EVEApproval.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		100000000000000000000006 /* eve.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = eve.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		100000000000000000000007 /* EVEApprovalTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EVEApprovalTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		100000000000000000000008 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = System/Library/Frameworks/XCTest.framework; sourceTree = SDKROOT; };
 		100000000000000000000009 /* VoiceFeedbackTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceFeedbackTranscriber.swift; sourceTree = "<group>"; };
@@ -72,7 +72,7 @@
 		000000000000000000000003 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				100000000000000000000006 /* EVEApproval.app */,
+				100000000000000000000006 /* eve.app */,
 				100000000000000000000007 /* EVEApprovalTests.xctest */,
 			);
 			name = Products;
@@ -124,7 +124,7 @@
 			dependencies = ();
 			name = EVEApproval;
 			productName = EVEApproval;
-			productReference = 100000000000000000000006 /* EVEApproval.app */;
+			productReference = 100000000000000000000006 /* eve.app */;
 			productType = "com.apple.product-type.application";
 		};
 		400000000000000000000002 /* EVEApprovalTests */ = {
@@ -252,7 +252,8 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				PRODUCT_BUNDLE_IDENTIFIER = local.eve.approval;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_MODULE_NAME = EVEApproval;
+				PRODUCT_NAME = eve;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -274,7 +275,8 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				PRODUCT_BUNDLE_IDENTIFIER = local.eve.approval;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_MODULE_NAME = EVEApproval;
+				PRODUCT_NAME = eve;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 			};
@@ -291,7 +293,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/EVEApproval.app/Contents/MacOS/EVEApproval";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/eve.app/Contents/MacOS/eve";
 			};
 			name = Debug;
 		};
@@ -305,7 +307,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = local.eve.approval.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/EVEApproval.app/Contents/MacOS/EVEApproval";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/eve.app/Contents/MacOS/eve";
 			};
 			name = Release;
 		};
