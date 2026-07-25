@@ -1,0 +1,41 @@
+{
+  "id": "plan_3106fff10c38be7d",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_dedupe_plan_queue_20260725",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Prevent duplicate-looking plan approval entries for the same repository, branch, and plan content.",
+      "acceptanceCriteria": "- The macOS approval queue does not display multiple stale/pending entries that represent the same plan content for the same repository and branch\n- If duplicate requests exist, the newest relevant request is displayed and selected consistently\n- Pending requests remain prioritized over stale requests\n- Focused tests cover duplicate plan request collapsing",
+      "allowedPathGlobs": [
+        "macos/EVEApproval/**"
+      ],
+      "milestones": [
+        {
+          "title": "Collapse duplicate queue entries",
+          "goal": "Add deterministic queue normalization for duplicate-looking plan requests"
+        },
+        {
+          "title": "Verify selection behavior",
+          "goal": "Test that duplicated stale requests collapse while pending requests remain visible and prioritized"
+        }
+      ],
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "8d0e756ee4c19c30466065632a8dca621cf7b7ed",
+      "branch": "feat/plan-shapshots",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-25T20:18:00Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-25T21:10:40Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_fc40c1ae49afe99e"
+}

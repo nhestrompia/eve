@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 64,
-  "commitCount": 70,
-  "decisionCount": 117,
-  "riskCount": 43,
+  "snapshotCount": 65,
+  "commitCount": 71,
+  "decisionCount": 120,
+  "riskCount": 44,
   "artifactCount": 35,
-  "latestAt": "2026-07-25T20:17:10Z",
-  "latestSnapshot": "snap_baa266c1ea5eb14f",
-  "latestTitle": "Fix plan approval state indicators",
+  "latestAt": "2026-07-25T21:14:32Z",
+  "latestSnapshot": "snap_fc40c1ae49afe99e",
+  "latestTitle": "Collapse duplicate approval queue entries",
   "branch": "feat/plan-shapshots",
-  "head": "4c01edb5e55ce3186259b29f097aa8add79b8b74",
+  "head": "a00a68311909427a50fd23566edde0d60bd1532a",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "4c01edb5e55ce3186259b29f097aa8add79b8b74"
+  "latestGitState": "a00a68311909427a50fd23566edde0d60bd1532a"
 }
