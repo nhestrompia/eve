@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "0.1.0",
+  "id": "skip_b5779a044fbd4f87",
+  "repoId": "eve",
+  "branch": "main",
+  "reason": "Pre-existing merge/gitignore commits were already present before this stale-plan-removal task; skip them so a fresh plan can be declared from the current clean HEAD.",
+  "range": {
+    "from": "e89aa26dca3b74d0ee64d47e35e669562bda4615",
+    "to": "2741ece4d3320a1300b2675b157f32ac08e56f7f",
+    "commits": [
+      "2741ece4d3320a1300b2675b157f32ac08e56f7f",
+      "a265709a2876021458fe6ef928ce35214f980a4a",
+      "131157bde39480f2d3d422e7529af7916bf70bea",
+      "80ab09f6dadaa5be3b2c93d868b1691e4c4e2991",
+      "a00a68311909427a50fd23566edde0d60bd1532a",
+      "8d0e756ee4c19c30466065632a8dca621cf7b7ed",
+      "4c01edb5e55ce3186259b29f097aa8add79b8b74",
+      "e4502b6493e39cb7c9f860a0c3531a1035e5379e",
+      "a35e4791ff8fe3a2fc942f340bf25ea9b7ebf2ec",
+      "38bbd0f939563be3a6707e2db02ed7be04e31ba9",
+      "130c297b65cd76a0ae467c05e3c62dcfc41ad4dc",
+      "dfe642f634441e80ace5539403e00179120dc059",
+      "8cf9a1183a735f16b25c46297b88580b3983e5b3",
+      "b0dd79648f7f9d18c9a0e419997ae67a1ffd734d",
+      "863182bc7a3e5948ca7aae685fbc9b67d1e372a4",
+      "223d3c2290c88075f9449ea1f9ea3ee5a69e1965",
+      "9391a4c2649db60d2eb3705644519ebef319eead",
+      "23838a3d633ed92a235c371f6066f0a3dbe4c06b",
+      "a69f2118cf8ef0bbe1829aa08a65b3de3beed3d7",
+      "ee18c80fe9c41f9f566a08007e710c6def57f39a",
+      "bb50b2c8bff0c5b5b5a538493f332ce8c1b47c1e",
+      "a7ce89736a5649fc610e496b326fd8b94f95403c",
+      "762487c911fbdd31e0bb23f5f8928dde56c65ac7",
+      "5f0038631cc5624d7d7ada2b901f7ae88f3194a4",
+      "f0e916dd6e7abea660c196b1542a7d6c0ba83e58",
+      "45313f44ba1b9113dc5e8f7b3a21bc3e00c62f9e",
+      "a09c2eb75bd28a061065469023f07cb9b25a107b",
+      "9a49348c0add6ad985aa4cf7d0986aa693fb6345"
+    ]
+  },
+  "createdAt": "2026-07-25T21:30:47Z",
+  "agent": {}
+}

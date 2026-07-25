@@ -596,6 +596,27 @@ func (repo repository) rejectPlanRequest(ctx context.Context, id string, expecte
 	return request, err
 }
 
+func (repo repository) dismissStalePlanRequest(ctx context.Context, id string, expectedRevision int) (*planRequest, error) {
+	var request *planRequest
+	err := repo.withPlanLock(ctx, func() error {
+		loaded, err := repo.loadPlanRequest(id)
+		if err != nil {
+			return err
+		}
+		request = loaded
+		if expectedRevision != request.CurrentRevision {
+			return fmt.Errorf("revision conflict: current revision is %d", request.CurrentRevision)
+		}
+		if request.State != "stale" {
+			return fmt.Errorf("plan request is %s", request.State)
+		}
+		request.State = "dismissed"
+		request.UpdatedAt = nowUTC()
+		return repo.savePlanRequest(request)
+	})
+	return request, err
+}
+
 func (repo repository) loadPlanRequest(id string) (*planRequest, error) {
 	path, err := repo.planRequestPath(id)
 	if err != nil {
