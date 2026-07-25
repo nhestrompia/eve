@@ -221,7 +221,7 @@ final class VoiceFeedbackTranscriber: ObservableObject {
         guard activeSessionID == sessionID else { return }
         guard speechAuthorized else {
             becomeUnavailable(
-                "Speech Recognition access is off. Enable EVE in System Settings › Privacy & Security › Speech Recognition."
+                "Speech Recognition access is off. Enable eve in System Settings > Privacy & Security > Speech Recognition."
             )
             return
         }
@@ -230,7 +230,7 @@ final class VoiceFeedbackTranscriber: ObservableObject {
         guard activeSessionID == sessionID else { return }
         guard microphoneAuthorized else {
             becomeUnavailable(
-                "Microphone access is off. Enable EVE in System Settings › Privacy & Security › Microphone."
+                "Microphone access is off. Enable eve in System Settings > Privacy & Security > Microphone."
             )
             return
         }
@@ -250,7 +250,7 @@ final class VoiceFeedbackTranscriber: ObservableObject {
                 onTranscript: onTranscript
             )
         } catch {
-            fail("EVE couldn’t start the microphone: \(error.localizedDescription)")
+            fail("eve couldn't start the microphone: \(error.localizedDescription)")
         }
     }
 

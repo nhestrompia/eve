@@ -115,6 +115,21 @@ final class PlanModelsTests: XCTestCase {
         )
     }
 
+    func testReviewQueueEmptiesOnlyWhenLastDisplayedRequestLeaves() throws {
+        let pending = try decodeRequest(id: "planreq_pending01", state: "pending_approval")
+        let stale = try decodeRequest(id: "planreq_stale001", state: "stale")
+
+        XCTAssertTrue(didReviewQueueEmptyAfterPendingRequests(previousPendingCount: 1, requests: []))
+        XCTAssertFalse(didReviewQueueEmptyAfterPendingRequests(previousPendingCount: 1, requests: [stale]))
+        XCTAssertFalse(didReviewQueueEmptyAfterPendingRequests(previousPendingCount: 2, requests: [pending]))
+        XCTAssertFalse(didReviewQueueEmptyAfterPendingRequests(previousPendingCount: 0, requests: []))
+    }
+
+    func testMenuBarApprovalWindowUsesCompactEmptySize() {
+        XCTAssertEqual(approvalWindowSize(hasRequests: false), CGSize(width: 420, height: 260))
+        XCTAssertEqual(approvalWindowSize(hasRequests: true), CGSize(width: 760, height: 680))
+    }
+
     private func decodeRequest(id: String, state: String, repository: String = "eve") throws -> PlanRequest {
         let data = Data("""
         {

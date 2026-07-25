@@ -62,7 +62,7 @@ struct EVEClient {
     private func decode<Response: Decodable>(data: Data, response: URLResponse) throws -> Response {
         guard let http = response as? HTTPURLResponse else { throw ClientError.invalidResponse }
         guard (200..<300).contains(http.statusCode) else {
-            let message = (try? JSONDecoder().decode(APIErrorPayload.self, from: data).error) ?? "EVE returned HTTP \(http.statusCode)."
+            let message = (try? JSONDecoder().decode(APIErrorPayload.self, from: data).error) ?? "eve returned HTTP \(http.statusCode)."
             throw ClientError.server(message)
         }
         return try JSONDecoder().decode(Response.self, from: data)
@@ -76,8 +76,8 @@ enum ClientError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .invalidURL: return "The EVE server address is invalid."
-        case .invalidResponse: return "EVE returned an invalid response."
+        case .invalidURL: return "The local eve server address is invalid."
+        case .invalidResponse: return "eve returned an invalid response."
         case let .server(message): return message
         }
     }
@@ -94,13 +94,13 @@ enum DaemonLauncher {
         do {
             try process.run()
         } catch {
-            throw ClientError.server("EVE could not be started. Install the eve binary and ensure port 4317 is available.")
+            throw ClientError.server("eve could not be started. Install the eve binary and ensure port 4317 is available.")
         }
         for _ in 0..<20 {
             try await Task.sleep(nanoseconds: 150_000_000)
             if await client.health() { return }
         }
         if process.isRunning { process.terminate() }
-        throw ClientError.server("EVE did not become healthy on 127.0.0.1:4317. Check for a port conflict or run `eve daemon` in Terminal.")
+        throw ClientError.server("eve did not become healthy on 127.0.0.1:4317. Check for a port conflict or run `eve daemon` in Terminal.")
     }
 }

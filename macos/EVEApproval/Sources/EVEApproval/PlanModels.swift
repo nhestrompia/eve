@@ -135,3 +135,7 @@ func newPendingPlanIDs(
             .map(\.id)
     )
 }
+
+func didReviewQueueEmptyAfterPendingRequests(previousPendingCount: Int, requests: [PlanRequest]) -> Bool {
+    previousPendingCount > 0 && requests.isEmpty
+}

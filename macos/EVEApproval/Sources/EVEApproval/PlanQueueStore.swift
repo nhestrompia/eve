@@ -8,6 +8,7 @@ final class PlanQueueStore: ObservableObject {
     @Published var notice: String?
 
     var onNewPendingRequests: (([PlanRequest]) -> Void)?
+    var onPendingQueueDrained: (() -> Void)?
 
     private let client: EVEClient
     private var refreshTask: Task<Void, Never>?
@@ -43,6 +44,7 @@ final class PlanQueueStore: ObservableObject {
     func refresh() async {
         do {
             let refreshed = orderedPlanRequests(try await client.reviewQueue())
+            let previousPendingCount = pendingCount
             let newIDs = newPendingPlanIDs(previous: seenPendingIDs, requests: refreshed)
             requests = refreshed
             seenPendingIDs = Set(
@@ -55,6 +57,9 @@ final class PlanQueueStore: ObservableObject {
             if !newIDs.isEmpty {
                 let newRequests = refreshed.filter { newIDs.contains($0.id) }
                 onNewPendingRequests?(newRequests)
+            }
+            if didReviewQueueEmptyAfterPendingRequests(previousPendingCount: previousPendingCount, requests: refreshed) {
+                onPendingQueueDrained?()
             }
         } catch {
             state = .offline(error.localizedDescription)

@@ -13,15 +13,15 @@ struct EVEApprovalApp: App {
     var body: some Scene {
         MenuBarExtra {
             PlanQueueView(store: coordinator.store)
-                .frame(width: 760, height: 680)
+                .approvalWindowFrame(hasRequests: !coordinator.store.requests.isEmpty)
         } label: {
             Label(
-                "EVE Plans",
+                "eve plans",
                 systemImage: coordinator.store.pendingCount == 0
                     ? "checkmark.shield"
                     : "checkmark.shield.fill"
             )
-            .accessibilityLabel("\(coordinator.store.pendingCount) EVE plans pending approval")
+            .accessibilityLabel("\(coordinator.store.pendingCount) eve plans pending approval")
         }
         .menuBarExtraStyle(.window)
     }
@@ -43,6 +43,9 @@ private final class ApprovalAppCoordinator: ObservableObject {
             guard let self, let store else { return }
             self.attentionController.show(store: store, newRequests: requests)
         }
+        store.onPendingQueueDrained = { [weak self] in
+            self?.attentionController.close()
+        }
         store.start()
     }
 }
@@ -59,7 +62,7 @@ private final class PlanAttentionController {
                 backing: .buffered,
                 defer: false
             )
-            panel.title = "EVE Plan Approvals"
+            panel.title = "eve plan approvals"
             panel.titlebarAppearsTransparent = true
             panel.isFloatingPanel = true
             panel.hidesOnDeactivate = false
@@ -76,6 +79,21 @@ private final class PlanAttentionController {
         NSApplication.shared.requestUserAttention(.informationalRequest)
         panel?.center()
         panel?.makeKeyAndOrderFront(nil)
+    }
+
+    func close() {
+        panel?.close()
+    }
+}
+
+func approvalWindowSize(hasRequests: Bool) -> CGSize {
+    hasRequests ? CGSize(width: 760, height: 680) : CGSize(width: 420, height: 260)
+}
+
+private extension View {
+    func approvalWindowFrame(hasRequests: Bool) -> some View {
+        let size = approvalWindowSize(hasRequests: hasRequests)
+        return frame(width: size.width, height: size.height)
     }
 }
 
@@ -133,11 +151,11 @@ struct PlanQueueView: View {
     private var content: some View {
         switch store.state {
         case .loading:
-            ProgressView("Connecting to EVE…")
+            ProgressView("Connecting to eve...")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         case let .offline(message):
             QueueEmptyState(
-                title: "EVE is offline",
+                title: "eve is offline",
                 systemImage: "bolt.horizontal.circle",
                 message: message
             )
@@ -146,7 +164,7 @@ struct PlanQueueView: View {
                 QueueEmptyState(
                     title: "No plans waiting",
                     systemImage: "checkmark.circle",
-                    message: "EVE is watching in the background. A review window will open when an agent declares a plan."
+                    message: "eve is watching in the background. A review window will open when an agent declares a plan."
                 )
             } else {
                 HStack(spacing: 0) {

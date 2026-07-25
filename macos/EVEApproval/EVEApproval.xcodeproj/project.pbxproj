@@ -247,8 +247,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "EVE uses the microphone only while you dictate Plan feedback.";
-				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "EVE uses Apple Speech for on-device Plan feedback dictation.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "eve uses the microphone only while you dictate Plan feedback.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "eve uses Apple Speech for on-device Plan feedback dictation.";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				PRODUCT_BUNDLE_IDENTIFIER = local.eve.approval;
@@ -269,8 +269,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "EVE uses the microphone only while you dictate Plan feedback.";
-				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "EVE uses Apple Speech for on-device Plan feedback dictation.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "eve uses the microphone only while you dictate Plan feedback.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "eve uses Apple Speech for on-device Plan feedback dictation.";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				PRODUCT_BUNDLE_IDENTIFIER = local.eve.approval;
