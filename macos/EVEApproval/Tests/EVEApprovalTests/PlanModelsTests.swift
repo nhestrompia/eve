@@ -114,6 +114,65 @@ final class PlanModelsTests: XCTestCase {
         )
     }
 
+    func testDuplicatePlanRequestsCollapseToNewestEquivalentRequest() throws {
+        let older = try decodeRequest(
+            id: "planreq_publish_a",
+            state: "stale",
+            goal: "Publish the macOS eve app release asset used by the npm installer.",
+            updatedAt: "2026-07-25T20:07:34Z"
+        )
+        let newer = try decodeRequest(
+            id: "planreq_publish_b",
+            state: "stale",
+            goal: "Publish the macOS eve app release asset used by the npm installer.",
+            updatedAt: "2026-07-25T20:09:32Z"
+        )
+
+        XCTAssertEqual(collapsedDuplicatePlanRequests([older, newer]).map(\.id), [newer.id])
+    }
+
+    func testDuplicatePlanRequestsPreferPendingRequestOverStaleRequest() throws {
+        let stale = try decodeRequest(
+            id: "planreq_publish_stale",
+            state: "stale",
+            goal: "Publish the macOS eve app release asset used by the npm installer.",
+            updatedAt: "2026-07-25T20:09:32Z"
+        )
+        let pending = try decodeRequest(
+            id: "planreq_publish_pending",
+            state: "pending_approval",
+            goal: "Publish the macOS eve app release asset used by the npm installer.",
+            updatedAt: "2026-07-25T20:08:00Z"
+        )
+
+        XCTAssertEqual(collapsedDuplicatePlanRequests([stale, pending]).map(\.id), [pending.id])
+    }
+
+    func testDuplicatePlanCollapsePreservesVisibleGroupOrder() throws {
+        let unrelated = try decodeRequest(
+            id: "planreq_other",
+            state: "pending_approval",
+            goal: "Improve the approval copy."
+        )
+        let olderDuplicate = try decodeRequest(
+            id: "planreq_publish_a",
+            state: "stale",
+            goal: "Publish the macOS eve app release asset used by the npm installer.",
+            updatedAt: "2026-07-25T20:07:34Z"
+        )
+        let newerDuplicate = try decodeRequest(
+            id: "planreq_publish_b",
+            state: "stale",
+            goal: "Publish the macOS eve app release asset used by the npm installer.",
+            updatedAt: "2026-07-25T20:09:32Z"
+        )
+
+        XCTAssertEqual(
+            collapsedDuplicatePlanRequests([unrelated, olderDuplicate, newerDuplicate]).map(\.id),
+            [unrelated.id, newerDuplicate.id]
+        )
+    }
+
     func testAttentionOnlyIncludesNewPendingRequests() throws {
         let existing = try decodeRequest(id: "planreq_pending01", state: "pending_approval")
         let fresh = try decodeRequest(id: "planreq_pending02", state: "pending_approval")
@@ -148,7 +207,13 @@ final class PlanModelsTests: XCTestCase {
         XCTAssertEqual(menuBarSystemImageName(pendingCount: 2), "checkmark.shield.fill")
     }
 
-    private func decodeRequest(id: String, state: String, repository: String = "eve") throws -> PlanRequest {
+    private func decodeRequest(
+        id: String,
+        state: String,
+        repository: String = "eve",
+        goal: String = "Add a gate",
+        updatedAt: String = "2026-07-25T20:00:00Z"
+    ) throws -> PlanRequest {
         let data = Data("""
         {
           "planRequestId":"\(id)",
@@ -157,7 +222,18 @@ final class PlanModelsTests: XCTestCase {
           "branch":"main",
           "state":"\(state)",
           "currentRevision":1,
-          "revisions":[]
+          "createdAt":"2026-07-25T19:59:00Z",
+          "updatedAt":"\(updatedAt)",
+          "revisions":[{
+            "revision":1,
+            "source":"agent",
+            "goal":"\(goal)",
+            "acceptanceCriteria":"- Criteria",
+            "allowedPathGlobs":[".github/workflows/release.yml"],
+            "milestones":[],
+            "resolvedCheckIds":[],
+            "branch":"main"
+          }]
         }
         """.utf8)
         return try JSONDecoder().decode(PlanRequest.self, from: data)

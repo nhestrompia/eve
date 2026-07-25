@@ -33,6 +33,8 @@ struct PlanRequest: Codable, Identifiable, Hashable {
     var staleReasons: [String]?
     var supersededBy: String?
     var fulfilledSnapshotId: String?
+    var createdAt: String?
+    var updatedAt: String?
 
     var id: String { planRequestId }
     var current: PlanRevision? {
@@ -181,6 +183,58 @@ func orderedPlanRequests(_ requests: [PlanRequest]) -> [PlanRequest] {
         if left.branch != right.branch { return left.branch < right.branch }
         return left.id < right.id
     }
+}
+
+func collapsedDuplicatePlanRequests(_ requests: [PlanRequest]) -> [PlanRequest] {
+    var collapsedByKey: [String: PlanRequest] = [:]
+    var keyOrder: [String] = []
+    var result: [PlanRequest] = []
+
+    for request in requests {
+        guard let key = duplicatePlanKey(for: request) else {
+            result.append(request)
+            continue
+        }
+        if let existing = collapsedByKey[key] {
+            collapsedByKey[key] = preferredDuplicatePlanRequest(existing, request)
+        } else {
+            collapsedByKey[key] = request
+            keyOrder.append(key)
+        }
+    }
+
+    result.append(contentsOf: keyOrder.compactMap { collapsedByKey[$0] })
+    return result
+}
+
+private func duplicatePlanKey(for request: PlanRequest) -> String? {
+    guard let revision = request.current else {
+        return nil
+    }
+    let milestones = revision.milestones
+        .map { "\($0.title)\u{1F}\($0.goal ?? "")" }
+        .joined(separator: "\u{1E}")
+    return [
+        request.repositoryRoot,
+        request.branch,
+        revision.goal,
+        revision.acceptanceCriteria,
+        revision.allowedPathGlobs.joined(separator: "\u{1E}"),
+        milestones,
+        revision.configuredSuite ?? ""
+    ].joined(separator: "\u{1D}")
+}
+
+private func preferredDuplicatePlanRequest(_ left: PlanRequest, _ right: PlanRequest) -> PlanRequest {
+    if left.canApprove != right.canApprove {
+        return left.canApprove ? left : right
+    }
+    let leftRecency = left.updatedAt ?? left.createdAt ?? ""
+    let rightRecency = right.updatedAt ?? right.createdAt ?? ""
+    if leftRecency != rightRecency {
+        return leftRecency > rightRecency ? left : right
+    }
+    return left.id > right.id ? left : right
 }
 
 func newPendingPlanIDs(

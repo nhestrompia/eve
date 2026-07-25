@@ -43,7 +43,7 @@ final class PlanQueueStore: ObservableObject {
 
     func refresh() async {
         do {
-            let refreshed = orderedPlanRequests(try await client.reviewQueue())
+            let refreshed = orderedPlanRequests(collapsedDuplicatePlanRequests(try await client.reviewQueue()))
             let previousPendingCount = pendingCount
             let newIDs = newPendingPlanIDs(previous: seenPendingIDs, requests: refreshed)
             requests = refreshed
@@ -98,7 +98,7 @@ final class PlanQueueStore: ObservableObject {
         guard request.canApprove else {
             return nil
         }
-        notice?.requestID == request.id && notice?.state == request.state ? notice?.message : nil
+        return notice?.requestID == request.id && notice?.state == request.state ? notice?.message : nil
     }
 
     private func recoverTerminalState(for request: PlanRequest, fallback error: Error) async {
