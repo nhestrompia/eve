@@ -57,6 +57,10 @@ struct PlanRequest: Codable, Identifiable, Hashable {
         isPendingApproval && !isStale
     }
 
+    var canDismissFromQueue: Bool {
+        state == "stale"
+    }
+
     var statusTitle: String {
         if isStale {
             return "Stale"
@@ -81,13 +85,13 @@ struct PlanRequest: Codable, Identifiable, Hashable {
 
     var terminalActionMessage: String? {
         if isStale {
-            return "Approval is disabled because the repository changed. Ask the agent to declare a fresh plan."
+            return "Approval is disabled because the repository changed. Remove this stale plan or ask the agent to declare a fresh one."
         }
         switch state {
         case "pending_approval":
             return nil
         case "stale":
-            return "Approval is disabled because the repository changed. Ask the agent to declare a fresh plan."
+            return "Approval is disabled because the repository changed. Remove this stale plan or ask the agent to declare a fresh one."
         case "locked":
             return "This plan is locked. The agent can continue with implementation."
         case "rejected":
@@ -143,6 +147,10 @@ struct ApprovalBody: Encodable {
 struct RejectionBody: Encodable {
     var expectedRevision: Int
     var feedback: String
+}
+
+struct DismissalBody: Encodable {
+    var expectedRevision: Int
 }
 
 struct APIErrorPayload: Decodable {
