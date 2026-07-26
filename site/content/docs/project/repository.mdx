@@ -16,6 +16,14 @@ The eve repository should be understandable from a fresh clone. Humans, agents, 
 - `.github/workflows/release.yml` for tagged releases
 - `.github/dependabot.yml` for dependency update checks
 
+## Releases
+
+Releases are automated from pushed Git tags that match `v*.*.*`.
+
+The release workflow builds platform-specific Go binaries, injects the tag version into `eve version`, publishes checksums and GitHub Release assets, rewrites the npm installer package version to the same tag, and publishes `@nhestrompia/eve` to npm.
+
+The npm package remains `0.0.0-development` in the repository on purpose. It is not the shipped version; the release workflow sets the package version during tagged deployment.
+
 ## Verification
 
 Run the relevant tests before recording an eve snapshot.
@@ -23,10 +31,10 @@ Run the relevant tests before recording an eve snapshot.
 For normal product or CLI development:
 
 ```sh
-go test ./...
-npm --prefix ui test
-npm --prefix ui run build
+scripts/local-test.sh
 ```
+
+This script mirrors repository CI except for documentation-site checks.
 
 For documentation-site changes:
 

@@ -15,6 +15,8 @@ Record an eve snapshot after the product change is implemented and verified. A s
 
 This repository follows that workflow for product changes.
 
+For non-trivial agent work, start with a planned Snapshot: declare the Plan, wait for a locked revision, implement only after approval, then include the locked Plan ID and revision when completing the Snapshot.
+
 ## Minimal record
 
 Use a minimal record when the change is straightforward and the validation speaks for itself:
@@ -28,6 +30,24 @@ eve add \
 
 eve commit
 ```
+
+## Planned record
+
+When a Plan was approved before implementation, attach it to the Snapshot:
+
+```sh
+eve add \
+  --title "Add checkout recovery" \
+  --type feature \
+  --summary "Users can retry a failed checkout from the same screen." \
+  --validation "go test ./..." \
+  --plan-id plan_123 \
+  --plan-revision 1
+
+eve commit
+```
+
+The Snapshot records whether changed paths, verification evidence, and policy matched the locked Plan.
 
 ## Better record
 

@@ -3,7 +3,7 @@ title: Local API
 description: HTTP endpoints served by the trusted local eve runtime.
 ---
 
-`eve dev` starts the local runtime on localhost. It serves the web UI, local API, and MCP endpoint.
+`eve` starts the local runtime on localhost. It serves the web UI, local API, and MCP endpoint.
 
 ## Endpoints
 
@@ -24,6 +24,11 @@ GET  /api/repos/{repoId}/snapshots/{snapshotId}/code/file?path={path}&mode=diff|
 GET  /api/repos/{repoId}/snapshots/{snapshotId}/sessions
 GET  /api/repos/{repoId}/snapshots/{snapshotId}/sessions/{sessionKey}
 POST /api/repos/{repoId}/snapshots/{snapshotId}/checkout
+GET  /api/plan-requests?status={state}
+GET  /api/plan-requests/{planRequestId}
+GET  /api/plan-requests/events
+POST /api/plan-requests/{planRequestId}/approve
+POST /api/plan-requests/{planRequestId}/reject
 POST /mcp
 ```
 
@@ -38,6 +43,8 @@ The Snapshot code endpoints expose the relevant code behind a Snapshot without t
 `/api/search` and the global `/api/snapshots` endpoints support the local UI's cross-repository snapshot lookup. Repository-scoped endpoints remain available under `/api/repos/{repoId}`.
 
 `/api/repos/{repoId}/pending` reports committed work that has not yet been resolved by a Snapshot or Skip. Pending state is advisory; Snapshots remain the only user-facing product-history records.
+
+The Plan request endpoints power the local approval queue. Approval and rejection mutations require `expectedRevision`; approval may include edited proposal content. Revision or stale-context conflicts return `409`, and invalid edited content returns `422`. The events endpoint streams queue updates with server-sent events.
 
 ## Security
 

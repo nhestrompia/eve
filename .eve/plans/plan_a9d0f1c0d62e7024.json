@@ -1,0 +1,46 @@
+{
+  "id": "plan_a9d0f1c0d62e7024",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_remove_stale_plan_20260726_c",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Let users remove stale plan requests from the visible approval queue.",
+      "acceptanceCriteria": "- Stale plan requests expose a clear remove/dismiss action in the macOS approval app\n- Removing a stale plan hides it from the approval queue without deleting locked/completed plan history\n- Pending approvable plans cannot be removed through this stale-only action\n- API and Swift tests cover stale removal and invalid removal states",
+      "allowedPathGlobs": [
+        "cmd/eve/**",
+        "macos/EVEApproval/**"
+      ],
+      "milestones": [
+        {
+          "title": "Add stale removal API",
+          "goal": "Expose a trusted-local endpoint that transitions stale plan requests out of the review queue"
+        },
+        {
+          "title": "Add native remove action",
+          "goal": "Show a remove stale plan button and refresh the queue after success"
+        },
+        {
+          "title": "Verify behavior",
+          "goal": "Run focused Go and Swift tests plus build checks"
+        }
+      ],
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "a9ffa6f7a0073230bd9153fd90554c8b3da8926c",
+      "branch": "codex/remove-stale-plan",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-25T21:31:53Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-25T21:32:01Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_b6fff027ac9168be"
+}

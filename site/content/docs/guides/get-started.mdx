@@ -43,6 +43,16 @@ both `AGENTS.md` and `CLAUDE.md`. Existing instructions remain untouched
 outside the EVE markers. Review and commit these repository-level files with
 the rest of your setup.
 
+## Start eve
+
+Start the local UI, API, and HTTP MCP endpoint:
+
+```sh
+eve
+```
+
+Open `http://localhost:4317`.
+
 ## Run from this checkout
 
 Contributors working on EVE itself also need Go 1.26 or newer. Run the embedded
@@ -52,10 +62,8 @@ UI and CLI directly from the repository source with:
 npm --prefix ui ci
 npm --prefix ui run build
 go run ./cmd/eve init
-go run ./cmd/eve dev
+go run ./cmd/eve
 ```
-
-Open `http://localhost:4317`.
 
 You do not need to run the docs site for normal local use. The docs site is only for documentation edits.
 

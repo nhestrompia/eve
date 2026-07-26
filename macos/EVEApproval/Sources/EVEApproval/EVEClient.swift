@@ -15,8 +15,7 @@ struct EVEClient {
     }
 
     func reviewQueue() async throws -> [PlanRequest] {
-        let requests: [PlanRequest] = try await request(path: "/api/plan-requests")
-        return requests.filter { $0.state == "pending_approval" || $0.state == "stale" }
+        try await request(path: "/api/plan-requests?status=review")
     }
 
     func planRequest(id: String) async throws -> PlanRequest {
@@ -36,6 +35,14 @@ struct EVEClient {
             path: "/api/plan-requests/\(request.planRequestId)/reject",
             method: "POST",
             body: RejectionBody(expectedRevision: request.currentRevision, feedback: feedback)
+        )
+    }
+
+    func dismiss(_ request: PlanRequest) async throws -> PlanRequest {
+        try await self.request(
+            path: "/api/plan-requests/\(request.planRequestId)/dismiss",
+            method: "POST",
+            body: DismissalBody(expectedRevision: request.currentRevision)
         )
     }
 

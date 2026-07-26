@@ -88,13 +88,17 @@ v0.1 does not claim semantic verification.
 
 ## Local approval API
 
-`eve daemon --addr 127.0.0.1:4317` and `eve dev` share the same runtime:
+`eve`, `eve daemon --addr 127.0.0.1:4317`, and `eve dev` share the same runtime:
 
 - `GET /api/plan-requests?status=pending_approval`
+- `GET /api/plan-requests?status=review` for pending and stale requests that
+  still need reviewer attention
 - `GET /api/plan-requests/{id}`
 - `GET /api/plan-requests/events`
 - `POST /api/plan-requests/{id}/approve`
 - `POST /api/plan-requests/{id}/reject`
+- `POST /api/plan-requests/{id}/dismiss` to remove stale requests from the
+  local review queue
 
 Mutations require `expectedRevision`. Revision or repository-context conflicts
 return `409`; invalid edited content returns `422`. SSE sends queue updates and

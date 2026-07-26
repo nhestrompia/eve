@@ -241,6 +241,40 @@ func repoLooksUsable(repo repository) bool {
 	return true
 }
 
+func (repo repository) gitWorktreeRepositories() []repository {
+	output, err := gitOutput(repo.Root, "worktree", "list", "--porcelain")
+	if err != nil {
+		return nil
+	}
+	roots := parseGitWorktreeRoots(output)
+	repositories := make([]repository, 0, len(roots))
+	for _, root := range roots {
+		candidate := repoFromRoot(root)
+		if repoLooksUsable(candidate) {
+			repositories = append(repositories, candidate)
+		}
+	}
+	return repositories
+}
+
+func parseGitWorktreeRoots(output string) []string {
+	var roots []string
+	seen := map[string]bool{}
+	for _, line := range strings.Split(output, "\n") {
+		root, ok := strings.CutPrefix(line, "worktree ")
+		if !ok {
+			continue
+		}
+		root = cleanRegistryRoot(root)
+		if root == "" || seen[root] {
+			continue
+		}
+		seen[root] = true
+		roots = append(roots, root)
+	}
+	return roots
+}
+
 func repoVisibleFromPrimary(primary, candidate repository) bool {
 	primaryRoot := cleanRegistryRoot(primary.Root)
 	candidateRoot := cleanRegistryRoot(candidate.Root)

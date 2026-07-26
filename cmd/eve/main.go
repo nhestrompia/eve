@@ -35,12 +35,20 @@ func run(args []string, stdout io.Writer, stderr io.Writer) int {
 }
 
 func runWithIO(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int {
+	args = expandRootRuntimeArgs(args)
 	if len(args) == 0 {
-		printUsage(stderr)
-		return 2
+		printUsage(stdout)
+		return 0
 	}
 
 	switch args[0] {
+	case "help", "--help", "-h":
+		if len(args) != 1 {
+			fmt.Fprintln(stderr, "eve help takes no arguments")
+			return 2
+		}
+		printUsage(stdout)
+		return 0
 	case "init":
 		return runInit(args[1:], stdout, stderr)
 	case "instructions":
@@ -87,14 +95,30 @@ func runWithIO(args []string, stdin io.Reader, stdout io.Writer, stderr io.Write
 	}
 }
 
+func expandRootRuntimeArgs(args []string) []string {
+	if len(args) == 0 {
+		return []string{"daemon"}
+	}
+	if strings.HasPrefix(args[0], "-") && args[0] != "--help" && args[0] != "-h" {
+		expanded := make([]string, 0, len(args)+1)
+		expanded = append(expanded, "daemon")
+		expanded = append(expanded, args...)
+		return expanded
+	}
+	return args
+}
+
 func printUsage(w io.Writer) {
-	fmt.Fprintln(w, "Usage: eve <command>")
+	fmt.Fprintln(w, "Usage: eve [--addr 127.0.0.1:4317] [--cwd /path/to/repo]")
+	fmt.Fprintln(w, "       eve <command>")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Run `eve` with no command to start the local UI, API, and HTTP MCP endpoint.")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Commands:")
 	fmt.Fprintln(w, "  init [--no-agent-instructions | --instructions-only]")
 	fmt.Fprintln(w, "  instructions <install|status|diff>")
 	fmt.Fprintln(w, "  doctor")
-	fmt.Fprintln(w, "  add --title <title> --summary <summary> [--type feature] [--validation <command>]")
+	fmt.Fprintln(w, "  add --title <title> --summary <summary> [--type feature] [--validation <command>] [--plan-id <id> --plan-revision <n>]")
 	fmt.Fprintln(w, "  commit [--allow-dirty]")
 	fmt.Fprintln(w, "  run-suite [--cwd /path/to/repo] [--suite <name>] [--commit <sha>]")
 	fmt.Fprintln(w, "  dev [--addr localhost:4317]")

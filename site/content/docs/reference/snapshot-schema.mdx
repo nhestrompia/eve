@@ -8,7 +8,7 @@ Canonical snapshots are JSON files written under `.eve/snapshots/`.
 ```json
 {
   "id": "snap_123",
-  "schemaVersion": "0.1.0",
+  "schemaVersion": "0.3.0",
   "title": "Add GitHub OAuth",
   "type": "feature",
   "summary": "Users can now sign in with GitHub.",
@@ -24,6 +24,20 @@ Canonical snapshots are JSON files written under `.eve/snapshots/`.
   "timeline": [],
   "decisions": [],
   "validation": [],
+  "plan": {
+    "id": "plan_123",
+    "revision": 1
+  },
+  "planConformance": {
+    "status": "matched",
+    "noPlanOnFile": false,
+    "requiredChecksStatus": "matched",
+    "policyMatched": true,
+    "checkDefinitionsMatch": true,
+    "scopeDrift": false,
+    "changedPaths": ["cmd/eve/main.go"],
+    "outOfScopePaths": []
+  },
   "artifacts": [],
   "implementation": {
     "branch": "main",
@@ -70,6 +84,17 @@ Validation status must be one of:
 - `passed`
 - `failed`
 - `skipped`
+
+## Plan conformance
+
+Snapshots created with a locked Plan reference include `plan` and `planConformance`. Older or adopted repositories can still create Snapshots without a Plan; those records include a loud `no_plan` conformance result.
+
+Conformance status must be one of:
+
+- `matched`
+- `failed`
+- `incomplete`
+- `no_plan`
 
 ## Artifact types
 
