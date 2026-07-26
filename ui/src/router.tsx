@@ -6,12 +6,15 @@ import { ConfigPage } from './pages/config-page';
 import { DecisionsPage } from './pages/decisions-page';
 import { EvolutionDetailPage } from './pages/evolution-detail-page';
 import { ImplementationPage } from './pages/implementation-page';
+import { OverviewPage } from './pages/overview-page';
+import { PlansPage } from './pages/plans-page';
 import { RawJsonPage } from './pages/raw-json-page';
+import { RepositoriesPage } from './pages/repositories-page';
 import { RepositoryPage } from './pages/repository-page';
 import { RelationshipsPage } from './pages/relationships-page';
 import { RisksPage } from './pages/risks-page';
 import { SnapshotPage } from './pages/snapshot-page';
-import { TimelinePage } from './pages/timeline-page';
+import { SnapshotsPage } from './pages/snapshots-page';
 import { VerificationPage } from './pages/verification-page';
 
 const rootRoute = createRootRoute({ component: AppShell });
@@ -19,7 +22,25 @@ const rootRoute = createRootRoute({ component: AppShell });
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
-  component: TimelinePage
+  component: OverviewPage
+});
+
+const plansRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/plans',
+  component: PlansPage
+});
+
+const snapshotsIndexRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/snapshots',
+  component: SnapshotsPage
+});
+
+const repositoriesIndexRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/repositories',
+  component: RepositoriesPage
 });
 
 const evolutionRoute = createRoute({
@@ -96,6 +117,9 @@ const configRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
+  plansRoute,
+  snapshotsIndexRoute,
+  repositoriesIndexRoute,
   repositoryRoute,
   evolutionRoute,
   snapshotRoute,

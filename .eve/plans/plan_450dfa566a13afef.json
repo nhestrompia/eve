@@ -1,0 +1,51 @@
+{
+  "id": "plan_450dfa566a13afef",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_landing_polish_flow_command_20260726",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Fix the landing page step diagram visual consistency, rewrite the hero animation from scratch so it is smooth and non-overlapping, and replace the incorrect hero command with the repo's correct install command.",
+      "acceptanceCriteria": "The hero command uses the repository's documented install command; the hero animation is rebuilt as a smooth stable flow without overlapping labels or broken moving chips; the plan-to-verifiable-change diagram uses unified icon/card styling and clean connector arrows; mobile remains readable; prefers-reduced-motion disables hero animation; site build passes.",
+      "allowedPathGlobs": [
+        "site/app/page.tsx",
+        "site/app/global.css"
+      ],
+      "milestones": [
+        {
+          "title": "Correct command",
+          "goal": "Use the canonical install command documented in the repository."
+        },
+        {
+          "title": "Rebuild hero animation",
+          "goal": "Replace the broken hero motion with a clean staged card and particle flow."
+        },
+        {
+          "title": "Unify step diagram",
+          "goal": "Make icons, spacing, and connector arrows consistent."
+        },
+        {
+          "title": "Verify and record",
+          "goal": "Run build and browser checks, commit implementation, create EVE snapshot, commit EVE record."
+        }
+      ],
+      "configuredSuite": "npm --prefix site run build",
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "120af3ca1586055918fe44ccd9905f86fdb68ded",
+      "branch": "feat/landing",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-25T23:59:52Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-26T00:09:03Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_9a7d50d229f9738e"
+}

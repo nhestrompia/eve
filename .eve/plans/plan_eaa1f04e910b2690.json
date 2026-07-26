@@ -1,0 +1,58 @@
+{
+  "id": "plan_eaa1f04e910b2690",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_resolve_landing_pr_24_conflicts_20260726",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Resolve pull request #24 merge conflicts by merging origin/main into feat/landing and preserving the landing page work alongside main branch changes.",
+      "acceptanceCriteria": "The branch has no unmerged files or conflict markers, generated UI distribution assets are rebuilt from merged source, and relevant Go, UI, site, and Swift checks pass.",
+      "allowedPathGlobs": [
+        ".eve/**",
+        ".github/**",
+        "CHANGELOG.md",
+        "README.md",
+        "SECURITY.md",
+        "cmd/eve/**",
+        "docs/**",
+        "macos/**",
+        "npm/eve/**",
+        "scripts/**",
+        "site/content/**",
+        "types.go",
+        "ui/src/**"
+      ],
+      "milestones": [
+        {
+          "title": "Merge main into landing",
+          "goal": "Reproduce and resolve GitHub PR conflicts locally."
+        },
+        {
+          "title": "Regenerate generated assets",
+          "goal": "Rebuild embedded UI assets from merged source rather than choosing stale hashed files."
+        },
+        {
+          "title": "Verify merged branch",
+          "goal": "Run the relevant test and build commands across touched project areas."
+        }
+      ],
+      "configuredSuite": "go test ./...; npm --prefix ui test; npm --prefix ui run build; npm --prefix site run build; swift test",
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "34930459d644b5927fe594236543bfbaf5569e77",
+      "branch": "feat/landing",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-26T17:10:38Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-26T17:10:46Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_e411c1d4dbe58233"
+}

@@ -1,0 +1,47 @@
+{
+  "id": "plan_9b963339df2eddd0",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_landing_hero_flow_20260726",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Animate the landing page hero's right-side visual so it shows plans and snapshots flowing in and out smoothly, replacing the static specimen while preserving the current page layout and accessibility expectations.",
+      "acceptanceCriteria": "The hero right side presents an animated flow of plan, implementation, snapshot, and review cards; motion is smooth and purposeful; prefers-reduced-motion has a non-animated alternative; the site builds successfully.",
+      "allowedPathGlobs": [
+        "site/app/page.tsx",
+        "site/app/global.css"
+      ],
+      "milestones": [
+        {
+          "title": "Inspect existing landing hero",
+          "goal": "Understand current markup and CSS for the static right-side specimen."
+        },
+        {
+          "title": "Implement animated flow",
+          "goal": "Replace the static specimen with animated plan/snapshot flow markup and styles."
+        },
+        {
+          "title": "Verify and record",
+          "goal": "Run the site build, commit implementation changes, create an EVE snapshot, then commit the .eve record."
+        }
+      ],
+      "configuredSuite": "npm --prefix site run build",
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "f89560090c4dd26431449e82c1a2d536ed22083b",
+      "branch": "feat/landing",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-25T23:34:26Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-25T23:34:34Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_2e60ecbe39e3199a"
+}

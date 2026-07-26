@@ -1,0 +1,42 @@
+{
+  "id": "plan_23786be42557a7e4",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_landing_hero_path_dot_overlap_20260726",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Fix the landing hero flow animation marker so the active path does not show overlapping stop dots.",
+      "acceptanceCriteria": "The hero path displays one clear active moving marker at each step; fixed stop dots are subdued and do not visually clash with the moving signal. The site builds successfully and the animation is browser-verified.",
+      "allowedPathGlobs": [
+        "site/app/global.css"
+      ],
+      "milestones": [
+        {
+          "title": "Adjust path marker CSS",
+          "goal": "Make fixed stop dots quiet anchors and fade them out during their active phase."
+        },
+        {
+          "title": "Verify animation state",
+          "goal": "Use browser inspection and screenshot capture to confirm there is no double-dot clash."
+        }
+      ],
+      "configuredSuite": "npm --prefix site run build; git diff --check",
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "038b37179cfe09cdc67ac31bb4396a458a35a347",
+      "branch": "feat/landing",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-26T16:32:05Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-26T16:32:10Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_ec1e0f2ebdc093fc"
+}
