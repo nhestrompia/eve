@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 77,
+  "snapshotCount": 78,
   "commitCount": 85,
-  "decisionCount": 144,
-  "riskCount": 53,
+  "decisionCount": 147,
+  "riskCount": 55,
   "artifactCount": 45,
-  "latestAt": "2026-07-26T17:00:32Z",
-  "latestSnapshot": "snap_b492491fbc4f9835",
-  "latestTitle": "Remove fixed landing hero path dots",
+  "latestAt": "2026-07-26T17:11:15Z",
+  "latestSnapshot": "snap_e411c1d4dbe58233",
+  "latestTitle": "Resolve landing pull request merge conflicts",
   "branch": "feat/landing",
-  "head": "5f549fe5bb2d3425b7a3cbcd308e24d7a4a57988",
+  "head": "34930459d644b5927fe594236543bfbaf5569e77",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "0edde7567f3c9dc4db445a3e098ea15e8bc69448"
+  "latestGitState": "34930459d644b5927fe594236543bfbaf5569e77"
 }
