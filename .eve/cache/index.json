@@ -1,17 +1,17 @@
 {
   "id": "eve",
-  "root": "/Users/nhestrompia/Documents/eve",
+  "root": "/Users/nhestrompia/.codex/worktrees/d206/eve",
   "snapshotCount": 79,
   "commitCount": 87,
   "decisionCount": 149,
   "riskCount": 56,
   "artifactCount": 45,
-  "latestAt": "2026-07-26T17:43:08Z",
-  "latestSnapshot": "snap_9878edbb8b1ff4dc",
-  "latestTitle": "Package eve 0.3.0 release artifacts",
-  "branch": "codex/release-eve-0.3.0",
-  "head": "89b72e5eec6b9179154a797d14e3dfb88af7553a",
+  "latestAt": "2026-07-26T18:28:12Z",
+  "latestSnapshot": "snap_2adfad428981c460",
+  "latestTitle": "Prepare eve 0.4.0 release",
+  "branch": "codex/release-script-0.4.0",
+  "head": "6bbd4d009134d06fbba646e24830512cafaad373",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "89b72e5eec6b9179154a797d14e3dfb88af7553a"
+  "latestGitState": "6bbd4d009134d06fbba646e24830512cafaad373"
 }

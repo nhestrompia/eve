@@ -1,0 +1,37 @@
+{
+  "id": "plan_4d9184d510541883",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_release_script_0_4_0_20260726",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Add a local EVE release script and use it to prepare release 0.4.0.",
+      "acceptanceCriteria": "A repository script can prepare a release for a supplied version, updates versioned package metadata and changelog consistently, and has been run for 0.4.0 with verification recorded.",
+      "allowedPathGlobs": [
+        "scripts/**",
+        "CHANGELOG.md",
+        "npm/eve/package.json",
+        "npm/eve/package-lock.json",
+        ".eve/**"
+      ],
+      "milestones": [],
+      "configuredSuite": "go test ./... and relevant package/script verification",
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "112fb97c7bb4316db945d849f9341bf8f485ea34",
+      "branch": "codex/release-script-0.4.0",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-26T18:15:36Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-26T18:21:53Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_2adfad428981c460"
+}
