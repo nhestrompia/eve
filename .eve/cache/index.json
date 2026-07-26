@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 69,
-  "commitCount": 75,
-  "decisionCount": 127,
-  "riskCount": 46,
-  "artifactCount": 39,
-  "latestAt": "2026-07-25T23:54:25Z",
-  "latestSnapshot": "snap_fd821bee190ad4f2",
-  "latestTitle": "Match landing page reference design",
+  "snapshotCount": 70,
+  "commitCount": 76,
+  "decisionCount": 130,
+  "riskCount": 47,
+  "artifactCount": 42,
+  "latestAt": "2026-07-26T00:16:35Z",
+  "latestSnapshot": "snap_9a7d50d229f9738e",
+  "latestTitle": "Polish landing hero flow and diagram",
   "branch": "feat/landing",
-  "head": "868b6df2cfcd7ae249141ec60e74ea5c7ad947d2",
+  "head": "8c37a85dadbf560c385bf04be40ae91e136ad416",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "868b6df2cfcd7ae249141ec60e74ea5c7ad947d2"
+  "latestGitState": "8c37a85dadbf560c385bf04be40ae91e136ad416"
 }
