@@ -6,11 +6,13 @@ export function DashboardShell({
   title,
   subtitle,
   searchPlaceholder,
+  searchSlot,
   children,
 }: {
   title: string;
   subtitle: string;
   searchPlaceholder: string;
+  searchSlot?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -25,7 +27,7 @@ export function DashboardShell({
               {subtitle}
             </p>
           </div>
-          <DashboardSearch placeholder={searchPlaceholder} />
+          {searchSlot ?? <DashboardSearch placeholder={searchPlaceholder} />}
         </header>
         {children}
       </div>
