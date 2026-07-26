@@ -1,17 +1,16 @@
 {
   "id": "eve",
-  "root": "/Users/nhestrompia/.codex/worktrees/d206/eve",
-  "snapshotCount": 79,
-  "commitCount": 87,
-  "decisionCount": 149,
-  "riskCount": 56,
+  "root": "/Users/nhestrompia/.codex/worktrees/9704/eve",
+  "snapshotCount": 82,
+  "commitCount": 92,
+  "decisionCount": 154,
+  "riskCount": 58,
   "artifactCount": 45,
-  "latestAt": "2026-07-26T18:28:12Z",
-  "latestSnapshot": "snap_2adfad428981c460",
-  "latestTitle": "Prepare eve 0.4.0 release",
-  "branch": "codex/release-script-0.4.0",
-  "head": "6bbd4d009134d06fbba646e24830512cafaad373",
+  "latestAt": "2026-07-26T20:52:45Z",
+  "latestSnapshot": "snap_b94a145ccf520161",
+  "latestTitle": "Fix dashboard page filters",
+  "head": "0401da07c5e5d2d61dc90f758120f1c9419ad584",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "6bbd4d009134d06fbba646e24830512cafaad373"
+  "latestGitState": "0401da07c5e5d2d61dc90f758120f1c9419ad584"
 }
