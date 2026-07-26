@@ -4,10 +4,16 @@ All notable changes to eve will be documented here.
 
 This project uses Git tags for releases.
 
-## Unreleased
-
 ## 0.4.0 - 2026-07-26
 
+- Added `scripts/prepare-release.sh` for preparing npm package metadata and
+  changelog release sections locally.
+
+## 0.3.0 - 2026-07-26
+
+- Added `eve` as the default local launcher for the UI, API, HTTP MCP endpoint,
+  browser, and installed macOS approval app.
+- Added `eve kill` to stop the local runtime for the configured localhost port.
 - Added Planned Snapshot documentation for Plan approval, MCP tools, local API
   endpoints, CLI flags, and Snapshot conformance records.
 - Added `scripts/local-test.sh` for running repository verification locally

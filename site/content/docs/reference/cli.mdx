@@ -16,6 +16,19 @@ repository.
 
 ## Commands
 
+### default launcher
+
+Start the local runtime, product UI, local API, HTTP MCP endpoint, and local app launchers.
+
+```sh
+eve
+eve --addr localhost:4317
+eve --no-open
+eve --no-approval-app
+```
+
+On macOS, `eve` opens the installed approval app when it is available. The web approval queue remains available in the local UI.
+
 ### init
 
 Initialize eve storage in the current Git repository and install EVE's managed
@@ -101,9 +114,7 @@ eve commit --allow-dirty
 
 ### dev
 
-Start the local runtime, product UI, local API, and HTTP MCP endpoint from the
-current repository. This is equivalent to the default `eve` runtime command
-when run from a repository.
+Start the local runtime, product UI, local API, and HTTP MCP endpoint without opening the browser or approval app.
 
 ```sh
 eve dev
@@ -117,6 +128,15 @@ Start the long-lived local runtime used by the approval app and approval queue.
 ```sh
 eve daemon
 eve daemon --addr 127.0.0.1:4317
+```
+
+### kill
+
+Stop the local runtime for the configured localhost port.
+
+```sh
+eve kill
+eve kill --addr localhost:4317
 ```
 
 ### mcp-stdio

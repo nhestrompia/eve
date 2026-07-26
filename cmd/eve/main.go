@@ -16,7 +16,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -35,20 +37,22 @@ func run(args []string, stdout io.Writer, stderr io.Writer) int {
 }
 
 func runWithIO(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int {
-	args = expandRootRuntimeArgs(args)
 	if len(args) == 0 {
-		printUsage(stdout)
-		return 0
+		return runLaunch(args, stdout, stderr)
 	}
-
-	switch args[0] {
-	case "help", "--help", "-h":
+	if args[0] == "help" || args[0] == "--help" || args[0] == "-h" {
 		if len(args) != 1 {
 			fmt.Fprintln(stderr, "eve help takes no arguments")
 			return 2
 		}
 		printUsage(stdout)
 		return 0
+	}
+	if strings.HasPrefix(args[0], "-") {
+		return runLaunch(args, stdout, stderr)
+	}
+
+	switch args[0] {
 	case "init":
 		return runInit(args[1:], stdout, stderr)
 	case "instructions":
@@ -65,6 +69,8 @@ func runWithIO(args []string, stdin io.Reader, stdout io.Writer, stderr io.Write
 		return runDev(args[1:], stdout, stderr)
 	case "daemon":
 		return runDaemon(args[1:], stdout, stderr)
+	case "kill":
+		return runKill(args[1:], stdout, stderr)
 	case "mcp-stdio":
 		return runMCPStdio(args[1:], stdin, stdout, stderr)
 	case "install-mcp":
@@ -95,24 +101,11 @@ func runWithIO(args []string, stdin io.Reader, stdout io.Writer, stderr io.Write
 	}
 }
 
-func expandRootRuntimeArgs(args []string) []string {
-	if len(args) == 0 {
-		return []string{"daemon"}
-	}
-	if strings.HasPrefix(args[0], "-") && args[0] != "--help" && args[0] != "-h" {
-		expanded := make([]string, 0, len(args)+1)
-		expanded = append(expanded, "daemon")
-		expanded = append(expanded, args...)
-		return expanded
-	}
-	return args
-}
-
 func printUsage(w io.Writer) {
-	fmt.Fprintln(w, "Usage: eve [--addr 127.0.0.1:4317] [--cwd /path/to/repo]")
+	fmt.Fprintln(w, "Usage: eve [--addr localhost:4317] [--no-open] [--no-approval-app]")
 	fmt.Fprintln(w, "       eve <command>")
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, "Run `eve` with no command to start the local UI, API, and HTTP MCP endpoint.")
+	fmt.Fprintln(w, "Run `eve` without a command to start the local UI, API, HTTP MCP endpoint, and local app launchers.")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Commands:")
 	fmt.Fprintln(w, "  init [--no-agent-instructions | --instructions-only]")
@@ -123,6 +116,7 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  run-suite [--cwd /path/to/repo] [--suite <name>] [--commit <sha>]")
 	fmt.Fprintln(w, "  dev [--addr localhost:4317]")
 	fmt.Fprintln(w, "  daemon [--addr 127.0.0.1:4317]")
+	fmt.Fprintln(w, "  kill [--addr localhost:4317]")
 	fmt.Fprintln(w, "  mcp-stdio [--cwd /path/to/repo]")
 	fmt.Fprintln(w, "  install-mcp [--install] [--clients codex,claude,opencode]")
 	fmt.Fprintln(w, "  snapshot <snapshot-id>")
@@ -132,6 +126,36 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  validate <snapshot.json>")
 	fmt.Fprintln(w, "  canonicalize <snapshot.json>")
 	fmt.Fprintln(w, "  version")
+}
+
+func runLaunch(args []string, stdout io.Writer, stderr io.Writer) int {
+	fs := flag.NewFlagSet("eve", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	addr := fs.String("addr", "localhost:4317", "local runtime listen address")
+	cwd := fs.String("cwd", "", "repository working directory")
+	noOpen := fs.Bool("no-open", false, "do not open the web UI in a browser")
+	noApprovalApp := fs.Bool("no-approval-app", false, "do not open the installed macOS approval app")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	if fs.NArg() != 0 {
+		fmt.Fprintln(stderr, "eve takes no positional arguments when no command is provided")
+		return 2
+	}
+	if !isLocalhostAddr(*addr) {
+		fmt.Fprintln(stderr, "eve only binds to localhost")
+		return 2
+	}
+	repo, err := resolveRepo(repoRequest{CWD: *cwd})
+	if err != nil {
+		fmt.Fprintf(stderr, "%v\n", err)
+		return 1
+	}
+	return serveRuntime(repo, runtimeLaunchOptions{
+		Addr:            *addr,
+		OpenBrowser:     !*noOpen,
+		OpenApprovalApp: !*noApprovalApp,
+	}, stdout, stderr)
 }
 
 func runInit(args []string, stdout io.Writer, stderr io.Writer) int {
@@ -535,7 +559,7 @@ func runDev(args []string, stdout io.Writer, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "%v\n", err)
 		return 1
 	}
-	return serveRuntime(repo, *addr, stdout, stderr)
+	return serveRuntime(repo, runtimeLaunchOptions{Addr: *addr}, stdout, stderr)
 }
 
 func runDaemon(args []string, stdout io.Writer, stderr io.Writer) int {
@@ -575,24 +599,236 @@ func runDaemon(args []string, stdout io.Writer, stderr io.Writer) int {
 			return 1
 		}
 	}
-	return serveRuntime(repo, *addr, stdout, stderr)
+	return serveRuntime(repo, runtimeLaunchOptions{Addr: *addr}, stdout, stderr)
 }
 
-func serveRuntime(repo repository, addr string, stdout io.Writer, stderr io.Writer) int {
+func runKill(args []string, stdout io.Writer, stderr io.Writer) int {
+	fs := flag.NewFlagSet("kill", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	addr := fs.String("addr", "localhost:4317", "local runtime listen address")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	if fs.NArg() != 0 {
+		fmt.Fprintln(stderr, "eve kill takes no positional arguments")
+		return 2
+	}
+	if !isLocalhostAddr(*addr) {
+		fmt.Fprintln(stderr, "eve kill only targets localhost")
+		return 2
+	}
+	pids, err := runtimePIDs(*addr)
+	if err != nil {
+		fmt.Fprintf(stderr, "%v\n", err)
+		return 1
+	}
+	if len(pids) == 0 {
+		fmt.Fprintln(stdout, "No EVE runtime found.")
+		return 0
+	}
+	stopped := 0
+	for _, pid := range pids {
+		if err := killPID(pid); err != nil {
+			fmt.Fprintf(stderr, "stop EVE runtime pid %d: %v\n", pid, err)
+			continue
+		}
+		stopped++
+		fmt.Fprintf(stdout, "Stopped EVE runtime pid %d.\n", pid)
+	}
+	if stopped > 0 {
+		_ = os.Remove(runtimePIDPath(*addr))
+	}
+	if stopped != len(pids) {
+		return 1
+	}
+	return 0
+}
+
+type runtimeLaunchOptions struct {
+	Addr            string
+	OpenBrowser     bool
+	OpenApprovalApp bool
+}
+
+func serveRuntime(repo repository, options runtimeLaunchOptions, stdout io.Writer, stderr io.Writer) int {
 	if err := repo.ensureDirs(); err != nil {
 		fmt.Fprintf(stderr, "%v\n", err)
 		return 1
 	}
 	rememberRepository(repo)
 
-	server := newRuntimeServer(repo, strings.TrimSpace(addr))
+	server := newRuntimeServer(repo, strings.TrimSpace(options.Addr))
+	listener, err := net.Listen("tcp", server.addr)
+	if err != nil {
+		fmt.Fprintf(stderr, "serve runtime: %v\n", err)
+		return 1
+	}
+	defer listener.Close()
+	if err := writeRuntimePID(server.addr); err != nil {
+		fmt.Fprintf(stderr, "write runtime pid: %v\n", err)
+	}
+	defer func() {
+		_ = os.Remove(runtimePIDPath(server.addr))
+	}()
+
 	fmt.Fprintf(stdout, "EVE Runtime listening on http://%s\n", server.addr)
 	fmt.Fprintf(stdout, "MCP Streamable HTTP endpoint: http://%s/mcp\n", server.addr)
-	if err := http.ListenAndServe(server.addr, server.routes()); err != nil {
+	launchRuntimeClients(server.addr, options, stdout, stderr)
+	if err := http.Serve(listener, server.routes()); err != nil {
 		fmt.Fprintf(stderr, "serve runtime: %v\n", err)
 		return 1
 	}
 	return 0
+}
+
+func writeRuntimePID(addr string) error {
+	path := runtimePIDPath(addr)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(path, []byte(strconv.Itoa(os.Getpid())+"\n"), 0o644)
+}
+
+func runtimePIDs(addr string) ([]int, error) {
+	seen := map[int]bool{}
+	pids := []int{}
+	add := func(pid int) {
+		if pid > 0 && !seen[pid] {
+			seen[pid] = true
+			pids = append(pids, pid)
+		}
+	}
+	filePID := 0
+	if data, err := os.ReadFile(runtimePIDPath(addr)); err == nil {
+		filePID, _ = strconv.Atoi(strings.TrimSpace(string(data)))
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
+	portPIDs, checkedPort := runtimePIDsFromPort(addr)
+	if !checkedPort {
+		add(filePID)
+	}
+	for _, pid := range portPIDs {
+		add(pid)
+	}
+	sort.Ints(pids)
+	return pids, nil
+}
+
+func runtimePIDPath(addr string) string {
+	port := runtimePort(addr)
+	cacheDir, err := os.UserCacheDir()
+	if err != nil {
+		cacheDir = os.TempDir()
+	}
+	return filepath.Join(cacheDir, "eve", "runtime-"+port+".pid")
+}
+
+func runtimePort(addr string) string {
+	_, port, err := net.SplitHostPort(strings.TrimSpace(addr))
+	if err != nil || strings.TrimSpace(port) == "" {
+		return "4317"
+	}
+	return port
+}
+
+func runtimePIDsFromPort(addr string) ([]int, bool) {
+	if runtime.GOOS == "windows" {
+		return nil, false
+	}
+	lsof, err := exec.LookPath("lsof")
+	if err != nil {
+		return nil, false
+	}
+	output, err := exec.Command(lsof, "-ti", "tcp:"+runtimePort(addr), "-sTCP:LISTEN").Output()
+	if err != nil {
+		return nil, true
+	}
+	return parsePIDLines(string(output)), true
+}
+
+func parsePIDLines(output string) []int {
+	pids := []int{}
+	for _, line := range strings.Fields(output) {
+		pid, err := strconv.Atoi(strings.TrimSpace(line))
+		if err == nil && pid > 0 {
+			pids = append(pids, pid)
+		}
+	}
+	return pids
+}
+
+func killPID(pid int) error {
+	process, err := os.FindProcess(pid)
+	if err != nil {
+		return err
+	}
+	if err := process.Signal(os.Interrupt); err != nil {
+		if killErr := process.Kill(); killErr != nil {
+			return killErr
+		}
+	}
+	return nil
+}
+
+func launchRuntimeClients(addr string, options runtimeLaunchOptions, stdout io.Writer, stderr io.Writer) {
+	if options.OpenBrowser {
+		url := "http://" + addr
+		if err := launchURL(url); err != nil {
+			fmt.Fprintf(stderr, "open web UI: %v\n", err)
+		} else {
+			fmt.Fprintf(stdout, "Opened web UI: %s\n", url)
+		}
+	}
+	if options.OpenApprovalApp {
+		launched, err := launchApprovalApp()
+		if err != nil {
+			fmt.Fprintf(stderr, "open approval app: %v\n", err)
+		} else if launched {
+			fmt.Fprintln(stdout, "Opened macOS approval app.")
+		}
+	}
+}
+
+func launchURL(url string) error {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "darwin":
+		cmd = exec.Command("open", url)
+	case "windows":
+		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+	default:
+		cmd = exec.Command("xdg-open", url)
+	}
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%v: %s", err, strings.TrimSpace(string(output)))
+	}
+	return nil
+}
+
+func launchApprovalApp() (bool, error) {
+	if runtime.GOOS != "darwin" {
+		return false, nil
+	}
+	path := strings.TrimSpace(os.Getenv("EVE_APP_INSTALL_PATH"))
+	if path == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return false, err
+		}
+		path = filepath.Join(home, "Applications", "eve.app")
+	}
+	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
+	output, err := exec.Command("open", path).CombinedOutput()
+	if err != nil {
+		return false, fmt.Errorf("%v: %s", err, strings.TrimSpace(string(output)))
+	}
+	return true, nil
 }
 
 func runMCPStdio(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int {

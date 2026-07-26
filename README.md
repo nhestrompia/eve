@@ -28,14 +28,22 @@ cd /path/to/repository
 eve init
 ```
 
-Then start the local UI, API, and HTTP MCP endpoint with one command:
+Start the local UI, API, HTTP MCP endpoint, and local app launchers from that
+repository:
 
 ```sh
 eve
 ```
 
-Open `http://localhost:4317` to view its Snapshots. The HTTP MCP endpoint is
-available at `http://localhost:4317/mcp` while `eve` is running.
+EVE opens `http://localhost:4317` and, on macOS, opens the installed approval
+app when it is available. The HTTP MCP endpoint is available at
+`http://localhost:4317/mcp` while EVE is running.
+
+To stop the local runtime:
+
+```sh
+eve kill
+```
 
 
 <img width="3024" height="1606" alt="image" src="https://github.com/user-attachments/assets/2bb1b38e-aff2-4c26-8272-d90d12329fde" />
