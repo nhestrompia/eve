@@ -275,7 +275,7 @@ body {
 
 .eve-command {
   display: flex;
-  width: min(336px, 100%);
+  width: min(560px, 100%);
   min-height: 70px;
   align-items: center;
   justify-content: space-between;
@@ -290,7 +290,11 @@ body {
 }
 
 .eve-command code {
-  font-size: 1.05rem;
+  min-width: 0;
+  overflow: hidden;
+  font-size: clamp(0.86rem, 1.45vw, 1.04rem);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .eve-command code span {
@@ -391,12 +395,27 @@ body {
 .eve-stack {
   position: absolute;
   top: 18px;
-  left: 52px;
+  left: 74px;
   display: grid;
-  width: 210px;
-  gap: 8px;
-  transform: rotateX(7deg) rotateZ(-1deg);
+  width: 238px;
+  gap: 10px;
+  transform: rotateX(6deg) rotateZ(-0.8deg);
   transform-origin: center;
+}
+
+.eve-stack::before {
+  position: absolute;
+  z-index: 2;
+  top: -8px;
+  right: -10px;
+  left: -10px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, var(--eve-home-blue), transparent);
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+  animation: eve-stack-scan 6.8s var(--eve-ease) infinite;
 }
 
 .eve-stack-card {
@@ -419,13 +438,13 @@ body {
   content: "";
   opacity: 0;
   transform: translateX(-50%);
-  animation: eve-card-sheen 8s var(--eve-ease) infinite;
+  animation: eve-card-sheen 10s var(--eve-ease) infinite;
 }
 
 .eve-snapshot-card {
-  min-height: 154px;
-  padding: 19px 22px;
-  animation: eve-snapshot-arrive 9s var(--eve-ease) infinite;
+  min-height: 160px;
+  padding: 20px 22px;
+  animation: eve-flow-focus 12s var(--eve-ease) infinite;
 }
 
 .eve-plan-card,
@@ -439,20 +458,22 @@ body {
 }
 
 .eve-plan-card {
-  transform: translateX(-18px);
-  animation: eve-layer-slide 9s var(--eve-ease) infinite;
-  animation-delay: -2.7s;
+  transform: translateX(-12px);
+  animation: eve-flow-focus 12s var(--eve-ease) infinite;
+  animation-delay: -3s;
 }
 
 .eve-repo-card {
-  transform: translateX(-36px);
-  animation: eve-layer-slide 9s var(--eve-ease) infinite;
-  animation-delay: -5.4s;
+  transform: translateX(-24px);
+  animation: eve-flow-focus 12s var(--eve-ease) infinite;
+  animation-delay: -6s;
 }
 
 .eve-git-card {
   min-height: 62px;
-  transform: translateX(-56px);
+  transform: translateX(-36px);
+  animation: eve-flow-focus 12s var(--eve-ease) infinite;
+  animation-delay: -9s;
 }
 
 .eve-card-title {
@@ -637,7 +658,7 @@ body {
 .eve-visual-notes {
   position: absolute;
   top: 74px;
-  right: -4px;
+  right: 0;
   display: grid;
   gap: 45px;
   width: 132px;
@@ -654,46 +675,50 @@ body {
   position: absolute;
   top: 13px;
   right: calc(100% + 16px);
-  width: 52px;
+  width: 42px;
   height: 1px;
   background: linear-gradient(90deg, transparent, var(--eve-home-line));
   content: "";
 }
 
-.eve-flow-token {
+.eve-flow-lines span {
   position: absolute;
-  display: inline-flex;
-  min-width: 76px;
-  min-height: 28px;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid oklch(0.45 0.03 252 / 0.65);
-  border-radius: 999px;
-  background: oklch(0.12 0.014 252 / 0.82);
-  color: var(--eve-home-blue);
-  font-size: 11px;
-  font-weight: 760;
-  text-transform: uppercase;
-  opacity: 0;
-  animation: eve-token-flow 7.5s linear infinite;
+  left: 280px;
+  width: 56px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--eve-home-line), transparent);
+  opacity: 0.72;
 }
 
-.eve-flow-token[data-token='plan'] {
-  top: 212px;
-  left: 102px;
-  animation-delay: -0.3s;
+.eve-flow-lines span[data-line='snapshot'] {
+  top: 93px;
 }
 
-.eve-flow-token[data-token='snapshot'] {
-  top: 113px;
-  left: 362px;
-  animation-delay: -2.8s;
+.eve-flow-lines span[data-line='evidence'] {
+  top: 173px;
 }
 
-.eve-flow-token[data-token='evidence'] {
-  top: 292px;
-  left: 362px;
-  animation-delay: -5.1s;
+.eve-flow-lines span[data-line='git'] {
+  top: 255px;
+}
+
+.eve-flow-dot {
+  display: none;
+}
+
+.eve-flow-dot[data-dot='snapshot'] {
+  top: 90px;
+  animation-delay: -0.4s;
+}
+
+.eve-flow-dot[data-dot='evidence'] {
+  top: 170px;
+  animation-delay: -2.4s;
+}
+
+.eve-flow-dot[data-dot='plan'] {
+  top: 252px;
+  animation-delay: -4.4s;
 }
 
 .eve-compare {
@@ -786,7 +811,7 @@ body {
 .eve-step-list {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 38px;
+  gap: 46px;
 }
 
 .eve-step {
@@ -797,16 +822,34 @@ body {
   min-width: 0;
 }
 
-.eve-step:not(:last-child)::after,
 .eve-local-flow > span {
   color: var(--eve-home-muted);
-  content: "->";
+}
+
+.eve-step:not(:last-child)::before,
+.eve-step:not(:last-child)::after {
+  position: absolute;
+  content: "";
+}
+
+.eve-step:not(:last-child)::before {
+  top: 36px;
+  right: -38px;
+  width: 34px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--eve-home-muted));
+  opacity: 0.72;
 }
 
 .eve-step:not(:last-child)::after {
-  position: absolute;
-  top: 27px;
-  right: -27px;
+  top: 32px;
+  right: -40px;
+  width: 9px;
+  height: 9px;
+  border-top: 1px solid var(--eve-home-muted);
+  border-right: 1px solid var(--eve-home-muted);
+  opacity: 0.72;
+  transform: rotate(45deg);
 }
 
 .eve-step-icon {
@@ -816,6 +859,7 @@ body {
   border: 1px solid var(--eve-home-line);
   border-radius: 8px;
   background: oklch(0.105 0.012 252);
+  color: var(--eve-home-text);
 }
 
 .eve-step-icon::before,
@@ -825,38 +869,41 @@ body {
 }
 
 .eve-step-icon[data-icon='file']::before {
-  inset: 18px 22px 16px;
-  border: 1px solid var(--eve-home-text);
+  top: 19px;
+  left: 24px;
+  width: 26px;
+  height: 34px;
+  border: 1.5px solid currentColor;
   border-radius: 2px;
 }
 
 .eve-step-icon[data-icon='file']::after {
-  top: 18px;
-  right: 22px;
+  top: 19px;
+  right: 24px;
   width: 10px;
   height: 10px;
-  border-left: 1px solid var(--eve-home-text);
-  border-bottom: 1px solid var(--eve-home-text);
+  border-left: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
   background: var(--eve-home-bg);
 }
 
 .eve-step-icon[data-icon='code']::before {
-  top: 28px;
+  top: 26px;
   left: 20px;
-  width: 33px;
-  height: 18px;
-  border-top: 2px solid var(--eve-home-text);
-  border-bottom: 2px solid var(--eve-home-text);
-  transform: skewX(-26deg);
+  width: 34px;
+  height: 20px;
+  border-top: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: skewX(-18deg);
 }
 
 .eve-step-icon[data-icon='code']::after {
-  top: 22px;
-  left: 35px;
-  width: 1px;
-  height: 31px;
-  background: var(--eve-home-text);
-  transform: rotate(19deg);
+  top: 21px;
+  left: 36px;
+  width: 1.5px;
+  height: 32px;
+  background: currentColor;
+  transform: rotate(15deg);
 }
 
 .eve-step-icon[data-icon='data'] {
@@ -869,7 +916,7 @@ body {
   left: 21px;
   width: 31px;
   height: 13px;
-  border: 2px solid var(--eve-home-text);
+  border: 1.5px solid currentColor;
   border-radius: 50%;
 }
 
@@ -878,25 +925,25 @@ body {
   left: 21px;
   width: 31px;
   height: 22px;
-  border-right: 2px solid var(--eve-home-text);
-  border-bottom: 2px solid var(--eve-home-text);
-  border-left: 2px solid var(--eve-home-text);
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  border-left: 1.5px solid currentColor;
   border-radius: 0 0 50% 50%;
 }
 
 .eve-step-icon[data-icon='review']::before {
-  inset: 21px 17px 22px;
-  border: 2px solid var(--eve-home-text);
+  inset: 22px 18px 24px;
+  border: 1.5px solid currentColor;
   border-radius: 6px;
 }
 
 .eve-step-icon[data-icon='review']::after {
-  right: 24px;
-  bottom: 20px;
+  right: 27px;
+  bottom: 21px;
   width: 10px;
   height: 10px;
-  border-right: 2px solid var(--eve-home-text);
-  border-bottom: 2px solid var(--eve-home-text);
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
   transform: rotate(45deg);
 }
 
@@ -1033,48 +1080,39 @@ body {
   font-size: 13px;
 }
 
-@keyframes eve-snapshot-arrive {
+@keyframes eve-flow-focus {
   0%,
   100% {
-    opacity: 0.68;
-    transform: translate3d(0, 10px, 0) scale(0.98);
+    opacity: 0.72;
+    filter: saturate(0.82);
   }
 
-  22%,
-  62% {
+  18%,
+  42% {
     opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
+    filter: saturate(1.08);
   }
 }
 
-@keyframes eve-layer-slide {
-  0%,
-  100% {
-    opacity: 0.7;
-  }
-
-  35%,
-  66% {
-    opacity: 1;
-    transform: translate3d(0, -4px, 0);
-  }
-}
-
-@keyframes eve-token-flow {
+@keyframes eve-stack-scan {
   0% {
     opacity: 0;
-    transform: translate3d(-42px, 22px, 0) scale(0.96);
+    transform: translate3d(0, 0, 0);
   }
 
   16%,
-  42% {
-    opacity: 1;
+  54% {
+    opacity: 0.8;
   }
 
-  68%,
+  70% {
+    opacity: 0;
+    transform: translate3d(0, 338px, 0);
+  }
+
   100% {
     opacity: 0;
-    transform: translate3d(70px, -18px, 0) scale(1);
+    transform: translate3d(0, 338px, 0);
   }
 }
 
@@ -1128,6 +1166,7 @@ body {
     grid-template-columns: 1fr;
   }
 
+  .eve-step:nth-child(2)::before,
   .eve-step:nth-child(2)::after {
     display: none;
   }
@@ -1186,6 +1225,11 @@ body {
 
   .eve-command {
     min-height: 58px;
+    padding: 0 14px;
+  }
+
+  .eve-command code {
+    font-size: clamp(0.56rem, 2.45vw, 0.72rem);
   }
 
   .eve-actions {
@@ -1252,6 +1296,7 @@ body {
     grid-template-columns: 1fr;
   }
 
+  .eve-step:not(:last-child)::before,
   .eve-step:not(:last-child)::after {
     display: none;
   }
@@ -1268,15 +1313,17 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .eve-stack-card::after,
+  .eve-stack::before,
   .eve-snapshot-card,
   .eve-plan-card,
   .eve-repo-card,
-  .eve-flow-token {
+  .eve-git-card,
+  .eve-flow-dot {
     animation: none;
   }
 
-  .eve-flow-token {
-    opacity: 1;
+  .eve-flow-dot {
+    opacity: 0.72;
     transform: none;
   }
 }

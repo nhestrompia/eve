@@ -62,7 +62,7 @@ export default function HomePage() {
             </p>
             <div className="eve-command" aria-label="Install command">
               <code>
-                <span>$</span> npx eve init
+                <span>$</span> npx --yes @nhestrompia/eve@latest install
               </code>
               <span aria-hidden="true">copy</span>
             </div>
@@ -81,6 +81,12 @@ export default function HomePage() {
               EVE links snapshots, plans, repository state, and Git commits under .eve.
             </p>
             <div className="eve-visual-grid" aria-hidden="true">
+              <div className="eve-flow-lines">
+                <span data-line="snapshot" />
+                <span data-line="evidence" />
+                <span data-line="git" />
+              </div>
+
               <div className="eve-stack">
                 <div className="eve-stack-card eve-snapshot-card">
                   <div className="eve-card-title">
@@ -121,15 +127,9 @@ export default function HomePage() {
                 <span>Linked to Git state</span>
               </div>
 
-              <span className="eve-flow-token" data-token="plan">
-                plan
-              </span>
-              <span className="eve-flow-token" data-token="snapshot">
-                snapshot
-              </span>
-              <span className="eve-flow-token" data-token="evidence">
-                checks
-              </span>
+              <span className="eve-flow-dot" data-dot="plan" />
+              <span className="eve-flow-dot" data-dot="snapshot" />
+              <span className="eve-flow-dot" data-dot="evidence" />
             </div>
           </aside>
         </section>
