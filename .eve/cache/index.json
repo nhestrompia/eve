@@ -1,17 +1,17 @@
 {
   "id": "eve",
-  "root": "/Users/nhestrompia/.codex/worktrees/8735/eve",
+  "root": "/Users/nhestrompia/Documents/eve",
   "snapshotCount": 66,
   "commitCount": 72,
-  "decisionCount": 121,
-  "riskCount": 45,
+  "decisionCount": 123,
+  "riskCount": 46,
   "artifactCount": 35,
-  "latestAt": "2026-07-26T00:29:37Z",
-  "latestSnapshot": "snap_fd81ae635eb74945",
-  "latestTitle": "Document planned snapshots and release testing",
-  "branch": "codex/docs-local-test-version",
-  "head": "dcf5db23e45283386325a0910ff545b88d9ecc8c",
+  "latestAt": "2026-07-25T21:40:07Z",
+  "latestSnapshot": "snap_b6fff027ac9168be",
+  "latestTitle": "Allow removing stale plan requests",
+  "branch": "codex/remove-stale-plan",
+  "head": "599727134b694474657d1f3582deb09fe36ee9a4",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "dcf5db23e45283386325a0910ff545b88d9ecc8c"
+  "latestGitState": "599727134b694474657d1f3582deb09fe36ee9a4"
 }

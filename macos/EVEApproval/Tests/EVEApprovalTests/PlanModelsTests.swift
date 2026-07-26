@@ -75,13 +75,18 @@ final class PlanModelsTests: XCTestCase {
         let stale = try decodeRequest(id: "planreq_stale001", state: "stale")
         let locked = try decodeRequest(id: "planreq_locked01", state: "locked")
         let pending = try decodeRequest(id: "planreq_pending01", state: "pending_approval")
+        let dismissed = try decodeRequest(id: "planreq_dismiss01", state: "dismissed", staleReasons: ["working tree changed"])
 
         XCTAssertEqual(stale.statusTitle, "Stale")
-        XCTAssertEqual(stale.terminalActionMessage, "Approval is disabled because the repository changed. Ask the agent to declare a fresh plan.")
+        XCTAssertEqual(stale.terminalActionMessage, "Approval is disabled because the repository changed. Remove this stale plan or ask the agent to declare a fresh one.")
+        XCTAssertTrue(stale.canDismissFromQueue)
         XCTAssertEqual(locked.statusTitle, "Locked")
         XCTAssertEqual(locked.terminalActionMessage, "This plan is locked. The agent can continue with implementation.")
+        XCTAssertFalse(locked.canDismissFromQueue)
         XCTAssertEqual(pending.statusTitle, "Awaiting approval")
         XCTAssertNil(pending.terminalActionMessage)
+        XCTAssertFalse(pending.canDismissFromQueue)
+        XCTAssertFalse(dismissed.canDismissFromQueue)
     }
 
     func testFreshPendingRequestReplacesStaleSelection() throws {
@@ -212,8 +217,12 @@ final class PlanModelsTests: XCTestCase {
         state: String,
         repository: String = "eve",
         goal: String = "Add a gate",
-        updatedAt: String = "2026-07-25T20:00:00Z"
+        updatedAt: String = "2026-07-25T20:00:00Z",
+        staleReasons: [String] = []
     ) throws -> PlanRequest {
+        let staleReasonsJSON = staleReasons.isEmpty
+            ? ""
+            : #","staleReasons":["\#(staleReasons.joined(separator: #",""#))"]"#
         let data = Data("""
         {
           "planRequestId":"\(id)",
@@ -223,7 +232,7 @@ final class PlanModelsTests: XCTestCase {
           "state":"\(state)",
           "currentRevision":1,
           "createdAt":"2026-07-25T19:59:00Z",
-          "updatedAt":"\(updatedAt)",
+          "updatedAt":"\(updatedAt)"\(staleReasonsJSON),
           "revisions":[{
             "revision":1,
             "source":"agent",

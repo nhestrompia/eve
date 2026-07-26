@@ -94,6 +94,18 @@ final class PlanQueueStore: ObservableObject {
         }
     }
 
+    func dismiss(_ request: PlanRequest) async {
+        guard request.canDismissFromQueue else { return }
+        do {
+            _ = try await client.dismiss(request)
+            requests.removeAll { $0.id == request.id }
+            selectedID = preferredPlanSelection(currentID: selectedID, requests: requests)
+            await refresh()
+        } catch {
+            state = .offline(error.localizedDescription)
+        }
+    }
+
     func noticeMessage(for request: PlanRequest) -> String? {
         guard request.canApprove else {
             return nil

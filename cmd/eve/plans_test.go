@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -419,6 +420,53 @@ func TestPlanRejectionAPIReturnsConflictForStaleRepositoryContext(t *testing.T) 
 	stale, err := repo.loadPlanRequest(request.PlanRequestID)
 	if err != nil || stale.State != "stale" || !containsString(stale.StaleReasons, "working tree changed") {
 		t.Fatalf("stale request = %#v, %v", stale, err)
+	}
+}
+
+func TestPlanDismissAPIOnlyRemovesStaleRequestsFromReviewQueue(t *testing.T) {
+	repo := setupPlanTestRepo(t)
+	stale, err := repo.createOrResumePlanRequest(context.Background(), testPlanInput("planreq_dismiss001"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	stale.State = "stale"
+	stale.StaleReasons = []string{"working tree changed"}
+	if err := repo.savePlanRequest(stale); err != nil {
+		t.Fatal(err)
+	}
+	pending, err := repo.createOrResumePlanRequest(context.Background(), testPlanInput("planreq_dismiss002"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := newRuntimeServer(repo, "").routes()
+	post := func(id string, revision int) *httptest.ResponseRecorder {
+		recorder := httptest.NewRecorder()
+		handler.ServeHTTP(recorder, httptest.NewRequest(
+			http.MethodPost,
+			"/api/plan-requests/"+id+"/dismiss",
+			strings.NewReader(fmt.Sprintf(`{"expectedRevision":%d}`, revision)),
+		))
+		return recorder
+	}
+
+	if got := post(pending.PlanRequestID, pending.CurrentRevision); got.Code != http.StatusConflict {
+		t.Fatalf("pending dismiss = %d: %s", got.Code, got.Body.String())
+	}
+	if got := post(stale.PlanRequestID, stale.CurrentRevision+1); got.Code != http.StatusConflict {
+		t.Fatalf("revision conflict = %d: %s", got.Code, got.Body.String())
+	}
+	got := post(stale.PlanRequestID, stale.CurrentRevision)
+	if got.Code != http.StatusOK {
+		t.Fatalf("stale dismiss = %d: %s", got.Code, got.Body.String())
+	}
+	dismissed, err := repo.loadPlanRequest(stale.PlanRequestID)
+	if err != nil || dismissed.State != "dismissed" {
+		t.Fatalf("dismissed request = %#v, %v", dismissed, err)
+	}
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/api/plan-requests?status=stale", nil))
+	if recorder.Code != http.StatusOK || strings.Contains(recorder.Body.String(), stale.PlanRequestID) {
+		t.Fatalf("stale queue after dismiss = %d: %s", recorder.Code, recorder.Body.String())
 	}
 }
 
