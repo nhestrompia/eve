@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 70,
-  "commitCount": 76,
-  "decisionCount": 130,
-  "riskCount": 47,
+  "snapshotCount": 71,
+  "commitCount": 79,
+  "decisionCount": 132,
+  "riskCount": 48,
   "artifactCount": 42,
-  "latestAt": "2026-07-26T00:16:35Z",
-  "latestSnapshot": "snap_9a7d50d229f9738e",
-  "latestTitle": "Polish landing hero flow and diagram",
+  "latestAt": "2026-07-26T16:20:45Z",
+  "latestSnapshot": "snap_90dfddf22476a728",
+  "latestTitle": "Compact landing hero flow cards",
   "branch": "feat/landing",
-  "head": "8c37a85dadbf560c385bf04be40ae91e136ad416",
+  "head": "2f9c62c3b45b70dc6f58ce254098ab182b054ec4",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "8c37a85dadbf560c385bf04be40ae91e136ad416"
+  "latestGitState": "2f9c62c3b45b70dc6f58ce254098ab182b054ec4"
 }
