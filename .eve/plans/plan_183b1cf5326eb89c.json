@@ -1,0 +1,47 @@
+{
+  "id": "plan_183b1cf5326eb89c",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_landing_hero_remove_fixed_path_dots_20260726",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Remove the remaining fixed vertical path dots from the landing hero animation so the active moving marker never visually clashes with another dot.",
+      "acceptanceCriteria": "The hero flow path has one animated signal dot on the vertical path. No fixed vertical stop dots remain to collide with it. Reduced-motion mode still shows a readable static path. The site builds and the hero is browser-verified.",
+      "allowedPathGlobs": [
+        "site/app/page.tsx",
+        "site/app/global.css"
+      ],
+      "milestones": [
+        {
+          "title": "Remove redundant path anchors",
+          "goal": "Delete fixed vertical path dot elements and their CSS/keyframes."
+        },
+        {
+          "title": "Preserve reduced motion readability",
+          "goal": "Keep the static path lines visible when motion is reduced."
+        },
+        {
+          "title": "Verify in browser",
+          "goal": "Confirm there is only one path marker element and capture a screenshot."
+        }
+      ],
+      "configuredSuite": "npm --prefix site run build; git diff --check",
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "8e4c791561056176f891cf52e69bf4c3b0f32b92",
+      "branch": "feat/landing",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-26T16:58:18Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-26T16:58:25Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_b492491fbc4f9835"
+}

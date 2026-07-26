@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 73,
-  "commitCount": 81,
-  "decisionCount": 136,
-  "riskCount": 49,
-  "artifactCount": 44,
-  "latestAt": "2026-07-26T16:32:31Z",
-  "latestSnapshot": "snap_ec1e0f2ebdc093fc",
-  "latestTitle": "Clean up landing hero active path marker",
+  "snapshotCount": 74,
+  "commitCount": 82,
+  "decisionCount": 138,
+  "riskCount": 50,
+  "artifactCount": 45,
+  "latestAt": "2026-07-26T17:00:32Z",
+  "latestSnapshot": "snap_b492491fbc4f9835",
+  "latestTitle": "Remove fixed landing hero path dots",
   "branch": "feat/landing",
-  "head": "038b37179cfe09cdc67ac31bb4396a458a35a347",
+  "head": "0edde7567f3c9dc4db445a3e098ea15e8bc69448",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "038b37179cfe09cdc67ac31bb4396a458a35a347"
+  "latestGitState": "0edde7567f3c9dc4db445a3e098ea15e8bc69448"
 }
