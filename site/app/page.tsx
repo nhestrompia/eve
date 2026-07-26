@@ -84,9 +84,6 @@ export default function HomePage() {
                 <div className="eve-flow-path">
                   <span data-path="plan-snapshot" />
                   <span data-path="snapshot-commit" />
-                  <i data-dot="plan" />
-                  <i data-dot="snapshot" />
-                  <i data-dot="commit" />
                   <b />
                 </div>
 

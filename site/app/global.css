@@ -523,7 +523,6 @@ body {
 }
 
 .eve-flow-path span,
-.eve-flow-path i,
 .eve-flow-path b {
   position: absolute;
   content: "";
@@ -549,31 +548,6 @@ body {
   height: 136px;
   color: oklch(0.72 0.13 154 / 0.9);
   animation-name: eve-path-snapshot-commit;
-}
-
-.eve-flow-path i {
-  left: 50%;
-  width: 5px;
-  height: 5px;
-  border-radius: 999px;
-  background: color-mix(in oklch, var(--eve-home-muted) 70%, transparent);
-  box-shadow: none;
-  transform: translate(-50%, -50%);
-  animation: eve-dot-plan 12s linear infinite;
-}
-
-.eve-flow-path i[data-dot='plan'] {
-  top: 0;
-}
-
-.eve-flow-path i[data-dot='snapshot'] {
-  top: 174px;
-  animation-name: eve-dot-snapshot;
-}
-
-.eve-flow-path i[data-dot='commit'] {
-  top: 348px;
-  animation-name: eve-dot-commit;
 }
 
 .eve-flow-path b {
@@ -1315,51 +1289,6 @@ body {
   }
 }
 
-@keyframes eve-dot-plan {
-  0%,
-  26% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.85);
-  }
-
-  36%,
-  100% {
-    opacity: 0.34;
-    transform: translate(-50%, -50%) scale(1);
-  }
-}
-
-@keyframes eve-dot-snapshot {
-  0%,
-  26%,
-  70%,
-  100% {
-    opacity: 0.34;
-    transform: translate(-50%, -50%) scale(1);
-  }
-
-  36%,
-  60% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.85);
-  }
-}
-
-@keyframes eve-dot-commit {
-  0%,
-  60%,
-  100% {
-    opacity: 0.34;
-    transform: translate(-50%, -50%) scale(1);
-  }
-
-  70%,
-  94% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.85);
-  }
-}
-
 @keyframes eve-flow-signal {
   0%,
   12% {
@@ -1603,14 +1532,6 @@ body {
     height: 132px;
   }
 
-  .eve-flow-path i[data-dot='snapshot'] {
-    top: 174px;
-  }
-
-  .eve-flow-path i[data-dot='commit'] {
-    top: 348px;
-  }
-
   .eve-flow-node {
     left: 58px;
     width: calc(100% - 90px);
@@ -1690,7 +1611,6 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .eve-flow-node,
   .eve-flow-path span,
-  .eve-flow-path i,
   .eve-flow-path b,
   .eve-flow-note {
     animation: none !important;
@@ -1705,10 +1625,6 @@ body {
   .eve-flow-path span {
     opacity: 0.72;
     transform: scaleY(1);
-  }
-
-  .eve-flow-path i {
-    opacity: 0.82;
   }
 
   .eve-flow-path b {
