@@ -19,4 +19,4 @@ Do not include live secrets or private data in reports.
 
 ## Local Runtime Assumption
 
-eve currently assumes trusted local usage. Keep `eve dev` bound to localhost and only connect trusted MCP clients.
+eve currently assumes trusted local usage. Keep the local runtime bound to localhost and only connect trusted MCP clients.

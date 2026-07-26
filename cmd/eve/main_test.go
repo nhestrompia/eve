@@ -43,8 +43,49 @@ func TestRunVersion(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("exit code = %d, want 0; stderr = %s", code, stderr.String())
 	}
+	wantVersion := os.Getenv("EVE_EXPECT_CLI_VERSION")
+	if wantVersion == "" {
+		wantVersion = eve.CLIVersion
+	}
+	if !strings.Contains(stdout.String(), "eve "+wantVersion) {
+		t.Fatalf("stdout = %q, want CLI version %s", stdout.String(), wantVersion)
+	}
 	if !strings.Contains(stdout.String(), "snapshot schema "+eve.SnapshotSchemaVersion) {
 		t.Fatalf("stdout = %q, want snapshot schema", stdout.String())
+	}
+}
+
+func TestRootRuntimeArgumentExpansion(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want []string
+	}{
+		{name: "bare eve starts daemon", args: nil, want: []string{"daemon"}},
+		{name: "root flags start daemon", args: []string{"--cwd", "/repo"}, want: []string{"daemon", "--cwd", "/repo"}},
+		{name: "help remains help", args: []string{"--help"}, want: []string{"--help"}},
+		{name: "subcommand remains unchanged", args: []string{"doctor"}, want: []string{"doctor"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := expandRootRuntimeArgs(tt.args)
+			if !slices.Equal(got, tt.want) {
+				t.Fatalf("expandRootRuntimeArgs(%v) = %v, want %v", tt.args, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRunHelp(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	code := run([]string{"--help"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0; stderr = %s", code, stderr.String())
+	}
+	for _, want := range []string{"Usage: eve", "Run `eve` with no command", "Commands:"} {
+		if !strings.Contains(stdout.String(), want) {
+			t.Fatalf("stdout = %q, want %q", stdout.String(), want)
+		}
 	}
 }
 

@@ -94,14 +94,12 @@ final class PlanQueueStore: ObservableObject {
         }
     }
 
-    func remove(_ request: PlanRequest) async {
+    func dismiss(_ request: PlanRequest) async {
+        guard request.canDismissFromQueue else { return }
         do {
-            _ = try await client.remove(request)
-            notice = QueueNotice(
-                requestID: request.id,
-                state: "removed",
-                message: "Plan removed from the review queue."
-            )
+            _ = try await client.dismiss(request)
+            requests.removeAll { $0.id == request.id }
+            selectedID = preferredPlanSelection(currentID: selectedID, requests: requests)
             await refresh()
         } catch {
             state = .offline(error.localizedDescription)

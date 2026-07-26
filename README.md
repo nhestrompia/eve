@@ -18,7 +18,7 @@ skips the app because the native approval utility is macOS-only for now.
 Restart your agent client after installation so it reloads its MCP
 configuration.
 
-## Run eve Locally
+## Start eve
 
 eve is installed globally, but its data and runtime are local to each
 repository. Initialize the repository you want to use:
@@ -28,14 +28,14 @@ cd /path/to/repository
 eve init
 ```
 
-Start the local UI, API, and HTTP MCP endpoint from that repository:
+Then start the local UI, API, and HTTP MCP endpoint with one command:
 
 ```sh
-eve dev
+eve
 ```
 
 Open `http://localhost:4317` to view its Snapshots. The HTTP MCP endpoint is
-available at `http://localhost:4317/mcp` while `eve dev` is running.
+available at `http://localhost:4317/mcp` while `eve` is running.
 
 
 <img width="3024" height="1606" alt="image" src="https://github.com/user-attachments/assets/2bb1b38e-aff2-4c26-8272-d90d12329fde" />
@@ -72,12 +72,13 @@ To refresh the MCP configuration later:
 eve install-mcp
 ```
 
-To use HTTP MCP instead of stdio, run `eve dev` in the target repository and
-connect the agent to `http://localhost:4317/mcp`.
+To use HTTP MCP instead of stdio, run `eve` in the target repository and connect
+the agent to `http://localhost:4317/mcp`.
 
 ## Review pending Plans
 
-Run the long-lived local runtime from any known eve repository:
+The long-lived local runtime can also be started explicitly from any known eve
+repository:
 
 ```sh
 eve daemon --addr 127.0.0.1:4317

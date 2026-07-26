@@ -47,13 +47,6 @@ func (server runtimeServer) handlePlanRequestRoutes(w http.ResponseWriter, r *ht
 			return
 		}
 		writeJSON(w, http.StatusOK, refreshed)
-	case len(parts) == 1 && r.Method == http.MethodDelete:
-		removed, removeErr := repo.removePlanRequest(r.Context(), request.PlanRequestID)
-		if removeErr != nil {
-			writePlanMutationError(w, removeErr)
-			return
-		}
-		writeJSON(w, http.StatusOK, removed)
 	case len(parts) == 2 && parts[1] == "approve" && r.Method == http.MethodPost:
 		var input struct {
 			ExpectedRevision int           `json:"expectedRevision"`
@@ -84,6 +77,20 @@ func (server runtimeServer) handlePlanRequestRoutes(w http.ResponseWriter, r *ht
 			return
 		}
 		writeJSON(w, http.StatusOK, rejected)
+	case len(parts) == 2 && parts[1] == "dismiss" && r.Method == http.MethodPost:
+		var input struct {
+			ExpectedRevision int `json:"expectedRevision"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+			writeAPIError(w, http.StatusBadRequest, err)
+			return
+		}
+		dismissed, dismissErr := repo.dismissStalePlanRequest(r.Context(), request.PlanRequestID, input.ExpectedRevision)
+		if dismissErr != nil {
+			writePlanMutationError(w, dismissErr)
+			return
+		}
+		writeJSON(w, http.StatusOK, dismissed)
 	default:
 		writeAPIError(w, http.StatusNotFound, fmt.Errorf("plan request route not found"))
 	}

@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -423,51 +423,50 @@ func TestPlanRejectionAPIReturnsConflictForStaleRepositoryContext(t *testing.T) 
 	}
 }
 
-func TestPlanApprovalAPIRemovesStaleRequests(t *testing.T) {
+func TestPlanDismissAPIOnlyRemovesStaleRequestsFromReviewQueue(t *testing.T) {
 	repo := setupPlanTestRepo(t)
-	request, err := repo.createOrResumePlanRequest(context.Background(), testPlanInput("planreq_removestale"))
+	stale, err := repo.createOrResumePlanRequest(context.Background(), testPlanInput("planreq_dismiss001"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(repo.Root, "product.txt"), []byte("changed before removal\n"), 0o644); err != nil {
+	stale.State = "stale"
+	stale.StaleReasons = []string{"working tree changed"}
+	if err := repo.savePlanRequest(stale); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := repo.refreshPlanRequestState(context.Background(), request.PlanRequestID); err != nil {
+	pending, err := repo.createOrResumePlanRequest(context.Background(), testPlanInput("planreq_dismiss002"))
+	if err != nil {
 		t.Fatal(err)
 	}
 	handler := newRuntimeServer(repo, "").routes()
-	recorder := httptest.NewRecorder()
-	handler.ServeHTTP(recorder, httptest.NewRequest(
-		http.MethodDelete,
-		"/api/plan-requests/"+request.PlanRequestID,
-		nil,
-	))
-	if recorder.Code != http.StatusOK {
-		t.Fatalf("delete stale = %d: %s", recorder.Code, recorder.Body.String())
+	post := func(id string, revision int) *httptest.ResponseRecorder {
+		recorder := httptest.NewRecorder()
+		handler.ServeHTTP(recorder, httptest.NewRequest(
+			http.MethodPost,
+			"/api/plan-requests/"+id+"/dismiss",
+			strings.NewReader(fmt.Sprintf(`{"expectedRevision":%d}`, revision)),
+		))
+		return recorder
 	}
-	if _, err := repo.loadPlanRequest(request.PlanRequestID); !errors.Is(err, os.ErrNotExist) {
-		t.Fatalf("stale request still exists, err = %v", err)
-	}
-}
 
-func TestPlanApprovalAPIRejectsRemovingPendingRequests(t *testing.T) {
-	repo := setupPlanTestRepo(t)
-	request, err := repo.createOrResumePlanRequest(context.Background(), testPlanInput("planreq_keepalive"))
-	if err != nil {
-		t.Fatal(err)
+	if got := post(pending.PlanRequestID, pending.CurrentRevision); got.Code != http.StatusConflict {
+		t.Fatalf("pending dismiss = %d: %s", got.Code, got.Body.String())
 	}
-	handler := newRuntimeServer(repo, "").routes()
+	if got := post(stale.PlanRequestID, stale.CurrentRevision+1); got.Code != http.StatusConflict {
+		t.Fatalf("revision conflict = %d: %s", got.Code, got.Body.String())
+	}
+	got := post(stale.PlanRequestID, stale.CurrentRevision)
+	if got.Code != http.StatusOK {
+		t.Fatalf("stale dismiss = %d: %s", got.Code, got.Body.String())
+	}
+	dismissed, err := repo.loadPlanRequest(stale.PlanRequestID)
+	if err != nil || dismissed.State != "dismissed" {
+		t.Fatalf("dismissed request = %#v, %v", dismissed, err)
+	}
 	recorder := httptest.NewRecorder()
-	handler.ServeHTTP(recorder, httptest.NewRequest(
-		http.MethodDelete,
-		"/api/plan-requests/"+request.PlanRequestID,
-		nil,
-	))
-	if recorder.Code != http.StatusConflict {
-		t.Fatalf("delete pending = %d: %s", recorder.Code, recorder.Body.String())
-	}
-	if _, err := repo.loadPlanRequest(request.PlanRequestID); err != nil {
-		t.Fatalf("pending request was removed: %v", err)
+	handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/api/plan-requests?status=stale", nil))
+	if recorder.Code != http.StatusOK || strings.Contains(recorder.Body.String(), stale.PlanRequestID) {
+		t.Fatalf("stale queue after dismiss = %d: %s", recorder.Code, recorder.Body.String())
 	}
 }
 

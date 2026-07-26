@@ -125,14 +125,14 @@ export function PlanApprovalDialog({
     onSuccess: () => finishMutation("Plan rejected"),
     onError: (error) => toast.error("Rejection failed", { description: errorMessage(error) }),
   });
-  const remove = useMutation({
-    mutationFn: () => api.removePlanRequest(selected),
+  const dismiss = useMutation({
+    mutationFn: () => api.dismissPlanRequest(selected),
     onSuccess: () => finishMutation("Plan removed"),
     onError: (error) => toast.error("Remove failed", { description: errorMessage(error) }),
   });
   const validationMessage = proposalValidationMessage(proposal);
   const feedbackMessage = feedback.trim() ? "" : "Rejection feedback is required.";
-  const busy = approve.isPending || reject.isPending || remove.isPending;
+  const busy = approve.isPending || reject.isPending || dismiss.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -195,7 +195,7 @@ export function PlanApprovalDialog({
                 <Button
                   type="button"
                   variant="destructive"
-                  onClick={() => remove.mutate()}
+                  onClick={() => dismiss.mutate()}
                   disabled={busy}
                 >
                   <Trash2 className="size-4" aria-hidden="true" />

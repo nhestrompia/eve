@@ -481,14 +481,13 @@ struct PlanReviewView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityLabel(message)
                 Spacer(minLength: 0)
-                if request.canRemoveFromQueue {
-                    Button(role: .destructive) {
-                        Task { await store.remove(request) }
-                    } label: {
-                        Label(request.isStale ? "Remove stale plan" : "Remove plan", systemImage: "trash")
+                if request.canDismissFromQueue {
+                    Button("Remove stale plan") {
+                        Task { await store.dismiss(request) }
                     }
-                    .keyboardShortcut(.delete, modifiers: [.command])
                     .buttonStyle(.borderedProminent)
+                    .tint(.orange)
+                    .accessibilityLabel("Remove stale plan from queue")
                 }
             } else if rejecting {
                 Button("Cancel") {

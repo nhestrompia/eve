@@ -224,5 +224,5 @@ test("installs, verifies, and configures a downloaded release", async () => {
   });
   assert.match(output, /Installed eve at/);
   assert.match(output, /Skipping eve approval app install: macOS only/);
-  assert.match(output, /Next: open a Git repository/);
+  assert.match(output, /Next: open a Git repository, run `eve init`, then run `eve`/);
 });

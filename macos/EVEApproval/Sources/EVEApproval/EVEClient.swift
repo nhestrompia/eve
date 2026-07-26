@@ -38,21 +38,17 @@ struct EVEClient {
         )
     }
 
-    func remove(_ request: PlanRequest) async throws -> PlanRequest {
-        try await self.request(path: "/api/plan-requests/\(request.planRequestId)", method: "DELETE")
+    func dismiss(_ request: PlanRequest) async throws -> PlanRequest {
+        try await self.request(
+            path: "/api/plan-requests/\(request.planRequestId)/dismiss",
+            method: "POST",
+            body: DismissalBody(expectedRevision: request.currentRevision)
+        )
     }
 
     private func request<Response: Decodable>(path: String) async throws -> Response {
         guard let url = URL(string: path, relativeTo: baseURL) else { throw ClientError.invalidURL }
         let (data, response) = try await session.data(from: url)
-        return try decode(data: data, response: response)
-    }
-
-    private func request<Response: Decodable>(path: String, method: String) async throws -> Response {
-        guard let url = URL(string: path, relativeTo: baseURL) else { throw ClientError.invalidURL }
-        var request = URLRequest(url: url)
-        request.httpMethod = method
-        let (data, response) = try await session.data(for: request)
         return try decode(data: data, response: response)
     }
 

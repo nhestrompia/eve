@@ -5,6 +5,7 @@
     "---Concepts---",
     "concepts/product-history",
     "concepts/snapshots-and-git",
+    "concepts/planned-snapshots",
     "concepts/storage-model",
     "---Guides---",
     "guides/get-started",
