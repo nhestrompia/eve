@@ -553,11 +553,11 @@ body {
 
 .eve-flow-path i {
   left: 50%;
-  width: 8px;
-  height: 8px;
+  width: 5px;
+  height: 5px;
   border-radius: 999px;
-  background: var(--eve-home-text);
-  box-shadow: 0 0 0 5px oklch(0.75 0.12 263 / 0.08);
+  background: color-mix(in oklch, var(--eve-home-muted) 70%, transparent);
+  box-shadow: none;
   transform: translate(-50%, -50%);
   animation: eve-dot-plan 12s linear infinite;
 }
@@ -568,26 +568,24 @@ body {
 
 .eve-flow-path i[data-dot='snapshot'] {
   top: 174px;
-  box-shadow: 0 0 0 5px oklch(0.75 0.12 263 / 0.14);
   animation-name: eve-dot-snapshot;
 }
 
 .eve-flow-path i[data-dot='commit'] {
   top: 348px;
-  box-shadow: 0 0 0 5px oklch(0.72 0.13 154 / 0.14);
   animation-name: eve-dot-commit;
 }
 
 .eve-flow-path b {
   top: 0;
   left: 50%;
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   border-radius: 999px;
   background: var(--eve-home-blue);
   box-shadow:
-    0 0 18px oklch(0.75 0.12 263 / 0.72),
-    0 0 38px oklch(0.75 0.12 263 / 0.34);
+    0 0 0 5px oklch(0.75 0.12 263 / 0.16),
+    0 0 20px oklch(0.75 0.12 263 / 0.5);
   transform: translate(-50%, -50%);
   animation: eve-flow-signal 12s cubic-bezier(0.25, 1, 0.5, 1) infinite;
 }
@@ -1320,13 +1318,13 @@ body {
 @keyframes eve-dot-plan {
   0%,
   26% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1.25);
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.85);
   }
 
   36%,
   100% {
-    opacity: 0.28;
+    opacity: 0.34;
     transform: translate(-50%, -50%) scale(1);
   }
 }
@@ -1336,14 +1334,14 @@ body {
   26%,
   70%,
   100% {
-    opacity: 0.28;
+    opacity: 0.34;
     transform: translate(-50%, -50%) scale(1);
   }
 
   36%,
   60% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1.3);
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.85);
   }
 }
 
@@ -1351,32 +1349,42 @@ body {
   0%,
   60%,
   100% {
-    opacity: 0.28;
+    opacity: 0.34;
     transform: translate(-50%, -50%) scale(1);
   }
 
   70%,
   94% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1.3);
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.85);
   }
 }
 
 @keyframes eve-flow-signal {
   0%,
   12% {
+    background: var(--eve-home-blue);
+    box-shadow:
+      0 0 0 5px oklch(0.75 0.12 263 / 0.16),
+      0 0 20px oklch(0.75 0.12 263 / 0.5);
     opacity: 1;
     transform: translate(-50%, -50%) translateY(0);
   }
 
   34% {
     background: var(--eve-home-blue);
+    box-shadow:
+      0 0 0 5px oklch(0.75 0.12 263 / 0.16),
+      0 0 20px oklch(0.75 0.12 263 / 0.5);
     opacity: 1;
     transform: translate(-50%, -50%) translateY(var(--eve-flow-mid));
   }
 
   58% {
     background: var(--eve-home-blue);
+    box-shadow:
+      0 0 0 5px oklch(0.75 0.12 263 / 0.16),
+      0 0 20px oklch(0.75 0.12 263 / 0.5);
     opacity: 1;
     transform: translate(-50%, -50%) translateY(var(--eve-flow-mid));
   }
@@ -1384,12 +1392,18 @@ body {
   78%,
   92% {
     background: var(--eve-home-green);
+    box-shadow:
+      0 0 0 5px oklch(0.72 0.13 154 / 0.16),
+      0 0 20px oklch(0.72 0.13 154 / 0.5);
     opacity: 1;
     transform: translate(-50%, -50%) translateY(var(--eve-flow-end));
   }
 
   100% {
     background: var(--eve-home-green);
+    box-shadow:
+      0 0 0 5px oklch(0.72 0.13 154 / 0.16),
+      0 0 20px oklch(0.72 0.13 154 / 0.5);
     opacity: 0;
     transform: translate(-50%, -50%) translateY(var(--eve-flow-end));
   }
