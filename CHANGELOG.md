@@ -4,7 +4,7 @@ All notable changes to eve will be documented here.
 
 This project uses Git tags for releases.
 
-## Unreleased
+## 0.3.0 - 2026-07-26
 
 - Added Planned Snapshot documentation for Plan approval, MCP tools, local API
   endpoints, CLI flags, and Snapshot conformance records.
