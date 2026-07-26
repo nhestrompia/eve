@@ -118,7 +118,7 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  init [--no-agent-instructions | --instructions-only]")
 	fmt.Fprintln(w, "  instructions <install|status|diff>")
 	fmt.Fprintln(w, "  doctor")
-	fmt.Fprintln(w, "  add --title <title> --summary <summary> [--type feature] [--validation <command>]")
+	fmt.Fprintln(w, "  add --title <title> --summary <summary> [--type feature] [--validation <command>] [--plan-id <id> --plan-revision <n>]")
 	fmt.Fprintln(w, "  commit [--allow-dirty]")
 	fmt.Fprintln(w, "  run-suite [--cwd /path/to/repo] [--suite <name>] [--commit <sha>]")
 	fmt.Fprintln(w, "  dev [--addr localhost:4317]")

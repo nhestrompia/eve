@@ -3,8 +3,10 @@ package eve
 const (
 	SnapshotSchemaVersion = "0.3.0"
 	PlanSchemaVersion     = "0.1.0"
-	CLIVersion            = "0.3.0"
 )
+
+// CLIVersion is overridden by release builds from the pushed Git tag.
+var CLIVersion = "0.3.0"
 
 type Snapshot struct {
 	ID                string           `json:"id"`

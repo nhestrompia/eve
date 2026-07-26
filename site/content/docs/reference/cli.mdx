@@ -66,6 +66,7 @@ Create or update a staged snapshot draft. Use this after implementation and veri
 
 ```sh
 eve add --title <title> --summary <summary> [--type feature] [--validation <command>]
+eve add --title <title> --summary <summary> --plan-id <plan_id> --plan-revision <revision>
 ```
 
 Common flags:
@@ -86,6 +87,8 @@ Common flags:
 - `--related`
 - `--json`
 - `--allow-dirty`
+- `--plan-id`
+- `--plan-revision`
 
 ### commit
 
@@ -109,13 +112,11 @@ eve dev --addr localhost:4317
 
 ### daemon
 
-Start the same local runtime, falling back to a known initialized repository
-when the current directory is not inside one.
+Start the long-lived local runtime used by the approval app and approval queue.
 
 ```sh
 eve daemon
 eve daemon --addr 127.0.0.1:4317
-eve daemon --cwd /path/to/repo
 ```
 
 ### mcp-stdio

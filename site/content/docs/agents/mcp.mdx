@@ -39,10 +39,16 @@ eve://repos/{repoId}/snapshots/{snapshotId}
 - `list_repos`
 - `list_snapshots`
 - `get_snapshot`
+- `declare_plan`
+- `get_plan_request`
 - `pending_snapshot`
 - `complete_snapshot`
 - `skip_snapshot`
 - `checkout_snapshot`
+
+`declare_plan` persists a durable local Plan request and waits for approval when the connection survives. Agents should reuse the same `planRequestId` after timeout, cancellation, or restart. `get_plan_request` reads the current request state without waiting.
+
+Approve and reject operations are intentionally exposed through the trusted localhost API and local UI, not through MCP.
 
 `skip_snapshot` requires a non-empty reason and writes a durable `.eve/skips/`
 record. Skips resolve reviewed committed ranges without appearing in Snapshot
