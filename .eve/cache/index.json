@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 72,
-  "commitCount": 80,
-  "decisionCount": 134,
-  "riskCount": 48,
-  "artifactCount": 43,
-  "latestAt": "2026-07-26T16:25:16Z",
-  "latestSnapshot": "snap_b4e842e75fced5fb",
-  "latestTitle": "Aligned landing hero path labels",
+  "snapshotCount": 73,
+  "commitCount": 81,
+  "decisionCount": 136,
+  "riskCount": 49,
+  "artifactCount": 44,
+  "latestAt": "2026-07-26T16:32:31Z",
+  "latestSnapshot": "snap_ec1e0f2ebdc093fc",
+  "latestTitle": "Clean up landing hero active path marker",
   "branch": "feat/landing",
-  "head": "d6496f4eef5d2f405142b0243509348523991702",
+  "head": "038b37179cfe09cdc67ac31bb4396a458a35a347",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "d6496f4eef5d2f405142b0243509348523991702"
+  "latestGitState": "038b37179cfe09cdc67ac31bb4396a458a35a347"
 }
