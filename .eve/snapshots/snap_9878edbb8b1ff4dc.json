@@ -1,0 +1,71 @@
+{
+  "id": "snap_9878edbb8b1ff4dc",
+  "schemaVersion": "0.3.0",
+  "title": "Package eve 0.3.0 release artifacts",
+  "type": "release",
+  "summary": "Prepared the next npm/GitHub release by adding macOS approval app packaging to the tag workflow and marking the accumulated changes as 0.3.0 in the changelog.",
+  "userVisibleChange": "npx @nhestrompia/eve@latest install can install the current release, including the macOS approval app asset expected by the installer.",
+  "relationships": {
+    "corrects": [],
+    "supersedes": [],
+    "reverts": [],
+    "dependsOn": [],
+    "related": []
+  },
+  "risks": [
+    {
+      "title": "GitHub Actions macOS runner availability can block tagged release publication",
+      "severity": "medium"
+    }
+  ],
+  "timeline": [],
+  "decisions": [
+    {
+      "title": "Build and zip eve.app on macos-latest during tagged releases"
+    },
+    {
+      "title": "Keep npm package.json at development version locally and let the release workflow set the tag version before publish"
+    }
+  ],
+  "validation": [
+    {
+      "command": "scripts/local-test.sh",
+      "status": "passed",
+      "output": "Go tests, CLI version injection test, npm installer tests, npm package dry-run, UI tests, UI production build, macOS approval app tests, and macOS approval app Release build all passed.",
+      "provenance": "reported_by_agent"
+    }
+  ],
+  "verification": {
+    "status": "not_configured",
+    "configBlobHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+    "policyChange": {
+      "changed": false,
+      "requirementsReduced": false,
+      "previousConfigHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "currentConfigHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3"
+    },
+    "integrity": "unconfigured"
+  },
+  "planConformance": {
+    "status": "no_plan",
+    "noPlanOnFile": true,
+    "requiredChecksStatus": "incomplete",
+    "policyMatched": false,
+    "checkDefinitionsMatch": false,
+    "scopeDrift": false,
+    "changedPaths": [],
+    "outOfScopePaths": []
+  },
+  "artifacts": [],
+  "implementation": {
+    "branch": "codex/release-eve-0.3.0",
+    "gitState": "89b72e5eec6b9179154a797d14e3dfb88af7553a",
+    "baseCommit": "74e854dbd7a1c6e4dc97786dedff6e123934b6f4",
+    "commits": [
+      "89b72e5eec6b9179154a797d14e3dfb88af7553a",
+      "112fb97c7bb4316db945d849f9341bf8f485ea34"
+    ],
+    "dirty": false
+  },
+  "createdAt": "2026-07-26T17:43:08Z"
+}

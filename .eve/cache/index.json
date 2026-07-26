@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 78,
-  "commitCount": 85,
-  "decisionCount": 147,
-  "riskCount": 55,
+  "snapshotCount": 79,
+  "commitCount": 87,
+  "decisionCount": 149,
+  "riskCount": 56,
   "artifactCount": 45,
-  "latestAt": "2026-07-26T17:11:15Z",
-  "latestSnapshot": "snap_e411c1d4dbe58233",
-  "latestTitle": "Resolve landing pull request merge conflicts",
-  "branch": "feat/landing",
-  "head": "34930459d644b5927fe594236543bfbaf5569e77",
+  "latestAt": "2026-07-26T17:43:08Z",
+  "latestSnapshot": "snap_9878edbb8b1ff4dc",
+  "latestTitle": "Package eve 0.3.0 release artifacts",
+  "branch": "codex/release-eve-0.3.0",
+  "head": "89b72e5eec6b9179154a797d14e3dfb88af7553a",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "34930459d644b5927fe594236543bfbaf5569e77"
+  "latestGitState": "89b72e5eec6b9179154a797d14e3dfb88af7553a"
 }
