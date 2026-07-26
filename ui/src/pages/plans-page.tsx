@@ -8,9 +8,10 @@ import {
   FileText,
   Filter,
   GitBranch,
+  Search,
   X,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 import {
   AgentAvatar,
@@ -24,7 +25,7 @@ import { LoadingState } from "../components/loading-state";
 import { PlanApprovalDialog, currentRevision } from "../components/pending-plan-banner";
 import type { EvolutionSummary, PlanRequest, PlanRevision } from "../types";
 
-type PlanRow = {
+export type PlanRow = {
   id: string;
   title: string;
   summary: string;
@@ -32,6 +33,7 @@ type PlanRow = {
   branch: string;
   agent: string;
   state: string;
+  sourceState: string;
   statusLabel: string;
   statusTone: PillTone;
   updatedAt?: string;
@@ -49,7 +51,12 @@ const TAB_ORDER = [
   { id: "rejected", label: "Rejected" },
 ];
 
+export type PlanSort = "newest" | "oldest" | "title" | "status";
+
+const PLAN_PAGE_SIZE = 10;
+
 export function PlansPage() {
+  const [query, setQuery] = useState("");
   const plans = useQuery({
     queryKey: ["plan-requests", "all"],
     queryFn: () => api.planRequests(""),
@@ -63,25 +70,75 @@ export function PlansPage() {
       title="Plans"
       subtitle="Proposed work by AI agents, awaiting your decision."
       searchPlaceholder="Search plans..."
+      searchSlot={<PlansSearchInput value={query} onChange={setQuery} />}
     >
       {plans.isLoading || snapshots.isLoading ? <LoadingState label="Loading plans" /> : null}
       {plans.error ? <ErrorState error={plans.error} /> : null}
       {snapshots.error ? <ErrorState error={snapshots.error} /> : null}
       {snapshots.data ? (
-        <PlansContent plans={plans.data ?? []} snapshots={snapshots.data} />
+        <PlansContent plans={plans.data ?? []} snapshots={snapshots.data} query={query} />
       ) : null}
     </DashboardShell>
   );
 }
 
-function PlansContent({ plans, snapshots }: { plans: PlanRequest[]; snapshots: EvolutionSummary[] }) {
+function PlansSearchInput({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  return (
+    <label className="flex h-12 w-full max-w-[330px] items-center gap-3 rounded-lg border border-slate-200 bg-white/70 px-4 text-sm text-slate-500 shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-colors focus-within:border-indigo-300 focus-within:bg-white sm:w-[310px] lg:w-[330px]">
+      <Search className="size-5 shrink-0 text-slate-600" strokeWidth={1.8} />
+      <span className="sr-only">Search plans</span>
+      <input
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="Search plans..."
+        className="min-w-0 flex-1 bg-transparent text-slate-950 outline-none placeholder:text-slate-500"
+      />
+    </label>
+  );
+}
+
+function PlansContent({ plans, snapshots, query }: { plans: PlanRequest[]; snapshots: EvolutionSummary[]; query: string }) {
   const rows = useMemo(() => buildPlanRows(plans, snapshots), [plans, snapshots]);
   const [activeTab, setActiveTab] = useState("all");
-  const filtered = rows.filter((row) => activeTab === "all" || row.state === activeTab);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [repositoryFilter, setRepositoryFilter] = useState("all");
+  const [agentFilter, setAgentFilter] = useState("all");
+  const [sort, setSort] = useState<PlanSort>("newest");
+  const [page, setPage] = useState(1);
+  const repositories = useMemo(
+    () => Array.from(new Set(rows.map((row) => row.repository).filter(Boolean))).sort((left, right) => left.localeCompare(right)),
+    [rows],
+  );
+  const agents = useMemo(
+    () => Array.from(new Set(rows.map((row) => row.agent).filter(Boolean))).sort((left, right) => left.localeCompare(right)),
+    [rows],
+  );
+  const filtered = useMemo(
+    () => filterPlanRows(rows, { activeTab, query, repositoryFilter, agentFilter, sort }),
+    [rows, activeTab, query, repositoryFilter, agentFilter, sort],
+  );
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PLAN_PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const visibleRows = filtered.slice((currentPage - 1) * PLAN_PAGE_SIZE, currentPage * PLAN_PAGE_SIZE);
   const [selectedId, setSelectedId] = useState(filtered[0]?.id ?? rows[0]?.id ?? "");
   const selected = filtered.find((row) => row.id === selectedId) ?? filtered[0] ?? rows[0];
   const pendingPlans = plans.filter((plan) => plan.state === "pending_approval");
   const [approvalOpen, setApprovalOpen] = useState(false);
+  const hasExtraFilters = repositoryFilter !== "all" || agentFilter !== "all";
+
+  useEffect(() => {
+    setPage(1);
+  }, [activeTab, query, repositoryFilter, agentFilter, sort]);
+
+  useEffect(() => {
+    if (filtered.length === 0) {
+      setSelectedId("");
+      return;
+    }
+    if (!filtered.some((row) => row.id === selectedId)) {
+      setSelectedId(filtered[0].id);
+    }
+  }, [filtered, selectedId]);
 
   return (
     <div className="mt-11">
@@ -110,16 +167,62 @@ function PlansContent({ plans, snapshots }: { plans: PlanRequest[]; snapshots: E
             );
           })}
         </div>
-        <div className="flex flex-wrap gap-3">
-          <button type="button" className="inline-flex h-11 items-center gap-3 rounded-lg border border-slate-200 bg-white/60 px-4 font-medium text-slate-950">
+        <div className="relative flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((open) => !open)}
+            className="inline-flex h-11 items-center gap-3 rounded-lg border border-slate-200 bg-white/60 px-4 font-medium text-slate-950"
+            aria-expanded={filtersOpen}
+          >
             <Filter className="size-4" />
             Filters
+            {hasExtraFilters ? <span className="size-2 rounded-full bg-indigo-500" /> : null}
             <ChevronDown className="size-4" />
           </button>
-          <button type="button" className="inline-flex h-11 items-center gap-3 rounded-lg border border-slate-200 bg-white/60 px-4 font-medium text-slate-950">
-            Sort: Newest
-            <ChevronDown className="size-4" />
-          </button>
+          <label className="relative inline-flex h-11 items-center rounded-lg border border-slate-200 bg-white/60 font-medium text-slate-950">
+            <span className="sr-only">Sort plans</span>
+            <select
+              value={sort}
+              onChange={(event) => setSort(event.target.value as PlanSort)}
+              className="h-full appearance-none bg-transparent pl-4 pr-10 outline-none"
+              aria-label="Sort plans"
+            >
+              <option value="newest">Sort: Newest</option>
+              <option value="oldest">Sort: Oldest</option>
+              <option value="title">Sort: Title</option>
+              <option value="status">Sort: Status</option>
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-3 size-4" />
+          </label>
+          {filtersOpen ? (
+            <div className="absolute right-0 top-[3.25rem] z-10 w-72 rounded-lg border border-slate-200 bg-white p-4 shadow-lg">
+              <div className="space-y-4">
+                <PlanFilterSelect
+                  label="Repository"
+                  value={repositoryFilter}
+                  onChange={setRepositoryFilter}
+                  options={[{ value: "all", label: "All repositories" }, ...repositories.map((repository) => ({ value: repository, label: repository }))]}
+                />
+                <PlanFilterSelect
+                  label="Agent"
+                  value={agentFilter}
+                  onChange={setAgentFilter}
+                  options={[{ value: "all", label: "All agents" }, ...agents.map((agent) => ({ value: agent, label: agent }))]}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRepositoryFilter("all");
+                    setAgentFilter("all");
+                  }}
+                  disabled={!hasExtraFilters}
+                  className="h-9 w-full rounded-md border border-slate-200 text-sm font-medium text-slate-950 disabled:cursor-not-allowed disabled:text-slate-300"
+                >
+                  Reset filters
+                </button>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -134,7 +237,10 @@ function PlansContent({ plans, snapshots }: { plans: PlanRequest[]; snapshots: E
             <span className="hidden 2xl:block" />
           </div>
           <div>
-            {filtered.slice(0, 10).map((row) => (
+            {visibleRows.length === 0 ? (
+              <div className="px-5 py-10 text-sm text-slate-500 lg:px-7">No plans match these filters.</div>
+            ) : null}
+            {visibleRows.map((row) => (
               <button
                 key={row.id}
                 type="button"
@@ -166,14 +272,34 @@ function PlansContent({ plans, snapshots }: { plans: PlanRequest[]; snapshots: E
             ))}
           </div>
           <div className="flex min-h-[68px] flex-col gap-3 px-5 py-4 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between lg:px-7">
-            <span>Showing 1-{Math.min(filtered.length, 10)} of {filtered.length} plans</span>
+            <span>
+              Showing {visibleRows.length === 0 ? 0 : (currentPage - 1) * PLAN_PAGE_SIZE + 1}-{Math.min(currentPage * PLAN_PAGE_SIZE, filtered.length)} of {filtered.length} plans
+            </span>
             <div className="flex items-center gap-2">
-              <button type="button" className="grid size-9 place-items-center rounded-md border border-slate-200 bg-white text-slate-600">
+              <button
+                type="button"
+                onClick={() => setPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+                className="grid size-9 place-items-center rounded-md border border-slate-200 bg-white text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+              >
                 <ChevronLeft className="size-4" />
               </button>
-              <button type="button" className="grid size-9 place-items-center rounded-md bg-slate-100 font-semibold text-slate-950">1</button>
-              <button type="button" className="grid size-9 place-items-center rounded-md text-slate-600">2</button>
-              <button type="button" className="grid size-9 place-items-center rounded-md border border-slate-200 bg-white text-slate-600">
+              {visiblePlanPages(pageCount, currentPage).map((pageNumber) => (
+                <button
+                  key={pageNumber}
+                  type="button"
+                  onClick={() => setPage(pageNumber)}
+                  className={pageNumber === currentPage ? "grid size-9 place-items-center rounded-md bg-slate-100 font-semibold text-slate-950" : "grid size-9 place-items-center rounded-md text-slate-600"}
+                >
+                  {pageNumber}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setPage(Math.min(pageCount, currentPage + 1))}
+                disabled={currentPage === pageCount}
+                className="grid size-9 place-items-center rounded-md border border-slate-200 bg-white text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+              >
                 <ChevronRight className="size-4" />
               </button>
             </div>
@@ -189,6 +315,38 @@ function PlansContent({ plans, snapshots }: { plans: PlanRequest[]; snapshots: E
 
       <PlanApprovalDialog plans={pendingPlans} open={approvalOpen} onOpenChange={setApprovalOpen} />
     </div>
+  );
+}
+
+function PlanFilterSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: Array<{ value: string; label: string }>;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="block text-sm font-medium text-slate-950">
+      {label}
+      <span className="relative mt-2 block">
+        <select
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="h-10 w-full appearance-none rounded-md border border-slate-200 bg-white pl-3 pr-9 text-sm outline-none"
+        >
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <ChevronDown className="pointer-events-none absolute right-3 top-3 size-4" />
+      </span>
+    </label>
   );
 }
 
@@ -291,6 +449,7 @@ function buildPlanRows(plans: PlanRequest[], snapshots: EvolutionSummary[]): Pla
       branch: plan.branch || "main",
       agent: "Codex",
       state,
+      sourceState: plan.state,
       statusLabel: planStatusLabel(state),
       statusTone: planStatusTone(state),
       updatedAt: revision?.createdAt,
@@ -312,11 +471,71 @@ function buildPlanRows(plans: PlanRequest[], snapshots: EvolutionSummary[]): Pla
     branch: "main",
     agent: snapshot.sessionProviders.includes("claude") ? "Claude" : "Codex",
     state: index % 7 === 0 ? "rejected" : "completed",
+    sourceState: index % 7 === 0 ? "rejected" : "fulfilled",
     statusLabel: index % 7 === 0 ? "Rejected" : "Completed",
     statusTone: index % 7 === 0 ? "rejected" : "verified",
     updatedAt: snapshot.updatedAt || snapshot.createdAt,
     files: ["Recorded in snapshot evidence", "Implementation metadata", "Verification notes"],
   }));
+}
+
+export function filterPlanRows(
+  rows: PlanRow[],
+  filters: {
+    activeTab: string;
+    query: string;
+    repositoryFilter: string;
+    agentFilter: string;
+    sort: PlanSort;
+  },
+) {
+  const query = filters.query.trim().toLowerCase();
+  return rows
+    .filter((row) => {
+      if (filters.activeTab !== "all" && row.state !== filters.activeTab) return false;
+      if (filters.repositoryFilter !== "all" && row.repository !== filters.repositoryFilter) return false;
+      if (filters.agentFilter !== "all" && row.agent !== filters.agentFilter) return false;
+      if (!query) return true;
+      return planSearchText(row).includes(query);
+    })
+    .sort((left, right) => comparePlanRows(left, right, filters.sort));
+}
+
+function planSearchText(row: PlanRow) {
+  const approvedAlias = row.state === "ready" || row.sourceState === "locked" ? "approved" : "";
+  return [
+    row.id,
+    row.title,
+    row.summary,
+    row.repository,
+    row.branch,
+    row.agent,
+    row.state,
+    row.sourceState,
+    row.statusLabel,
+    approvedAlias,
+    ...row.files,
+    row.revision?.acceptanceCriteria,
+    row.revision?.goal,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function comparePlanRows(left: PlanRow, right: PlanRow, sort: PlanSort) {
+  if (sort === "title") return left.title.localeCompare(right.title);
+  if (sort === "status") return left.statusLabel.localeCompare(right.statusLabel) || left.title.localeCompare(right.title);
+  const leftTime = new Date(left.updatedAt || "").getTime() || 0;
+  const rightTime = new Date(right.updatedAt || "").getTime() || 0;
+  return sort === "oldest" ? leftTime - rightTime : rightTime - leftTime;
+}
+
+function visiblePlanPages(pageCount: number, currentPage: number) {
+  const pages = new Set([1, pageCount, currentPage, currentPage - 1, currentPage + 1]);
+  return Array.from(pages)
+    .filter((page) => page >= 1 && page <= pageCount)
+    .sort((left, right) => left - right);
 }
 
 function normalizePlanState(state: string) {
