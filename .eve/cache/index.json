@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 71,
-  "commitCount": 79,
-  "decisionCount": 132,
+  "snapshotCount": 72,
+  "commitCount": 80,
+  "decisionCount": 134,
   "riskCount": 48,
-  "artifactCount": 42,
-  "latestAt": "2026-07-26T16:20:45Z",
-  "latestSnapshot": "snap_90dfddf22476a728",
-  "latestTitle": "Compact landing hero flow cards",
+  "artifactCount": 43,
+  "latestAt": "2026-07-26T16:25:16Z",
+  "latestSnapshot": "snap_b4e842e75fced5fb",
+  "latestTitle": "Aligned landing hero path labels",
   "branch": "feat/landing",
-  "head": "2f9c62c3b45b70dc6f58ce254098ab182b054ec4",
+  "head": "d6496f4eef5d2f405142b0243509348523991702",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "2f9c62c3b45b70dc6f58ce254098ab182b054ec4"
+  "latestGitState": "d6496f4eef5d2f405142b0243509348523991702"
 }
