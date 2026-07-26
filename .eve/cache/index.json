@@ -1,17 +1,17 @@
 {
   "id": "eve",
-  "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 65,
-  "commitCount": 71,
-  "decisionCount": 120,
+  "root": "/Users/nhestrompia/.codex/worktrees/a4ae/eve",
+  "snapshotCount": 66,
+  "commitCount": 72,
+  "decisionCount": 122,
   "riskCount": 44,
   "artifactCount": 35,
-  "latestAt": "2026-07-25T21:14:32Z",
-  "latestSnapshot": "snap_fc40c1ae49afe99e",
-  "latestTitle": "Collapse duplicate approval queue entries",
-  "branch": "feat/plan-shapshots",
-  "head": "a00a68311909427a50fd23566edde0d60bd1532a",
+  "latestAt": "2026-07-26T01:44:05Z",
+  "latestSnapshot": "snap_cccb5ede0fdaf267",
+  "latestTitle": "Fix stale plan approvals across worktrees",
+  "branch": "codex/remove-stale-plan-approvals",
+  "head": "d218255d60bf3c4585e6839c141e5271afa9124c",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "a00a68311909427a50fd23566edde0d60bd1532a"
+  "latestGitState": "d218255d60bf3c4585e6839c141e5271afa9124c"
 }
