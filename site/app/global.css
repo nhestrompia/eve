@@ -516,7 +516,7 @@ body {
   position: absolute;
   top: 190px;
   bottom: 128px;
-  left: 296px;
+  left: 286px;
   width: 1px;
   background: oklch(0.35 0.026 252 / 0.28);
   z-index: 4;
@@ -789,7 +789,7 @@ body {
 
 .eve-flow-note {
   position: absolute;
-  right: 2px;
+  left: 322px;
   z-index: 3;
   width: 116px;
   color: color-mix(in oklch, var(--eve-home-blue) 70%, var(--eve-home-muted));
@@ -803,10 +803,10 @@ body {
 .eve-flow-note::before {
   position: absolute;
   top: 0.78em;
-  right: calc(100% + 10px);
-  width: 42px;
+  left: -34px;
+  width: 28px;
   height: 1px;
-  background: linear-gradient(90deg, transparent, currentColor);
+  background: linear-gradient(90deg, currentColor, transparent);
   content: "";
   opacity: 0.52;
 }
@@ -814,7 +814,7 @@ body {
 .eve-flow-note::after {
   position: absolute;
   top: calc(0.78em - 2px);
-  right: calc(100% + 56px);
+  left: -38px;
   width: 5px;
   height: 5px;
   border: 0;
@@ -825,16 +825,16 @@ body {
 }
 
 .eve-flow-note[data-note='why'] {
-  top: 122px;
+  top: 181px;
 }
 
 .eve-flow-note[data-note='evidence'] {
-  top: 320px;
+  top: 355px;
   animation-name: eve-note-snapshot-active;
 }
 
 .eve-flow-note[data-note='git'] {
-  top: 532px;
+  top: 529px;
   color: color-mix(in oklch, var(--eve-home-green) 64%, var(--eve-home-muted));
   animation-name: eve-note-commit-active;
 }
