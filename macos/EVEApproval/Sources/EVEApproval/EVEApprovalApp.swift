@@ -481,6 +481,15 @@ struct PlanReviewView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityLabel(message)
                 Spacer(minLength: 0)
+                if request.canRemoveFromQueue {
+                    Button(role: .destructive) {
+                        Task { await store.remove(request) }
+                    } label: {
+                        Label(request.isStale ? "Remove stale plan" : "Remove plan", systemImage: "trash")
+                    }
+                    .keyboardShortcut(.delete, modifiers: [.command])
+                    .buttonStyle(.borderedProminent)
+                }
             } else if rejecting {
                 Button("Cancel") {
                     voiceFeedback.cancel()

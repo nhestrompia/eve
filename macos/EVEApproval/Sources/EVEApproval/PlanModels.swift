@@ -57,6 +57,10 @@ struct PlanRequest: Codable, Identifiable, Hashable {
         isPendingApproval && !isStale
     }
 
+    var canRemoveFromQueue: Bool {
+        isStale || state == "rejected" || state == "superseded"
+    }
+
     var statusTitle: String {
         if isStale {
             return "Stale"

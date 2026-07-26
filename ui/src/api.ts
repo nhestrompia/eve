@@ -330,6 +330,10 @@ export const api = {
         feedback
       })
     }),
+  removePlanRequest: (plan: PlanRequest) =>
+    request<PlanRequest>(`/api/plan-requests/${encodeURIComponent(plan.planRequestId)}`, {
+      method: 'DELETE'
+    }),
   pendingSnapshot: (repo: string) => request<PendingSnapshotResponse>(`/api/repos/${encodeURIComponent(repo)}/pending`),
   repositories: async () => (await repositoriesRaw()).map(adaptRepo),
   repository,

@@ -10,14 +10,15 @@ import {
   proposalValidationMessage,
 } from "./pending-plan-banner";
 
-function plan(id: string, repository: string, goal: string): PlanRequest {
+function plan(id: string, repository: string, goal: string, state = "pending_approval"): PlanRequest {
   return {
     planRequestId: id,
     repository,
     repositoryRoot: `/tmp/${repository}`,
     branch: "main",
-    state: "pending_approval",
+    state,
     currentRevision: 1,
+    staleReasons: state === "stale" ? ["repository HEAD changed"] : undefined,
     availableSuites: ["fast"],
     revisions: [
       {
@@ -68,6 +69,15 @@ describe("PendingPlanBanner", () => {
 
   it("renders nothing for an empty queue", () => {
     expect(renderWithQueryClient(<PendingPlanBanner plans={[]} />)).toBe("");
+  });
+
+  it("keeps stale plans in the review queue so they can be removed", () => {
+    const html = renderWithQueryClient(
+      <PendingPlanBanner plans={[plan("planreq_stale", "eve", "Old plan", "stale")]} />,
+    );
+
+    expect(html).toContain("1 plan is waiting for you");
+    expect(html).toContain("Old plan");
   });
 
   it("builds edited approval proposals from the current revision", () => {

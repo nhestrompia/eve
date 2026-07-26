@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -419,6 +420,99 @@ func TestPlanRejectionAPIReturnsConflictForStaleRepositoryContext(t *testing.T) 
 	stale, err := repo.loadPlanRequest(request.PlanRequestID)
 	if err != nil || stale.State != "stale" || !containsString(stale.StaleReasons, "working tree changed") {
 		t.Fatalf("stale request = %#v, %v", stale, err)
+	}
+}
+
+func TestPlanApprovalAPIRemovesStaleRequests(t *testing.T) {
+	repo := setupPlanTestRepo(t)
+	request, err := repo.createOrResumePlanRequest(context.Background(), testPlanInput("planreq_removestale"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(repo.Root, "product.txt"), []byte("changed before removal\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repo.refreshPlanRequestState(context.Background(), request.PlanRequestID); err != nil {
+		t.Fatal(err)
+	}
+	handler := newRuntimeServer(repo, "").routes()
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, httptest.NewRequest(
+		http.MethodDelete,
+		"/api/plan-requests/"+request.PlanRequestID,
+		nil,
+	))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("delete stale = %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if _, err := repo.loadPlanRequest(request.PlanRequestID); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("stale request still exists, err = %v", err)
+	}
+}
+
+func TestPlanApprovalAPIRejectsRemovingPendingRequests(t *testing.T) {
+	repo := setupPlanTestRepo(t)
+	request, err := repo.createOrResumePlanRequest(context.Background(), testPlanInput("planreq_keepalive"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := newRuntimeServer(repo, "").routes()
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, httptest.NewRequest(
+		http.MethodDelete,
+		"/api/plan-requests/"+request.PlanRequestID,
+		nil,
+	))
+	if recorder.Code != http.StatusConflict {
+		t.Fatalf("delete pending = %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if _, err := repo.loadPlanRequest(request.PlanRequestID); err != nil {
+		t.Fatalf("pending request was removed: %v", err)
+	}
+}
+
+func TestPlanApprovalAPIDiscoversRequestsFromLinkedWorktrees(t *testing.T) {
+	repo := setupPlanTestRepo(t)
+	branch := gitOutputForTest(t, repo.Root, "branch", "--show-current")
+	gitRun(t, repo.Root, "branch", "-m", branch, "main")
+	worktreeRoot := filepath.Join(t.TempDir(), "linked")
+	gitRun(t, repo.Root, "worktree", "add", "-b", "feature-plan", worktreeRoot)
+	t.Cleanup(func() { gitRun(t, repo.Root, "worktree", "remove", "--force", worktreeRoot) })
+
+	worktreeRepo := repoFromRoot(worktreeRoot)
+	request, err := worktreeRepo.createOrResumePlanRequest(context.Background(), testPlanInput("planreq_worktree1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	handler := newRuntimeServer(repo, "").routes()
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/api/plan-requests?status=pending_approval", nil))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("worktree queue = %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), request.PlanRequestID) ||
+		!strings.Contains(recorder.Body.String(), worktreeRoot) {
+		t.Fatalf("worktree request missing from queue: %s", recorder.Body.String())
+	}
+}
+
+func TestParseGitWorktreeRoots(t *testing.T) {
+	roots := parseGitWorktreeRoots("worktree /repo/main\nHEAD abc\n\nworktree /repo/linked\nbranch refs/heads/feature\n")
+	if len(roots) != 2 || roots[0] != filepath.Clean("/repo/main") || roots[1] != filepath.Clean("/repo/linked") {
+		t.Fatalf("roots = %#v", roots)
+	}
+}
+
+func TestPlanRequestReviewStatusMatchesPendingAndStaleOnly(t *testing.T) {
+	if !planRequestMatchesStatus(&planRequest{State: "pending_approval"}, "review") {
+		t.Fatal("review status should include pending approvals")
+	}
+	if !planRequestMatchesStatus(&planRequest{State: "stale"}, "review") {
+		t.Fatal("review status should include stale requests")
+	}
+	if planRequestMatchesStatus(&planRequest{State: "locked"}, "review") {
+		t.Fatal("review status should exclude locked requests")
 	}
 }
 

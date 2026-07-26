@@ -94,6 +94,20 @@ final class PlanQueueStore: ObservableObject {
         }
     }
 
+    func remove(_ request: PlanRequest) async {
+        do {
+            _ = try await client.remove(request)
+            notice = QueueNotice(
+                requestID: request.id,
+                state: "removed",
+                message: "Plan removed from the review queue."
+            )
+            await refresh()
+        } catch {
+            state = .offline(error.localizedDescription)
+        }
+    }
+
     func noticeMessage(for request: PlanRequest) -> String? {
         guard request.canApprove else {
             return nil

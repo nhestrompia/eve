@@ -101,6 +101,14 @@ func (repo repository) planRequestPath(id string) (string, error) {
 	return filepath.Join(dir, id+".json"), nil
 }
 
+func (repo repository) deletePlanRequest(id string) error {
+	path, err := repo.planRequestPath(id)
+	if err != nil {
+		return err
+	}
+	return os.Remove(path)
+}
+
 func (repo repository) planLockPath() (string, error) {
 	return repo.verificationPrivatePath("plan-requests.lock")
 }
@@ -910,6 +918,27 @@ func (repo repository) fulfillPlanRequest(ctx context.Context, request *planRequ
 		current.UpdatedAt = nowUTC()
 		return repo.savePlanRequest(current)
 	})
+}
+
+func (repo repository) removePlanRequest(ctx context.Context, id string) (*planRequest, error) {
+	var removed *planRequest
+	err := repo.withPlanLock(ctx, func() error {
+		request, err := repo.loadPlanRequest(id)
+		if err != nil {
+			return err
+		}
+		switch request.State {
+		case "stale", "rejected", "superseded":
+		default:
+			return fmt.Errorf("plan request is %s and cannot be removed", request.State)
+		}
+		if err := repo.deletePlanRequest(id); err != nil {
+			return err
+		}
+		removed = request
+		return nil
+	})
+	return removed, err
 }
 
 func noPlanConformance() *eve.PlanConformance {

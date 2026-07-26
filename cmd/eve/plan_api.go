@@ -47,6 +47,13 @@ func (server runtimeServer) handlePlanRequestRoutes(w http.ResponseWriter, r *ht
 			return
 		}
 		writeJSON(w, http.StatusOK, refreshed)
+	case len(parts) == 1 && r.Method == http.MethodDelete:
+		removed, removeErr := repo.removePlanRequest(r.Context(), request.PlanRequestID)
+		if removeErr != nil {
+			writePlanMutationError(w, removeErr)
+			return
+		}
+		writeJSON(w, http.StatusOK, removed)
 	case len(parts) == 2 && parts[1] == "approve" && r.Method == http.MethodPost:
 		var input struct {
 			ExpectedRevision int           `json:"expectedRevision"`
@@ -96,7 +103,7 @@ func writePlanMutationError(w http.ResponseWriter, err error) {
 
 func (server runtimeServer) planRequests(ctx context.Context, status string) ([]*planRequest, error) {
 	result := make([]*planRequest, 0)
-	for _, repo := range server.repositories() {
+	for _, repo := range server.planRequestRepositories() {
 		requests, err := repo.listPlanRequests()
 		if err != nil {
 			continue
@@ -107,7 +114,7 @@ func (server runtimeServer) planRequests(ctx context.Context, status string) ([]
 					request = refreshed
 				}
 			}
-			if status == "" || request.State == status {
+			if planRequestMatchesStatus(request, status) {
 				result = append(result, request)
 			}
 		}
@@ -115,14 +122,45 @@ func (server runtimeServer) planRequests(ctx context.Context, status string) ([]
 	return result, nil
 }
 
+func planRequestMatchesStatus(request *planRequest, status string) bool {
+	switch status {
+	case "":
+		return true
+	case "review":
+		return request.State == "pending_approval" || request.State == "stale"
+	default:
+		return request.State == status
+	}
+}
+
 func (server runtimeServer) findPlanRequest(id string) (repository, *planRequest, error) {
-	for _, repo := range server.repositories() {
+	for _, repo := range server.planRequestRepositories() {
 		request, err := repo.loadPlanRequest(id)
 		if err == nil {
 			return repo, request, nil
 		}
 	}
 	return repository{}, nil, fmt.Errorf("plan request %s not found", id)
+}
+
+func (server runtimeServer) planRequestRepositories() []repository {
+	repositories := make([]repository, 0)
+	seen := map[string]bool{}
+	add := func(repo repository) {
+		root := cleanRegistryRoot(repo.Root)
+		if root == "" || seen[root] {
+			return
+		}
+		seen[root] = true
+		repositories = append(repositories, repo)
+	}
+	for _, repo := range server.repositories() {
+		add(repo)
+		for _, worktree := range repo.gitWorktreeRepositories() {
+			add(worktree)
+		}
+	}
+	return repositories
 }
 
 func (server runtimeServer) handlePlanRequestEvents(w http.ResponseWriter, r *http.Request) {

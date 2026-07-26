@@ -78,10 +78,13 @@ final class PlanModelsTests: XCTestCase {
 
         XCTAssertEqual(stale.statusTitle, "Stale")
         XCTAssertEqual(stale.terminalActionMessage, "Approval is disabled because the repository changed. Ask the agent to declare a fresh plan.")
+        XCTAssertTrue(stale.canRemoveFromQueue)
         XCTAssertEqual(locked.statusTitle, "Locked")
         XCTAssertEqual(locked.terminalActionMessage, "This plan is locked. The agent can continue with implementation.")
+        XCTAssertFalse(locked.canRemoveFromQueue)
         XCTAssertEqual(pending.statusTitle, "Awaiting approval")
         XCTAssertNil(pending.terminalActionMessage)
+        XCTAssertFalse(pending.canRemoveFromQueue)
     }
 
     func testFreshPendingRequestReplacesStaleSelection() throws {
