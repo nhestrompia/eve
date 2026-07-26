@@ -1,17 +1,17 @@
 {
   "id": "eve",
-  "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 66,
-  "commitCount": 72,
-  "decisionCount": 123,
-  "riskCount": 46,
+  "root": "/Users/nhestrompia/.codex/worktrees/8735/eve",
+  "snapshotCount": 68,
+  "commitCount": 74,
+  "decisionCount": 127,
+  "riskCount": 48,
   "artifactCount": 35,
-  "latestAt": "2026-07-25T21:40:07Z",
-  "latestSnapshot": "snap_b6fff027ac9168be",
-  "latestTitle": "Allow removing stale plan requests",
-  "branch": "codex/remove-stale-plan",
-  "head": "599727134b694474657d1f3582deb09fe36ee9a4",
+  "latestAt": "2026-07-26T18:10:06Z",
+  "latestSnapshot": "snap_bd63e42135c65369",
+  "latestTitle": "Make eve launch and stop the local runtime",
+  "branch": "codex/docs-local-test-version",
+  "head": "e95a30b0dbb612c2a4c1997effa009c21dc33490",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "599727134b694474657d1f3582deb09fe36ee9a4"
+  "latestGitState": "e95a30b0dbb612c2a4c1997effa009c21dc33490"
 }
