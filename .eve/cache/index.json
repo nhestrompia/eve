@@ -1,17 +1,17 @@
 {
   "id": "eve",
-  "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 78,
-  "commitCount": 85,
-  "decisionCount": 147,
-  "riskCount": 55,
+  "root": "/Users/nhestrompia/.codex/worktrees/d206/eve",
+  "snapshotCount": 79,
+  "commitCount": 87,
+  "decisionCount": 149,
+  "riskCount": 56,
   "artifactCount": 45,
-  "latestAt": "2026-07-26T17:11:15Z",
-  "latestSnapshot": "snap_e411c1d4dbe58233",
-  "latestTitle": "Resolve landing pull request merge conflicts",
-  "branch": "feat/landing",
-  "head": "34930459d644b5927fe594236543bfbaf5569e77",
+  "latestAt": "2026-07-26T18:28:12Z",
+  "latestSnapshot": "snap_2adfad428981c460",
+  "latestTitle": "Prepare eve 0.4.0 release",
+  "branch": "codex/release-script-0.4.0",
+  "head": "6bbd4d009134d06fbba646e24830512cafaad373",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "34930459d644b5927fe594236543bfbaf5569e77"
+  "latestGitState": "6bbd4d009134d06fbba646e24830512cafaad373"
 }
