@@ -330,6 +330,14 @@ export const api = {
         feedback
       })
     }),
+  dismissPlanRequest: (plan: PlanRequest) =>
+    request<PlanRequest>(`/api/plan-requests/${encodeURIComponent(plan.planRequestId)}/dismiss`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        expectedRevision: plan.currentRevision
+      })
+    }),
   pendingSnapshot: (repo: string) => request<PendingSnapshotResponse>(`/api/repos/${encodeURIComponent(repo)}/pending`),
   repositories: async () => (await repositoriesRaw()).map(adaptRepo),
   repository,
