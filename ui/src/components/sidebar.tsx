@@ -1,4 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import type { LucideIcon } from "lucide-react";
 import {
   ClipboardList,
   Database,
@@ -6,9 +7,7 @@ import {
   Layers3,
   Search,
   Settings,
-  UserRound,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 
 type NavigationItem = {
   label: string;
@@ -32,8 +31,16 @@ export function Sidebar({ onSearch }: { onSearch: (query?: string) => void }) {
   return (
     <aside className="z-30 border-b border-slate-200/80 bg-[oklch(0.986_0.003_247)] md:fixed md:inset-y-0 md:left-0 md:flex md:w-[216px] md:flex-col md:border-b-0 md:border-r">
       <div className="flex min-h-20 items-center justify-between gap-4 px-6 md:min-h-[118px] md:px-7">
-        <Link to="/" aria-label="Go to overview" className="block transition-opacity hover:opacity-75">
-          <img src="/eve.svg" alt="eve" className="eve-logo h-8 w-[74px] object-contain object-left" />
+        <Link
+          to="/"
+          aria-label="Go to overview"
+          className="block transition-opacity hover:opacity-75"
+        >
+          <img
+            src="/eve.svg"
+            alt="eve"
+            className="eve-logo h-8 w-[74px] object-contain object-left"
+          />
         </Link>
         <button
           type="button"
@@ -74,24 +81,16 @@ export function Sidebar({ onSearch }: { onSearch: (query?: string) => void }) {
 
       <div className="hidden md:mt-auto md:block">
         <div className="px-4 pb-5">
-          <Link to="/config" className="flex h-12 items-center gap-4 rounded-lg px-4 text-[15px] font-medium transition-colors hover:bg-slate-100">
+          <Link
+            to="/config"
+            className="flex h-12 items-center gap-4 rounded-lg px-4 text-[15px] font-medium transition-colors hover:bg-slate-100"
+          >
             <Settings className="size-5 text-slate-700" strokeWidth={1.8} />
             <span>Settings</span>
           </Link>
         </div>
 
         <div className="mx-7 border-t border-slate-200" />
-
-        <div className="flex min-h-[78px] items-center gap-3 px-7">
-          <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-slate-100 text-[15px] font-semibold text-slate-950">
-            U
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-[15px] font-medium leading-5">Umut</span>
-            <span className="block truncate text-xs leading-5 text-slate-500">Local workspace</span>
-          </span>
-          <UserRound className="size-4 text-slate-500" strokeWidth={1.7} />
-        </div>
       </div>
     </aside>
   );
