@@ -1,5 +1,9 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { Fragment } from 'react';
+import { CopyCommand } from './copy-command';
+
+const installCommand = 'npx --yes @nhestrompia/eve@latest install';
 
 const comparisonRows = [
   ['What changed in files', 'Yes', 'Why it changed and what it means'],
@@ -44,7 +48,7 @@ export default function HomePage() {
             <Link href="/docs">Docs</Link>
             <a href="https://github.com/nhestrompia/eve">GitHub</a>
             <Link className="eve-nav-cta" href="/docs/guides/get-started">
-              Get started <span aria-hidden="true">-&gt;</span>
+              Get started <span className="eve-cta-arrow" aria-hidden="true" />
             </Link>
           </div>
         </nav>
@@ -60,12 +64,7 @@ export default function HomePage() {
               which Git state implemented it. Every snapshot is committed to your repository under{' '}
               <code>.eve/</code>.
             </p>
-            <div className="eve-command" aria-label="Install command">
-              <code>
-                <span>$</span> npx --yes @nhestrompia/eve@latest install
-              </code>
-              <span aria-hidden="true">copy</span>
-            </div>
+            <CopyCommand command={installCommand} />
             <div className="eve-actions">
               <a href="https://github.com/nhestrompia/eve">
                 View on GitHub <span aria-hidden="true">-&gt;</span>
@@ -81,55 +80,68 @@ export default function HomePage() {
               EVE links snapshots, plans, repository state, and Git commits under .eve.
             </p>
             <div className="eve-visual-grid" aria-hidden="true">
-              <div className="eve-flow-lines">
-                <span data-line="snapshot" />
-                <span data-line="evidence" />
-                <span data-line="git" />
-              </div>
+              <div className="eve-flow-stage">
+                <div className="eve-flow-path">
+                  <span data-path="plan-snapshot" />
+                  <span data-path="snapshot-commit" />
+                  <i data-dot="plan" />
+                  <i data-dot="snapshot" />
+                  <i data-dot="commit" />
+                  <b />
+                </div>
 
-              <div className="eve-stack">
-                <div className="eve-stack-card eve-snapshot-card">
-                  <div className="eve-card-title">
-                    <span className="eve-card-icon" data-icon="snapshot" />
-                    <div>
-                      <span>Snapshot</span>
-                      <code>abc123def</code>
-                    </div>
+                <article className="eve-flow-node eve-flow-node-plan">
+                  <span className="eve-flow-icon" data-icon="plan" />
+                  <div className="eve-flow-node-copy">
+                    <span>Plan</span>
+                    <strong>Release notes generated</strong>
+                    <p>decision, scope, checks</p>
                   </div>
-                  <p>Users can sign in with GitHub</p>
-                  <div className="eve-card-meta">
-                    <span>codex</span>
-                    <span>2h ago</span>
+                  <div className="eve-flow-meta">
+                    <span className="eve-codex-avatar" />
+                    <span>Codex</span>
+                    <span>Just now</span>
                   </div>
+                </article>
+
+                <article className="eve-flow-node eve-flow-node-snapshot">
+                  <span className="eve-flow-icon" data-icon="snapshot" />
+                  <div className="eve-flow-node-copy">
+                    <span>Snapshot</span>
+                    <strong>Release notes generated</strong>
+                    <p>validation, evidence, links</p>
+                    <code>snap_124.json</code>
+                  </div>
+                </article>
+
+                <article className="eve-flow-node eve-flow-node-commit">
+                  <span className="eve-flow-icon eve-git-logo">
+                    <svg viewBox="0 0 92 92" focusable="false">
+                      <rect x="13" y="13" width="66" height="66" rx="8" />
+                      <path d="M35 28l29 29M42 35a7 7 0 11-14 0 7 7 0 0114 0zm22 22a7 7 0 11-14 0 7 7 0 0114 0zM36 41v21a7 7 0 107 0V46" />
+                    </svg>
+                  </span>
+                  <div className="eve-flow-node-copy">
+                    <span>Commit</span>
+                    <strong>Committed to Git</strong>
+                    <p>.eve/snapshots/snap_124.json</p>
+                  </div>
+                  <div className="eve-flow-meta">
+                    <span>main</span>
+                    <span>1m ago</span>
+                  </div>
+                </article>
+
+                <div className="eve-flow-note" data-note="why">
+                  <span>What changed and why</span>
                 </div>
-                <div className="eve-stack-card eve-plan-card">
-                  <span className="eve-card-icon" data-icon="plan" />
-                  <span>Plans</span>
+                <div className="eve-flow-note" data-note="evidence">
+                  <span>Evidence and verification</span>
                 </div>
-                <div className="eve-stack-card eve-repo-card">
-                  <span className="eve-card-icon" data-icon="repo" />
-                  <span>Repository</span>
-                </div>
-                <div className="eve-stack-card eve-git-card">
-                  <span className="eve-git-mark">git</span>
-                  <span className="eve-git-line" />
+                <div className="eve-flow-note" data-note="git">
+                  <span>Linked to Git state</span>
                 </div>
               </div>
-
-              <div className="eve-live-label">
-                <span>Lives in</span>
-                <code>.eve/</code>
-              </div>
-
-              <div className="eve-visual-notes">
-                <span>What changed and why</span>
-                <span>Evidence and verification</span>
-                <span>Linked to Git state</span>
-              </div>
-
-              <span className="eve-flow-dot" data-dot="plan" />
-              <span className="eve-flow-dot" data-dot="snapshot" />
-              <span className="eve-flow-dot" data-dot="evidence" />
             </div>
           </aside>
         </section>
@@ -159,14 +171,17 @@ export default function HomePage() {
           <h2>From plan to verifiable change</h2>
           <div className="eve-step-list">
             {steps.map((step, index) => (
-              <article className="eve-step" key={step.title}>
-                <div className="eve-step-icon" data-icon={step.icon} aria-hidden="true" />
-                <div>
-                  <span>{index + 1}</span>
-                  <h3>{step.title}</h3>
-                  <p>{step.text}</p>
-                </div>
-              </article>
+              <Fragment key={step.title}>
+                <article className="eve-step">
+                  <div className="eve-step-icon" data-icon={step.icon} aria-hidden="true" />
+                  <div>
+                    <span>{index + 1}</span>
+                    <h3>{step.title}</h3>
+                    <p>{step.text}</p>
+                  </div>
+                </article>
+                {index < steps.length - 1 ? <div className="eve-step-connector" aria-hidden="true" /> : null}
+              </Fragment>
             ))}
           </div>
         </section>
@@ -209,7 +224,7 @@ export default function HomePage() {
           </h2>
           <div className="eve-final-actions">
             <Link className="eve-final-primary" href="/docs/guides/get-started">
-              Get started <span aria-hidden="true">-&gt;</span>
+              Get started <span className="eve-cta-arrow" aria-hidden="true" />
             </Link>
             <a href="https://github.com/nhestrompia/eve">
               View on GitHub <span aria-hidden="true">-&gt;</span>
