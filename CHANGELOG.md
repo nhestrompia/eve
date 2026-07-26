@@ -6,6 +6,12 @@ This project uses Git tags for releases.
 
 ## Unreleased
 
+- Added Planned Snapshot documentation for Plan approval, MCP tools, local API
+  endpoints, CLI flags, and Snapshot conformance records.
+- Added `scripts/local-test.sh` for running repository verification locally
+  without documentation-site checks.
+- Fixed release builds so tagged deployments inject the tag version into the
+  `eve version` output used by npm installer verification.
 - Added the `npx @nhestrompia/eve@latest install` flow for checksummed,
   platform-specific global CLI installation and MCP setup.
 - Added automatic `AGENTS.md` and `CLAUDE.md` instruction bootstrap, managed

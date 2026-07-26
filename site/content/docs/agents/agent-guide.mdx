@@ -16,11 +16,15 @@ stale, modified, or malformed guidance.
 ## Agent workflow
 
 1. Inspect the repository and recent snapshots.
-2. Implement the requested product change.
-3. Run relevant verification.
-4. Commit implementation changes to Git when the repository workflow calls for it.
-5. Complete an eve snapshot with the title, type, summary, validation, artifacts, and relationships.
-6. Commit the generated `.eve/` record to Git.
+2. For non-trivial product work, call `declare_plan` with a stable `planRequestId`.
+3. Wait for a locked Plan revision before editing code.
+4. Implement the requested product change.
+5. Run relevant verification.
+6. Commit implementation changes to Git when the repository workflow calls for it.
+7. Complete an eve snapshot with the locked Plan reference, title, type, summary, validation, artifacts, and relationships.
+8. Commit the generated `.eve/` record to Git.
+
+If `declare_plan` times out, is cancelled, or the agent restarts, recover with `get_plan_request` or call `declare_plan` again with the same `planRequestId`.
 
 ## What agents should write
 
@@ -46,7 +50,7 @@ Avoid:
 
 When the MCP server is available, prefer the structured MCP tools over shell-only flows. MCP lets an agent complete snapshots without relying on fragile text parsing.
 
-Call `complete_snapshot` after a coherent, completed unit of product work. If
+Call `declare_plan` before snapshot-worthy implementation and wait for approval. Call `complete_snapshot` after a coherent, completed unit of product work. If
 the work is trivial or incomplete and should not enter product history, call
 `skip_snapshot` with a short reason.
 

@@ -61,6 +61,7 @@ Create or update a staged snapshot draft. Use this after implementation and veri
 
 ```sh
 eve add --title <title> --summary <summary> [--type feature] [--validation <command>]
+eve add --title <title> --summary <summary> --plan-id <plan_id> --plan-revision <revision>
 ```
 
 Common flags:
@@ -81,6 +82,8 @@ Common flags:
 - `--related`
 - `--json`
 - `--allow-dirty`
+- `--plan-id`
+- `--plan-revision`
 
 ### commit
 
@@ -98,6 +101,15 @@ Start the local runtime, product UI, local API, and HTTP MCP endpoint.
 ```sh
 eve dev
 eve dev --addr localhost:4317
+```
+
+### daemon
+
+Start the long-lived local runtime used by the approval app and approval queue.
+
+```sh
+eve daemon
+eve daemon --addr 127.0.0.1:4317
 ```
 
 ### mcp-stdio

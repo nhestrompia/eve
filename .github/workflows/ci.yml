@@ -36,6 +36,11 @@ jobs:
       - name: Test Go
         run: go test ./...
 
+      - name: Test release version injection
+        env:
+          EVE_EXPECT_CLI_VERSION: 9.9.9-ci
+        run: go test -run TestRunVersion ./cmd/eve -ldflags="-X github.com/nhestrompia/eve.CLIVersion=9.9.9-ci"
+
       - name: Test npm installer
         run: |
           npm --prefix npm/eve test

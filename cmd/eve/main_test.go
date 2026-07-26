@@ -43,6 +43,13 @@ func TestRunVersion(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("exit code = %d, want 0; stderr = %s", code, stderr.String())
 	}
+	wantVersion := os.Getenv("EVE_EXPECT_CLI_VERSION")
+	if wantVersion == "" {
+		wantVersion = eve.CLIVersion
+	}
+	if !strings.Contains(stdout.String(), "eve "+wantVersion) {
+		t.Fatalf("stdout = %q, want CLI version %s", stdout.String(), wantVersion)
+	}
 	if !strings.Contains(stdout.String(), "snapshot schema "+eve.SnapshotSchemaVersion) {
 		t.Fatalf("stdout = %q, want snapshot schema", stdout.String())
 	}
