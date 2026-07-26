@@ -1,17 +1,17 @@
 {
   "id": "eve",
-  "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 65,
-  "commitCount": 71,
-  "decisionCount": 120,
-  "riskCount": 44,
+  "root": "/Users/nhestrompia/.codex/worktrees/8735/eve",
+  "snapshotCount": 66,
+  "commitCount": 72,
+  "decisionCount": 121,
+  "riskCount": 45,
   "artifactCount": 35,
-  "latestAt": "2026-07-25T21:14:32Z",
-  "latestSnapshot": "snap_fc40c1ae49afe99e",
-  "latestTitle": "Collapse duplicate approval queue entries",
-  "branch": "feat/plan-shapshots",
-  "head": "a00a68311909427a50fd23566edde0d60bd1532a",
+  "latestAt": "2026-07-26T00:29:37Z",
+  "latestSnapshot": "snap_fd81ae635eb74945",
+  "latestTitle": "Document planned snapshots and release testing",
+  "branch": "codex/docs-local-test-version",
+  "head": "dcf5db23e45283386325a0910ff545b88d9ecc8c",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "a00a68311909427a50fd23566edde0d60bd1532a"
+  "latestGitState": "dcf5db23e45283386325a0910ff545b88d9ecc8c"
 }
