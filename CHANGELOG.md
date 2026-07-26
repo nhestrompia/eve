@@ -4,7 +4,7 @@ All notable changes to eve will be documented here.
 
 This project uses Git tags for releases.
 
-## Unreleased
+## 0.3.0 - 2026-07-26
 
 - Added `eve` as the default local launcher for the UI, API, HTTP MCP endpoint,
   browser, and installed macOS approval app.

@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   release:
-    name: Build and publish
+    name: Build CLI
     runs-on: ubuntu-latest
 
     strategy:
@@ -60,9 +60,48 @@ jobs:
           name: eve-${{ matrix.goos }}-${{ matrix.goarch }}
           path: dist/*
 
+  macos-app:
+    name: Build macOS approval app
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Test approval app
+        run: |
+          xcodebuild \
+            -project macos/EVEApproval/EVEApproval.xcodeproj \
+            -scheme EVEApproval \
+            -destination 'platform=macOS' \
+            -derivedDataPath "$RUNNER_TEMP/eveapproval-derived" \
+            test \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Build approval app
+        run: |
+          xcodebuild \
+            -project macos/EVEApproval/EVEApproval.xcodeproj \
+            -scheme EVEApproval \
+            -destination 'platform=macOS' \
+            -configuration Release \
+            -derivedDataPath "$RUNNER_TEMP/eveapproval-derived" \
+            build \
+            CODE_SIGNING_ALLOWED=NO
+          mkdir -p dist
+          ditto -c -k --keepParent "$RUNNER_TEMP/eveapproval-derived/Build/Products/Release/eve.app" dist/eve-macos-app.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: eve-macos-app
+          path: dist/eve-macos-app.zip
+
   publish:
     name: Publish release and npm installer
-    needs: release
+    needs:
+      - release
+      - macos-app
     runs-on: ubuntu-latest
 
     steps:

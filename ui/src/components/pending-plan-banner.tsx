@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { BellRing, CheckCircle2, ChevronRight, Edit3, GitBranch, XCircle } from "lucide-react";
+import { BellRing, CheckCircle2, ChevronRight, Edit3, GitBranch, Trash2, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { api } from "../api";
@@ -8,7 +8,7 @@ import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 
 export function PendingPlanBanner({ plans }: { plans: PlanRequest[] }) {
-  const pendingPlans = plans.filter((plan) => plan.state === "pending_approval");
+  const pendingPlans = plans.filter((plan) => plan.state === "pending_approval" || isStalePlan(plan));
   const [open, setOpen] = useState(false);
 
   if (pendingPlans.length === 0) return null;
@@ -125,9 +125,14 @@ export function PlanApprovalDialog({
     onSuccess: () => finishMutation("Plan rejected"),
     onError: (error) => toast.error("Rejection failed", { description: errorMessage(error) }),
   });
+  const dismiss = useMutation({
+    mutationFn: () => api.dismissPlanRequest(selected),
+    onSuccess: () => finishMutation("Plan removed"),
+    onError: (error) => toast.error("Remove failed", { description: errorMessage(error) }),
+  });
   const validationMessage = proposalValidationMessage(proposal);
   const feedbackMessage = feedback.trim() ? "" : "Rejection feedback is required.";
-  const busy = approve.isPending || reject.isPending;
+  const busy = approve.isPending || reject.isPending || dismiss.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -166,7 +171,7 @@ export function PlanApprovalDialog({
                   setEditing((value) => !value);
                   setRejecting(false);
                 }}
-                disabled={busy}
+                disabled={busy || isStalePlan(selected)}
               >
                 <Edit3 className="size-4" aria-hidden="true" />
                 {editing ? "Cancel edits" : "Edit plan"}
@@ -178,7 +183,7 @@ export function PlanApprovalDialog({
                   setRejecting((value) => !value);
                   setEditing(false);
                 }}
-                disabled={busy}
+                disabled={busy || isStalePlan(selected)}
               >
                 <XCircle className="size-4" aria-hidden="true" />
                 Reject
@@ -186,7 +191,17 @@ export function PlanApprovalDialog({
               <div className="min-h-5 flex-1 text-xs text-red-600">
                 {editing && validationMessage ? validationMessage : rejecting ? feedbackMessage : ""}
               </div>
-              {rejecting ? (
+              {isStalePlan(selected) ? (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => dismiss.mutate()}
+                  disabled={busy}
+                >
+                  <Trash2 className="size-4" aria-hidden="true" />
+                  Remove stale plan
+                </Button>
+              ) : rejecting ? (
                 <Button
                   type="button"
                   variant="destructive"
@@ -238,7 +253,7 @@ function PlanQueueList({
             }`}
           >
             <div className="flex min-w-0 items-center gap-2 text-xs text-slate-500">
-              <span className="size-2 rounded-full bg-blue-600" aria-hidden="true" />
+              <span className={`size-2 rounded-full ${isStalePlan(plan) ? "bg-orange-500" : "bg-blue-600"}`} aria-hidden="true" />
               <span className="truncate font-semibold text-slate-800">{plan.repository}</span>
             </div>
             <div className="mt-1 truncate text-xs font-mono text-slate-500">{plan.branch}</div>
@@ -284,12 +299,24 @@ export function PlanApprovalContent({
             {revision?.goal || "Plan awaiting review"}
           </h3>
         </div>
-        <div className="flex shrink-0 items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-          Awaiting approval
+        <div className={`flex shrink-0 items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${
+          isStalePlan(plan) ? "bg-orange-50 text-orange-700" : "bg-blue-50 text-blue-700"
+        }`}>
+          {isStalePlan(plan) ? "Stale" : "Awaiting approval"}
         </div>
       </div>
 
       <div className="mt-5 grid gap-5">
+        {isStalePlan(plan) ? (
+          <div className="rounded-lg border border-orange-200 bg-orange-50 p-4 text-sm text-orange-950">
+            <p className="font-semibold">Approval disabled</p>
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              {(plan.staleReasons?.length ? plan.staleReasons : ["Repository context changed"]).map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         <PlanTextField
           label="Goal"
           value={editing ? proposal.goal : revision?.goal ?? ""}
@@ -427,6 +454,10 @@ function ReadOnlyList({
 
 export function currentRevision(plan: PlanRequest): PlanRevision | undefined {
   return plan.revisions.find((revision) => revision.revision === plan.currentRevision);
+}
+
+function isStalePlan(plan?: PlanRequest): boolean {
+  return Boolean(plan && (plan.state === "stale" || (plan.staleReasons?.length ?? 0) > 0));
 }
 
 export function planToProposal(plan?: PlanRequest): PlanProposal {

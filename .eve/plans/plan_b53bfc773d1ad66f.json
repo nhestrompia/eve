@@ -1,0 +1,52 @@
+{
+  "id": "plan_b53bfc773d1ad66f",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_landing_hero_flow_copy_cta_20260726",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Replace the static/broken landing hero visual with a continuous plan-to-snapshot-to-timeline flow, add copied feedback to the command control, restyle the Get started CTA states, and improve the step diagram quality.",
+      "acceptanceCriteria": "Hero visual shows plans entering, snapshots being created/fading, and timeline movement in a continuous CSS animation; command control copies the install command and shows a check icon for a couple seconds; Get started CTA normal and hover states look intentional; step diagram connectors and icon styling are cleaner; mobile remains readable; prefers-reduced-motion disables looping motion; site build passes.",
+      "allowedPathGlobs": [
+        "site/app/page.tsx",
+        "site/app/global.css",
+        "site/app/copy-command.tsx"
+      ],
+      "milestones": [
+        {
+          "title": "Interactive command",
+          "goal": "Add a client command copy control with temporary check feedback."
+        },
+        {
+          "title": "Hero flow rebuild",
+          "goal": "Replace the static hero stack with a continuous animated plan/snapshot/timeline flow."
+        },
+        {
+          "title": "CTA and diagram polish",
+          "goal": "Restyle Get started and improve step diagram connectors."
+        },
+        {
+          "title": "Verify and record",
+          "goal": "Run build and browser checks, commit implementation, create EVE snapshot, commit EVE record."
+        }
+      ],
+      "configuredSuite": "npm --prefix site run build",
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "4268daf5d5d201acb8d446457f22d4a2b0231873",
+      "branch": "feat/landing",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-26T00:26:26Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-26T00:26:33Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_b4e842e75fced5fb"
+}

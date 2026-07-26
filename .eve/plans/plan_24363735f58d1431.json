@@ -1,0 +1,47 @@
+{
+  "id": "plan_24363735f58d1431",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_landing_reference_match_20260726",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Rework the site landing page to closely match the provided dark reference design, including the hero layout, animated right-side plan/snapshot flow, comparison panel, step flow, local-first diagram, and final CTA.",
+      "acceptanceCriteria": "Landing page uses a dark background and compact shell matching the provided reference; hero copy and actions match the reference content and layout; right hero visual animates plans/snapshots flowing smoothly; lower comparison, process, local-first, and CTA sections are present and visually aligned with the reference; mobile layout remains readable; prefers-reduced-motion disables looping animation; site build passes.",
+      "allowedPathGlobs": [
+        "site/app/page.tsx",
+        "site/app/global.css"
+      ],
+      "milestones": [
+        {
+          "title": "Match reference structure",
+          "goal": "Replace the previous landing content with the reference's hero, comparison, process, local-first, and CTA sections."
+        },
+        {
+          "title": "Match dark visual system",
+          "goal": "Rewrite landing CSS for the reference's dark surface, borders, typography scale, blue accents, and compact spacing."
+        },
+        {
+          "title": "Verify and record",
+          "goal": "Run the site build, inspect desktop/mobile screenshots and reduced-motion behavior, commit implementation, create EVE snapshot, then commit the EVE record."
+        }
+      ],
+      "configuredSuite": "npm --prefix site run build",
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "01e74e198125ef8534d5f5755469c504719c5bce",
+      "branch": "feat/landing",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-25T23:41:09Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-25T23:41:13Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_fd821bee190ad4f2"
+}
