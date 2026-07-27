@@ -1,0 +1,46 @@
+{
+  "id": "plan_8b31d86096437964",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_pending_snapshot_merged_branch_resolution",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Fix the Pending Snapshot banner so trunk does not report committed work as pending when that work was already covered by snapshots or skips created on merged branches.",
+      "acceptanceCriteria": "Add a regression test for a feature branch product change that is snapshotted on the branch and then merged to main. The pending snapshot API should return no pending work for main after the merge. Existing pending snapshot tests continue to pass.",
+      "allowedPathGlobs": [
+        "cmd/eve/pending.go",
+        "cmd/eve/main_test.go"
+      ],
+      "milestones": [
+        {
+          "title": "Reproduce",
+          "goal": "Create a focused failing test that models snapshotted feature-branch work merged to trunk."
+        },
+        {
+          "title": "Fix",
+          "goal": "Update pending snapshot resolution to use relevant snapshot/skip ancestry across merged branches without suppressing unrelated branch work."
+        },
+        {
+          "title": "Verify",
+          "goal": "Run focused Go pending snapshot tests."
+        }
+      ],
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "ab73a0774340712caa84109b0474c1410249bad0",
+      "branch": "codex/fix-pending-snapshot-merged-branches",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-27T23:27:11Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-27T23:27:16Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_486eb042dfcb345c"
+}

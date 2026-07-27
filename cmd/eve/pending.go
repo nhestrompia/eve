@@ -253,7 +253,7 @@ func (repo repository) detectPending(options pendingOptions) (*pendingSnapshot, 
 		}
 		return nil, nil
 	}
-	commits, err := implementationCommits(repo, lastResolved, head)
+	commits, err := pendingImplementationCommits(repo, lastResolved, head)
 	if err != nil {
 		if err := repo.resolvePendingBranch(branch, head); err != nil {
 			return nil, err
@@ -307,7 +307,7 @@ func (repo repository) lastResolvedCandidate(branch string, head string, branchS
 	}
 	for _, snapshot := range snapshots {
 		gitState := strings.TrimSpace(snapshot.Implementation.GitState)
-		if gitState == "" || strings.TrimSpace(snapshot.Implementation.Branch) != branch {
+		if gitState == "" {
 			continue
 		}
 		if !repo.isAncestor(gitState, head) {
@@ -325,7 +325,7 @@ func (repo repository) lastResolvedCandidate(branch string, head string, branchS
 	}
 	for _, skip := range skips {
 		gitState := strings.TrimSpace(skip.Range.To)
-		if gitState == "" || strings.TrimSpace(skip.Branch) != branch {
+		if gitState == "" {
 			continue
 		}
 		if !repo.isAncestor(gitState, head) {
@@ -356,6 +356,27 @@ func (repo repository) lastResolvedCandidate(branch string, head string, branchS
 		return candidates[i].Distance < candidates[j].Distance
 	})
 	return candidates[0], true, nil
+}
+
+func pendingImplementationCommits(repo repository, baseCommit string, head string) ([]string, error) {
+	args := []string{"log", "--format=%H", "--no-merges"}
+	if strings.TrimSpace(baseCommit) != "" {
+		args = append(args, strings.TrimSpace(baseCommit)+".."+head)
+	} else {
+		args = append(args, "-n", "1", head)
+	}
+	args = append(args, "--", ".", ":(exclude).eve")
+	commitsText, err := gitOutput(repo.Root, args...)
+	if err != nil {
+		return nil, err
+	}
+	commits := []string{}
+	for _, line := range strings.Split(commitsText, "\n") {
+		if trimmed := strings.TrimSpace(line); trimmed != "" {
+			commits = append(commits, trimmed)
+		}
+	}
+	return commits, nil
 }
 
 func (repo repository) loadPendingState() (pendingStateFile, error) {

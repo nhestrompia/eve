@@ -1120,6 +1120,39 @@ func TestPendingSnapshotMergeTriggerAndCompleteResolution(t *testing.T) {
 	}
 }
 
+func TestPendingSnapshotMergeRecognizesMergedBranchSnapshot(t *testing.T) {
+	repo := initTempGitRepo(t)
+	t.Chdir(repo)
+	mustRun(t, []string{"init"})
+	gitRun(t, repo, "add", ".eve/config.json", "AGENTS.md", "CLAUDE.md")
+	gitRun(t, repo, "commit", "-m", "initialize eve")
+	trunk := gitOutputForTest(t, repo, "branch", "--show-current")
+
+	handler := newRuntimeServer(repoFromRoot(repo), "localhost:0").routes()
+	var initial pendingSnapshotResponse
+	requestJSON(t, handler, http.MethodGet, "/api/repos/"+filepath.Base(repo)+"/pending", nil, &initial)
+	if initial.Pending {
+		t.Fatalf("initial pending = %#v, want no pending on first trunk observation", initial)
+	}
+
+	gitRun(t, repo, "checkout", "-b", "feature")
+	commitProductChangeAt(t, repo, "product.txt", "product\nmerged feature\n", "merged feature", time.Now().UTC())
+	response := mcpCall(t, handler, `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"complete_snapshot","arguments":{"title":"Feature Snapshot","type":"feature","summary":"Completed feature work.","validation":[{"command":"go test ./...","status":"passed"}]}}}`)
+	if !strings.Contains(response, "Feature Snapshot") {
+		t.Fatalf("complete response = %s, want feature snapshot", response)
+	}
+	gitRun(t, repo, "add", ".eve")
+	gitRun(t, repo, "commit", "-m", "record feature snapshot")
+
+	gitRun(t, repo, "checkout", trunk)
+	gitRun(t, repo, "merge", "--no-ff", "feature", "-m", "merge feature")
+	var resolved pendingSnapshotResponse
+	requestJSON(t, handler, http.MethodGet, "/api/repos/"+filepath.Base(repo)+"/pending", nil, &resolved)
+	if resolved.Pending {
+		t.Fatalf("resolved pending = %#v, want no pending for snapshotted feature branch merge", resolved)
+	}
+}
+
 func TestTrunkBranchDetection(t *testing.T) {
 	repo := initTempGitRepo(t)
 	t.Chdir(repo)

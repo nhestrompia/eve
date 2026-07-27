@@ -1,17 +1,17 @@
 {
   "id": "eve",
-  "root": "/Users/nhestrompia/.codex/worktrees/c93d/eve",
-  "snapshotCount": 84,
-  "commitCount": 96,
-  "decisionCount": 159,
-  "riskCount": 61,
+  "root": "/Users/nhestrompia/.codex/worktrees/581e/eve",
+  "snapshotCount": 85,
+  "commitCount": 98,
+  "decisionCount": 161,
+  "riskCount": 62,
   "artifactCount": 45,
-  "latestAt": "2026-07-27T22:32:16Z",
-  "latestSnapshot": "snap_24edbcf68f763721",
-  "latestTitle": "Keep the local dashboard live and truthful",
-  "branch": "codex/fix-live-dashboard-refresh",
-  "head": "f304f53c97f1ca4f3e4f60d3c41bd6587a7eba4f",
+  "latestAt": "2026-07-27T23:30:17Z",
+  "latestSnapshot": "snap_486eb042dfcb345c",
+  "latestTitle": "Resolve merged branch pending snapshots",
+  "branch": "codex/fix-pending-snapshot-merged-branches",
+  "head": "51cac2caa30da054eb8be53cb52b5cd10b877672",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "f304f53c97f1ca4f3e4f60d3c41bd6587a7eba4f"
+  "latestGitState": "51cac2caa30da054eb8be53cb52b5cd10b877672"
 }
