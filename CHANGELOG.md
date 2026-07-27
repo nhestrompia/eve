@@ -4,6 +4,14 @@ All notable changes to eve will be documented here.
 
 This project uses Git tags for releases.
 
+## Unreleased
+
+## 0.5.0 - 2026-07-27
+
+- Fixed Snapshots and Plans dashboard filters so page-local search, status,
+  agent, repository, date, filter, sort, pagination, and snapshot graph
+  navigation controls update the visible rows.
+
 ## 0.4.0 - 2026-07-26
 
 - Added `scripts/prepare-release.sh` for preparing npm package metadata and
