@@ -1,0 +1,35 @@
+{
+  "id": "plan_758e1cb3b156706e",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_require_agent_plan_20260728",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Require agent-facing snapshot completion paths to use a locked Plan reference so agents cannot bypass declare_plan by calling complete_snapshot or eve commit without planId and planRevision.",
+      "acceptanceCriteria": "- MCP complete_snapshot returns an error when planId and planRevision are omitted for a clean or allow-dirty agent snapshot.\n- CLI eve commit returns an error when a staged snapshot draft omits planId and planRevision.\n- Existing dirty-tree errors still take precedence when dirty completion was not explicitly allowed.\n- Pending snapshot and CLI happy-path tests pass with approved plan references.\n- go test ./... passes.",
+      "allowedPathGlobs": [
+        "cmd/eve/main.go",
+        "cmd/eve/ui_server.go",
+        "cmd/eve/main_test.go"
+      ],
+      "milestones": [],
+      "configuredSuite": "change",
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "5c9fcc11866757d5e5f64f2def9b7cd05217a3fb",
+      "branch": "codex/require-agent-plan-snapshots",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-27T23:49:11Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-27T23:49:27Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_c785d7fcd95e65c8"
+}

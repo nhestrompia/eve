@@ -408,15 +408,15 @@ func TestRuntimeAPIAndMCP(t *testing.T) {
 		t.Fatalf("resources/read response = %s, want snapshot", response)
 	}
 	response = mcpCall(t, handler, `{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"complete_snapshot","arguments":{"title":"Completed by MCP","type":"feature","summary":"MCP writes snapshots.","validation":[{"command":"go test ./...","status":"passed"}],"allowDirty":true}}}`)
-	if !strings.Contains(response, "Completed by MCP") {
-		t.Fatalf("complete_snapshot response = %s, want created snapshot", response)
+	if !strings.Contains(response, "isError") || !strings.Contains(response, "requires a locked Plan reference") {
+		t.Fatalf("complete_snapshot response = %s, want missing-plan refusal", response)
 	}
 	snapshots, err := repoFromRoot(repo).listSnapshots("")
 	if err != nil {
 		t.Fatalf("list snapshots: %v", err)
 	}
-	if len(snapshots) != 2 {
-		t.Fatalf("snapshot count = %d, want 2", len(snapshots))
+	if len(snapshots) != 1 {
+		t.Fatalf("snapshot count = %d, want unchanged existing snapshot", len(snapshots))
 	}
 }
 
@@ -1098,6 +1098,7 @@ func TestPendingSnapshotMergeTriggerAndCompleteResolution(t *testing.T) {
 		t.Fatalf("initial pending = %#v, want no pending on first observation", initial)
 	}
 
+	locked := approvePlanForTest(t, repoFromRoot(repo), "planreq_trunkmerge", "Record the trunk merge", []string{"product.txt"})
 	commitProductChangeAt(t, repo, "product.txt", "product\ntrunk merge\n", "trunk merge", time.Now().UTC())
 	var config configResponse
 	requestJSON(t, handler, http.MethodGet, "/api/config", nil, &config)
@@ -1109,7 +1110,7 @@ func TestPendingSnapshotMergeTriggerAndCompleteResolution(t *testing.T) {
 	if !strings.Contains(response, `"pending":true`) || !strings.Contains(response, pendingTriggerMerge) {
 		t.Fatalf("pending_snapshot response = %s, want merge pending", response)
 	}
-	response = mcpCall(t, handler, `{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"complete_snapshot","arguments":{"title":"Trunk Snapshot","type":"feature","summary":"Completed trunk work.","validation":[{"command":"go test ./...","status":"passed"}]}}}`)
+	response = mcpCall(t, handler, `{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"complete_snapshot","arguments":{"title":"Trunk Snapshot","type":"feature","summary":"Completed trunk work.","validation":[{"command":"go test ./...","status":"passed"}],"planId":"`+locked.PlanID+`","planRevision":1}}}`)
 	if !strings.Contains(response, "Trunk Snapshot") {
 		t.Fatalf("complete response = %s, want snapshot", response)
 	}
@@ -1136,8 +1137,9 @@ func TestPendingSnapshotMergeRecognizesMergedBranchSnapshot(t *testing.T) {
 	}
 
 	gitRun(t, repo, "checkout", "-b", "feature")
+	locked := approvePlanForTest(t, repoFromRoot(repo), "planreq_featuremerge", "Record the feature work", []string{"product.txt"})
 	commitProductChangeAt(t, repo, "product.txt", "product\nmerged feature\n", "merged feature", time.Now().UTC())
-	response := mcpCall(t, handler, `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"complete_snapshot","arguments":{"title":"Feature Snapshot","type":"feature","summary":"Completed feature work.","validation":[{"command":"go test ./...","status":"passed"}]}}}`)
+	response := mcpCall(t, handler, `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"complete_snapshot","arguments":{"title":"Feature Snapshot","type":"feature","summary":"Completed feature work.","validation":[{"command":"go test ./...","status":"passed"}],"planId":"`+locked.PlanID+`","planRevision":1}}}`)
 	if !strings.Contains(response, "Feature Snapshot") {
 		t.Fatalf("complete response = %s, want feature snapshot", response)
 	}
@@ -1353,6 +1355,7 @@ func TestAddAndCommitSnapshotCLI(t *testing.T) {
 	gitRun(t, repo, "add", ".eve/config.json", "AGENTS.md", "CLAUDE.md")
 	gitRun(t, repo, "commit", "-m", "initialize eve")
 
+	locked := approvePlanForTest(t, repoFromRoot(repo), "planreq_clisnapshot", "Record the CLI snapshot", []string{"product.txt"})
 	productPath := filepath.Join(repo, "product.txt")
 	if err := os.WriteFile(productPath, []byte("product\ncli snapshot\n"), 0o644); err != nil {
 		t.Fatalf("write product: %v", err)
@@ -1368,6 +1371,8 @@ func TestAddAndCommitSnapshotCLI(t *testing.T) {
 		"--summary", "The CLI can stage and commit EVE snapshots.",
 		"--validation", "go test ./...",
 		"--decision", "Expose the MCP snapshot flow through CLI commands.",
+		"--plan-id", locked.PlanID,
+		"--plan-revision", "1",
 	})
 
 	var stdout, stderr bytes.Buffer
@@ -1421,6 +1426,26 @@ func TestCommitSnapshotCLIRejectsDirtyImplementationFiles(t *testing.T) {
 	code := run([]string{"commit"}, &stdout, &stderr)
 	if code != 1 || !strings.Contains(stderr.String(), "working tree has uncommitted changes") {
 		t.Fatalf("commit code = %d stderr = %q stdout = %q, want dirty refusal", code, stderr.String(), stdout.String())
+	}
+}
+
+func TestCommitSnapshotCLIRejectsMissingPlan(t *testing.T) {
+	repo := initTempGitRepo(t)
+	t.Chdir(repo)
+	mustRun(t, []string{"init"})
+	gitRun(t, repo, "add", ".eve/config.json", "AGENTS.md", "CLAUDE.md")
+	gitRun(t, repo, "commit", "-m", "initialize eve")
+
+	mustRun(t, []string{
+		"add",
+		"--title", "Unplanned CLI Snapshot",
+		"--summary", "This draft should not commit without a Plan.",
+	})
+
+	var stdout, stderr bytes.Buffer
+	code := run([]string{"commit"}, &stdout, &stderr)
+	if code != 1 || !strings.Contains(stderr.String(), "requires a locked Plan reference") {
+		t.Fatalf("commit code = %d stderr = %q stdout = %q, want missing-plan refusal", code, stderr.String(), stdout.String())
 	}
 }
 
@@ -1761,6 +1786,24 @@ func initTempGitRepoAt(t *testing.T, repo string) string {
 	gitRun(t, repo, "add", "product.txt")
 	gitRun(t, repo, "commit", "-m", "initial")
 	return repo
+}
+
+func approvePlanForTest(t *testing.T, repo repository, planRequestID string, goal string, allowedPathGlobs []string) *planRequest {
+	t.Helper()
+	request, err := repo.createOrResumePlanRequest(context.Background(), declarePlanInput{
+		PlanRequestID:      planRequestID,
+		Goal:               goal,
+		AcceptanceCriteria: "- Snapshot completion uses the approved Plan",
+		AllowedPathGlobs:   allowedPathGlobs,
+	})
+	if err != nil {
+		t.Fatalf("create plan request: %v", err)
+	}
+	locked, err := repo.approvePlanRequest(context.Background(), request.PlanRequestID, request.CurrentRevision, nil)
+	if err != nil {
+		t.Fatalf("approve plan request: %v", err)
+	}
+	return locked
 }
 
 func gitRun(t *testing.T, repo string, args ...string) {

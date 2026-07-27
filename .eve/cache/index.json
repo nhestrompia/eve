@@ -1,17 +1,17 @@
 {
   "id": "eve",
-  "root": "/Users/nhestrompia/.codex/worktrees/581e/eve",
-  "snapshotCount": 85,
-  "commitCount": 98,
-  "decisionCount": 161,
-  "riskCount": 62,
+  "root": "/Users/nhestrompia/.codex/worktrees/75cc/eve",
+  "snapshotCount": 86,
+  "commitCount": 100,
+  "decisionCount": 163,
+  "riskCount": 63,
   "artifactCount": 45,
-  "latestAt": "2026-07-27T23:30:17Z",
-  "latestSnapshot": "snap_486eb042dfcb345c",
-  "latestTitle": "Resolve merged branch pending snapshots",
-  "branch": "codex/fix-pending-snapshot-merged-branches",
-  "head": "51cac2caa30da054eb8be53cb52b5cd10b877672",
+  "latestAt": "2026-07-27T23:49:41Z",
+  "latestSnapshot": "snap_c785d7fcd95e65c8",
+  "latestTitle": "Require Plans for Agent Snapshots",
+  "branch": "codex/require-agent-plan-snapshots",
+  "head": "5c9fcc11866757d5e5f64f2def9b7cd05217a3fb",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "51cac2caa30da054eb8be53cb52b5cd10b877672"
+  "latestGitState": "5c9fcc11866757d5e5f64f2def9b7cd05217a3fb"
 }

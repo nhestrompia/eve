@@ -377,6 +377,10 @@ func runCommit(args []string, stdout io.Writer, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "%v\n", err)
 		return 1
 	}
+	if err := requireAgentPlanReference(repo, input, []string{filepath.ToSlash(filepath.Join(".eve", "staged"))}); err != nil {
+		fmt.Fprintf(stderr, "%v\n", err)
+		return 1
+	}
 	snapshot, err := completeSnapshot(repo, input, []string{filepath.ToSlash(filepath.Join(".eve", "staged"))})
 	if err != nil {
 		fmt.Fprintf(stderr, "%v\n", err)
@@ -1133,6 +1137,30 @@ func (repo repository) loadSnapshot(id string) (*eve.Snapshot, error) {
 	}
 	verifySnapshotRunEvidence(repo, snapshot)
 	return snapshot, nil
+}
+
+func requireAgentPlanReference(repo repository, input completeSnapshotInput, ignoredStatusPaths []string) error {
+	evidencePaths, err := verificationNewEvidencePaths(repo)
+	if err != nil {
+		return err
+	}
+	filteredIgnored := make([]string, 0, len(ignoredStatusPaths)+len(evidencePaths))
+	for _, path := range ignoredStatusPaths {
+		if strings.TrimSuffix(filepath.ToSlash(path), "/") != ".eve/runs" {
+			filteredIgnored = append(filteredIgnored, path)
+		}
+	}
+	facts, err := deriveGitFactsIgnoring(repo, append(filteredIgnored, evidencePaths...))
+	if err != nil {
+		return err
+	}
+	if facts.Dirty && !input.AllowDirty {
+		return nil
+	}
+	if input.PlanID == "" {
+		return errors.New("complete_snapshot requires a locked Plan reference; call declare_plan and pass planId and planRevision, or use skip_snapshot when no Snapshot is warranted")
+	}
+	return nil
 }
 
 func (repo repository) saveSnapshot(snapshot *eve.Snapshot) error {
