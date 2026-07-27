@@ -2000,6 +2000,9 @@ func (server runtimeServer) completeSnapshotTool(ctx context.Context, args json.
 	if err != nil {
 		return toolError(err.Error()), nil
 	}
+	if err := requireAgentPlanReference(repo, input, nil); err != nil {
+		return toolError(err.Error()), nil
+	}
 	snapshot, err := completeSnapshot(repo, input, nil)
 	if err != nil {
 		return toolError(err.Error()), nil
