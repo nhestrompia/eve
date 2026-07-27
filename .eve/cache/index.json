@@ -1,16 +1,17 @@
 {
   "id": "eve",
-  "root": "/Users/nhestrompia/.codex/worktrees/9704/eve",
-  "snapshotCount": 82,
-  "commitCount": 92,
-  "decisionCount": 154,
-  "riskCount": 58,
+  "root": "/Users/nhestrompia/.codex/worktrees/3f02/eve",
+  "snapshotCount": 83,
+  "commitCount": 94,
+  "decisionCount": 157,
+  "riskCount": 60,
   "artifactCount": 45,
-  "latestAt": "2026-07-26T20:52:45Z",
-  "latestSnapshot": "snap_b94a145ccf520161",
-  "latestTitle": "Fix dashboard page filters",
-  "head": "0401da07c5e5d2d61dc90f758120f1c9419ad584",
+  "latestAt": "2026-07-27T17:57:28Z",
+  "latestSnapshot": "snap_a466ef232c757ee5",
+  "latestTitle": "Prepare eve 0.5.0 release",
+  "branch": "codex/release-eve-0.5.0",
+  "head": "7892706f734e5d2993ab8ea9e580a95b5d1ddb28",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "0401da07c5e5d2d61dc90f758120f1c9419ad584"
+  "latestGitState": "7892706f734e5d2993ab8ea9e580a95b5d1ddb28"
 }
