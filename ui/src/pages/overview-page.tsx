@@ -69,7 +69,8 @@ function OverviewContent({
   const latestSnapshots = snapshots.slice(0, 5);
   const failed = snapshots.filter((snapshot) => snapshot.failedValidationCount > 0).length;
   const percent = verificationPercent(snapshots.length, failed);
-  const activeAgents = buildAgentRows(snapshots);
+  const activeAgents = buildActiveAgentRows(plans);
+  const activePlans = plans.filter((plan) => ["pending_approval", "locked"].includes(plan.state));
   const agentsPaused = pendingPlans.length;
   const showAttention = pendingPlans.length > 0 || failed > 0 || agentsPaused > 0;
 
@@ -139,8 +140,8 @@ function OverviewContent({
           </div>
           <div className="mt-7 grid grid-cols-3 gap-3 border-t border-slate-200 pt-5">
             <MiniStat icon={Boxes} value={repositories.length} label="repos" />
-            <MiniStat icon={Zap} value={activeAgents.length || 1} label="agents" />
-            <MiniStat icon={Clock3} value={plans.length} label="active plans" />
+            <MiniStat icon={Zap} value={activeAgents.length} label="agents" />
+            <MiniStat icon={Clock3} value={activePlans.length} label="active plans" />
           </div>
         </OverviewCard>
 
@@ -148,15 +149,24 @@ function OverviewContent({
           <div className="flex items-center justify-between gap-3">
             <h2 className="font-semibold text-slate-950">Active agents</h2>
             <span className="inline-flex items-center gap-2 text-xs text-slate-500">
-              <span className="size-1.5 rounded-full bg-emerald-500" />
-              {activeAgents.length || 1} running
+              <span className={`size-1.5 rounded-full ${activeAgents.length > 0 ? "bg-emerald-500" : "bg-slate-300"}`} />
+              {activeAgents.length} running
             </span>
           </div>
-          <div className="mt-6 space-y-6">
-            {(activeAgents.length ? activeAgents : [{ agent: "Codex", label: "Watching snapshots", percent: 54 }]).slice(0, 2).map((agent) => (
-              <AgentProgress key={agent.agent} {...agent} />
-            ))}
-          </div>
+          {activeAgents.length > 0 ? (
+            <div className="mt-6 space-y-6">
+              {activeAgents.slice(0, 2).map((agent) => (
+                <ActiveAgentRow key={`${agent.repository}-${agent.label}`} {...agent} />
+              ))}
+            </div>
+          ) : (
+            <div className="mt-6 rounded-lg border border-slate-200 bg-slate-50/70 px-4 py-4">
+              <p className="text-sm font-medium text-slate-950">No active agents</p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">
+                Locked plans appear here while implementation is underway.
+              </p>
+            </div>
+          )}
         </OverviewCard>
 
         <OverviewCard className="p-0">
@@ -252,7 +262,7 @@ function MiniStat({ icon: Icon, value, label }: { icon: typeof Gauge; value: num
   );
 }
 
-function AgentProgress({ agent, label, percent }: { agent: string; label: string; percent: number }) {
+function ActiveAgentRow({ agent, label, repository }: { agent: string; label: string; repository: string }) {
   return (
     <div className="grid grid-cols-[36px_minmax(0,1fr)] gap-3">
       <AgentAvatar agent={agent} />
@@ -262,11 +272,9 @@ function AgentProgress({ agent, label, percent }: { agent: string; label: string
             <p className="truncate font-semibold text-slate-950">{agent}</p>
             <p className="mt-0.5 truncate text-[11px] text-slate-500">{label}</p>
           </div>
-          <span className="text-xs text-slate-700">{percent}%</span>
+          <Pill tone="progress">In progress</Pill>
         </div>
-        <div className="mt-3 h-1.5 rounded-full bg-slate-200">
-          <div className="h-full rounded-full bg-emerald-500" style={{ width: `${percent}%` }} />
-        </div>
+        <p className="mt-2 truncate text-[11px] text-slate-500">{repository}</p>
       </div>
     </div>
   );
@@ -277,19 +285,12 @@ function agentName(snapshot: EvolutionSummary) {
   return provider.charAt(0).toUpperCase() + provider.slice(1);
 }
 
-function buildAgentRows(snapshots: EvolutionSummary[]) {
-  const counts = new Map<string, { count: number; latest?: EvolutionSummary }>();
-  for (const snapshot of snapshots) {
-    const agent = agentName(snapshot);
-    const current = counts.get(agent) ?? { count: 0 };
-    counts.set(agent, { count: current.count + 1, latest: current.latest ?? snapshot });
-  }
-  const total = Math.max(1, snapshots.length);
-  return Array.from(counts.entries())
-    .map(([agent, value]) => ({
-      agent,
-      label: value.latest?.title || "Working on snapshots",
-      percent: Math.max(8, Math.round((value.count / total) * 100)),
-    }))
-    .sort((left, right) => right.percent - left.percent);
+export function buildActiveAgentRows(plans: PlanRequest[]) {
+  return plans
+    .filter((plan) => plan.state === "locked")
+    .map((plan) => ({
+      agent: "Agent",
+      label: currentRevision(plan)?.goal || "Implementing an approved plan",
+      repository: plan.repository,
+    }));
 }
