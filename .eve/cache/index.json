@@ -1,17 +1,17 @@
 {
   "id": "eve",
-  "root": "/Users/nhestrompia/.codex/worktrees/3f02/eve",
-  "snapshotCount": 83,
-  "commitCount": 94,
-  "decisionCount": 157,
-  "riskCount": 60,
+  "root": "/Users/nhestrompia/.codex/worktrees/c93d/eve",
+  "snapshotCount": 84,
+  "commitCount": 96,
+  "decisionCount": 159,
+  "riskCount": 61,
   "artifactCount": 45,
-  "latestAt": "2026-07-27T17:57:28Z",
-  "latestSnapshot": "snap_a466ef232c757ee5",
-  "latestTitle": "Prepare eve 0.5.0 release",
-  "branch": "codex/release-eve-0.5.0",
-  "head": "7892706f734e5d2993ab8ea9e580a95b5d1ddb28",
+  "latestAt": "2026-07-27T22:32:16Z",
+  "latestSnapshot": "snap_24edbcf68f763721",
+  "latestTitle": "Keep the local dashboard live and truthful",
+  "branch": "codex/fix-live-dashboard-refresh",
+  "head": "f304f53c97f1ca4f3e4f60d3c41bd6587a7eba4f",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "7892706f734e5d2993ab8ea9e580a95b5d1ddb28"
+  "latestGitState": "f304f53c97f1ca4f3e4f60d3c41bd6587a7eba4f"
 }
