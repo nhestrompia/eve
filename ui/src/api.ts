@@ -69,6 +69,7 @@ type SearchAPI = {
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     ...init,
+    cache: 'no-store',
     headers: { Accept: 'application/json', ...(init?.headers ?? {}) }
   });
   const data = await response.json().catch(() => undefined);

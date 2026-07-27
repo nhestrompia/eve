@@ -824,7 +824,11 @@ func (server runtimeServer) repoForSnapshot(id string) (repository, bool) {
 func repositorySignature(repos []repository) string {
 	parts := make([]string, 0, len(repos))
 	for _, repo := range repos {
-		parts = append(parts, repo.ID+"\x00"+repo.Root)
+		snapshotState := "missing"
+		if info, err := os.Stat(repo.snapshotsDir()); err == nil {
+			snapshotState = fmt.Sprintf("%d:%d", info.ModTime().UnixNano(), info.Size())
+		}
+		parts = append(parts, repo.ID+"\x00"+repo.Root+"\x00"+snapshotState)
 	}
 	return strings.Join(parts, "\x00")
 }
@@ -2331,6 +2335,7 @@ func marshalMCP(response mcpResponse) []byte {
 
 func writeJSON(w http.ResponseWriter, status int, value any) {
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(value)
 }

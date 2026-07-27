@@ -1,0 +1,46 @@
+{
+  "id": "plan_73cda896aab29d5e",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_live_ui_refresh_20260728",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Keep the local dashboard truthful and automatically synchronized with completed agent work, snapshots, plans, and repository state.",
+      "acceptanceCriteria": "- Completed snapshots are never presented as running agents.\n- Only locked, unfulfilled plans appear as active agent work.\n- Snapshot, plan, and repository queries refetch automatically without a manual page refresh.\n- Dynamic API responses bypass browser caches.\n- Adding a snapshot invalidates the global snapshot index immediately.\n- Go tests, UI tests, production UI build, and a real-browser smoke check pass.",
+      "allowedPathGlobs": [
+        "ui/**",
+        "cmd/eve/**"
+      ],
+      "milestones": [
+        {
+          "title": "Correct active-work semantics",
+          "goal": "Drive active agents and active plan counts from nonterminal plan state instead of completed snapshots."
+        },
+        {
+          "title": "Make local data live",
+          "goal": "Poll dynamic query families, disable API caching, and invalidate the snapshot index on writes."
+        },
+        {
+          "title": "Verify end to end",
+          "goal": "Run automated suites, production build, and browser validation."
+        }
+      ],
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "fff1da2a4d5c47648aa29cfff45369962e14de22",
+      "branch": "codex/fix-live-dashboard-refresh",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-27T22:29:59Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-27T22:30:23Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_24edbcf68f763721"
+}

@@ -1448,6 +1448,40 @@ func TestRuntimeListsRegisteredRepositories(t *testing.T) {
 	}
 }
 
+func TestGlobalSnapshotListRefreshesWhenSnapshotIsAdded(t *testing.T) {
+	repo := initTempGitRepo(t)
+	head := gitOutputForTest(t, repo, "rev-parse", "HEAD")
+	mustRunInRepo(t, repo, []string{"init"})
+	writeSnapshot(t, repo, sampleSnapshot("snap_first", "First Snapshot", head))
+
+	handler := newRuntimeServer(repoFromRoot(repo), "localhost:0").routes()
+	var rows []snapshotSummary
+	requestJSON(t, handler, http.MethodGet, "/api/snapshots", nil, &rows)
+	if len(rows) != 1 {
+		t.Fatalf("initial snapshots = %#v, want one row", rows)
+	}
+
+	writeSnapshot(t, repo, sampleSnapshot("snap_second", "Second Snapshot", head))
+	requestJSON(t, handler, http.MethodGet, "/api/snapshots", nil, &rows)
+	if len(rows) != 2 || !slices.ContainsFunc(rows, func(row snapshotSummary) bool { return row.ID == "snap_second" }) {
+		t.Fatalf("refreshed snapshots = %#v, want newly added snapshot immediately", rows)
+	}
+}
+
+func TestDynamicAPIResponsesDisableBrowserCaching(t *testing.T) {
+	repo := initTempGitRepo(t)
+	mustRunInRepo(t, repo, []string{"init"})
+	handler := newRuntimeServer(repoFromRoot(repo), "localhost:0").routes()
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/api/snapshots", nil)
+
+	handler.ServeHTTP(recorder, request)
+
+	if got := recorder.Header().Get("Cache-Control"); got != "no-store" {
+		t.Fatalf("Cache-Control = %q, want no-store", got)
+	}
+}
+
 func TestRepositoryVisibilityHidesTempReposForNormalPrimary(t *testing.T) {
 	primary := repository{ID: "eve", Root: filepath.Join(string(os.PathSeparator), "Users", "eve", "repo")}
 	tempRepo := repository{ID: "eve-plan-smoke", Root: filepath.Join(os.TempDir(), "eve-plan-smoke")}
