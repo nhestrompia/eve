@@ -27,7 +27,7 @@ const steps = [
   {
     icon: 'data',
     title: 'Snapshot',
-    text: 'EVE captures the change, runs checks, and records evidence.',
+    text: 'eve captures the change, runs checks, and records evidence.',
   },
   {
     icon: 'review',
@@ -60,7 +60,7 @@ export default function HomePage() {
               Context for your code. History for your <span>product.</span>
             </h1>
             <p className="eve-hero-lede">
-              EVE records what changed in your product, why it changed, how it was verified, and
+              eve records what changed in your product, why it changed, how it was verified, and
               which Git state implemented it. Every snapshot is committed to your repository under{' '}
               <code>.eve/</code>.
             </p>
@@ -75,9 +75,9 @@ export default function HomePage() {
             </div>
           </div>
 
-          <aside className="eve-hero-visual" aria-label="Animated EVE product-history flow">
+          <aside className="eve-hero-visual" aria-label="Animated eve product-history flow">
             <p className="eve-flow-summary">
-              EVE links snapshots, plans, repository state, and Git commits under .eve.
+              eve links snapshots, plans, repository state, and Git commits under .eve.
             </p>
             <div className="eve-visual-grid" aria-hidden="true">
               <div className="eve-flow-stage">
@@ -143,16 +143,16 @@ export default function HomePage() {
           </aside>
         </section>
 
-        <section className="eve-compare" aria-label="Git and EVE comparison">
+        <section className="eve-compare" aria-label="Git and eve comparison">
           <div className="eve-compare-copy">
             <h2>Git records implementation.</h2>
-            <p>EVE records product intent and evidence.</p>
+            <p>eve records product intent and evidence.</p>
           </div>
           <div className="eve-compare-table" role="table">
             <div className="eve-compare-head" role="row">
               <span role="columnheader" />
               <span role="columnheader">Git</span>
-              <span role="columnheader">EVE</span>
+              <span role="columnheader">eve</span>
             </div>
             {comparisonRows.map(([label, git, eve]) => (
               <div className="eve-compare-row" role="row" key={label}>
@@ -186,9 +186,9 @@ export default function HomePage() {
         <section className="eve-local" aria-label="Local-first Git-native storage">
           <div className="eve-local-copy">
             <h2>Local-first. Git-native.</h2>
-            <p>EVE stores everything in your repository. No lock-in, no cloud, no surprises.</p>
+            <p>eve stores everything in your repository. No lock-in, no cloud, no surprises.</p>
           </div>
-          <div className="eve-local-flow" aria-label="EVE repository storage flow">
+          <div className="eve-local-flow" aria-label="eve repository storage flow">
             <pre><code>{`Agent / CLI
 
   eve plan
@@ -217,7 +217,7 @@ export default function HomePage() {
         <section className="eve-final">
           <h2>
             Your product has a history.
-            <span>EVE makes it verifiable.</span>
+            <span>eve makes it verifiable.</span>
           </h2>
           <div className="eve-final-actions">
             <Link className="eve-final-primary" href="/docs/guides/get-started">
