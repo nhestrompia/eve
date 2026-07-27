@@ -1,0 +1,53 @@
+{
+  "id": "plan_253ac976ac20c3b1",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_release_0_5_0_2026_07_27",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Prepare the eve 0.5.0 release using the existing repository release process and record the release in EVE.",
+      "acceptanceCriteria": "npm/eve package metadata is bumped to 0.5.0; CHANGELOG.md contains a dated 0.5.0 section summarizing changes since 0.4.0; relevant release verification passes; implementation changes are committed; an EVE release snapshot is completed and the generated .eve record is committed separately.",
+      "allowedPathGlobs": [
+        "CHANGELOG.md",
+        "npm/eve/package.json",
+        "npm/eve/package-lock.json",
+        ".eve/**"
+      ],
+      "milestones": [
+        {
+          "title": "Review prior release flow",
+          "goal": "Use prior EVE release snapshots and scripts/prepare-release.sh to follow the established release procedure."
+        },
+        {
+          "title": "Prepare release metadata",
+          "goal": "Add the 0.5.0 changelog notes and run scripts/prepare-release.sh 0.5.0 to update release files."
+        },
+        {
+          "title": "Verify release",
+          "goal": "Run focused package checks and repository tests appropriate for a metadata release."
+        },
+        {
+          "title": "Record release history",
+          "goal": "Commit implementation files, create the EVE release snapshot, then commit the generated .eve files."
+        }
+      ],
+      "configuredSuite": "release metadata and package verification",
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "6bdc117a65a1892b107709a694788e5d95226c8d",
+      "branch": "codex/release-eve-0.5.0",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-27T17:51:38Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-27T17:51:44Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_a466ef232c757ee5"
+}
