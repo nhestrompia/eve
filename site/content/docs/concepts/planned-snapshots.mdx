@@ -3,7 +3,7 @@ title: Planned Snapshots
 description: Approve implementation plans before agents make snapshot-worthy changes.
 ---
 
-Planned Snapshots add a local human approval gate before non-trivial product work. An agent declares what it intends to change, EVE stores a durable Plan request, a human approves or edits it locally, and the final Snapshot records whether the implementation matched the locked Plan.
+Planned Snapshots add a local human approval gate before non-trivial product work. An agent declares what it intends to change, eve stores a durable Plan request, a human approves or edits it locally, and the final Snapshot records whether the implementation matched the locked Plan.
 
 ```text
 declare_plan -> approval -> locked Plan revision -> implementation -> complete_snapshot
@@ -15,7 +15,7 @@ Agents call `declare_plan` with a caller-stable `planRequestId`, a goal, accepta
 
 The request is durable. If an MCP call times out, is cancelled, or either side restarts, the agent should call `get_plan_request` or call `declare_plan` again with the same `planRequestId`. Reusing the same ID with identical content resumes the request. Reusing it with different content fails.
 
-Pending requests are stored in EVE's Git-private local state, so waiting for approval does not dirty the repository.
+Pending requests are stored in eve's Git-private local state, so waiting for approval does not dirty the repository.
 
 ## Approval
 
@@ -27,11 +27,11 @@ Approving unchanged content locks the agent's revision. Editing during approval 
 
 When the implementation is complete and verified, the agent passes the locked `planId` and `planRevision` to `complete_snapshot` or to the CLI draft with `eve add --plan-id ... --plan-revision ...`.
 
-EVE records Plan conformance on the Snapshot:
+eve records Plan conformance on the Snapshot:
 
 - `matched` when scope, policy, check definitions, and eligible verification evidence match
 - `failed` when checks fail, policy or definitions drift, or changed paths fall outside the approved scope
 - `incomplete` when required evidence is missing or indeterminate
 - `no_plan` when the Snapshot was completed without a locked Plan reference
 
-Acceptance criteria remain human-readable evidence. EVE checks approved scope and verification evidence; it does not claim semantic proof that every sentence in the criteria was satisfied.
+Acceptance criteria remain human-readable evidence. eve checks approved scope and verification evidence; it does not claim semantic proof that every sentence in the criteria was satisfied.

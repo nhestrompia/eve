@@ -1,17 +1,16 @@
 {
   "id": "eve",
-  "root": "/Users/nhestrompia/.codex/worktrees/581e/eve",
-  "snapshotCount": 85,
-  "commitCount": 98,
+  "root": "/Users/nhestrompia/.codex/worktrees/c1fa/eve",
+  "snapshotCount": 86,
+  "commitCount": 100,
   "decisionCount": 161,
   "riskCount": 62,
   "artifactCount": 45,
-  "latestAt": "2026-07-27T23:30:17Z",
-  "latestSnapshot": "snap_486eb042dfcb345c",
-  "latestTitle": "Resolve merged branch pending snapshots",
-  "branch": "codex/fix-pending-snapshot-merged-branches",
-  "head": "51cac2caa30da054eb8be53cb52b5cd10b877672",
+  "latestAt": "2026-07-27T23:44:23Z",
+  "latestSnapshot": "snap_396d4892847c1ceb",
+  "latestTitle": "Lowercase eve site brand",
+  "head": "8fc9c144214a07d48fb843b39ea2ea02553d1d8f",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "51cac2caa30da054eb8be53cb52b5cd10b877672"
+  "latestGitState": "8fc9c144214a07d48fb843b39ea2ea02553d1d8f"
 }
