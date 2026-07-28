@@ -11,7 +11,6 @@ export function TopBar({ onSearch }: { onSearch: () => void }) {
   const config = useQuery({
     queryKey: ["config"],
     queryFn: api.config,
-    refetchInterval: 10_000,
   });
   const [copied, setCopied] = useState(false);
   const match = state.location.pathname.match(/snap_[^/]+|EV-\d+/);
