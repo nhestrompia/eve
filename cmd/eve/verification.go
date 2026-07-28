@@ -305,6 +305,10 @@ func (repo repository) cancellationPath(runID string) (string, error) {
 	return repo.verificationPrivatePath("cancel", runID)
 }
 
+func (repo repository) verificationMarkerPath() (string, error) {
+	return repo.verificationPrivatePath("verification.active")
+}
+
 func (repo repository) requestVerificationCancellation(runID string) error {
 	path, err := repo.cancellationPath(runID)
 	if err != nil {
@@ -830,7 +834,12 @@ func acquireVerificationLock(repo repository, runID string) (*verificationLock, 
 	}
 	token := newRecordID("lock")
 	marker := fmt.Sprintf("pid=%d\nrunId=%s\ntoken=%s\n", os.Getpid(), runID, token)
-	markerPath := filepath.Join(repo.verificationRunsDir(), ".active.lock")
+	markerPath, err := repo.verificationMarkerPath()
+	if err != nil {
+		_ = unlockVerificationFile(lockFile)
+		_ = lockFile.Close()
+		return nil, err
+	}
 	markerFile, err := createVerificationMarker(markerPath)
 	if err != nil {
 		_ = unlockVerificationFile(lockFile)
@@ -952,9 +961,26 @@ func (server runtimeServer) awaitVerificationLock(ctx context.Context, repo repo
 		server.cleanupVerificationRun(repo, run.RunID)
 		return
 	}
+	markerPath, markerErr := repo.verificationMarkerPath()
+	if markerErr != nil {
+		server.verificationRegistry.mu.Lock()
+		run.Status, run.DriftReason, run.CompletedAt = "invalidated", markerErr.Error(), nowUTC()
+		server.verificationRegistry.mu.Unlock()
+		_ = server.persistVerificationRun(repo, run)
+		server.cleanupVerificationRun(repo, run.RunID)
+		return
+	}
+	if err := os.MkdirAll(filepath.Dir(markerPath), 0o700); err != nil {
+		server.verificationRegistry.mu.Lock()
+		run.Status, run.DriftReason, run.CompletedAt = "invalidated", err.Error(), nowUTC()
+		server.verificationRegistry.mu.Unlock()
+		_ = server.persistVerificationRun(repo, run)
+		server.cleanupVerificationRun(repo, run.RunID)
+		return
+	}
 	watcher, watchErr := fsnotify.NewWatcher()
 	if watchErr == nil {
-		watchErr = watcher.Add(repo.verificationRunsDir())
+		watchErr = watcher.Add(filepath.Dir(markerPath))
 	}
 	if watcher != nil {
 		defer watcher.Close()
@@ -964,7 +990,6 @@ func (server runtimeServer) awaitVerificationLock(ctx context.Context, repo repo
 		recovery = time.NewTicker(time.Second)
 		defer recovery.Stop()
 	}
-	markerPath := filepath.Join(repo.verificationRunsDir(), ".active.lock")
 	for {
 		if ctx.Err() != nil {
 			server.verificationRegistry.mu.Lock()

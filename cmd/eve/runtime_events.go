@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -43,6 +44,7 @@ type runtimeEvents struct {
 	nextID      uint64
 	debounce    time.Duration
 	watchedDirs int
+	generation  atomic.Uint64
 }
 
 func newRuntimeEvents(debounce time.Duration) *runtimeEvents {
@@ -74,6 +76,7 @@ func (events *runtimeEvents) subscribe() (<-chan runtimeEvent, func()) {
 }
 
 func (events *runtimeEvents) publish(event runtimeEvent) {
+	events.generation.Add(1)
 	events.mu.RLock()
 	defer events.mu.RUnlock()
 	for _, channel := range events.subscribers {
@@ -92,13 +95,26 @@ func (events *runtimeEvents) publish(event runtimeEvent) {
 	}
 }
 
+func (events *runtimeEvents) currentGeneration() uint64 {
+	if events == nil {
+		return 0
+	}
+	return events.generation.Load()
+}
+
 func (events *runtimeEvents) subscriberCount() int {
+	if events == nil {
+		return 0
+	}
 	events.mu.RLock()
 	defer events.mu.RUnlock()
 	return len(events.subscribers)
 }
 
 func (events *runtimeEvents) watchedDirectoryCount() int {
+	if events == nil {
+		return 0
+	}
 	events.mu.RLock()
 	defer events.mu.RUnlock()
 	return events.watchedDirs
@@ -332,6 +348,8 @@ func classifyRuntimePath(path string, repositories []watchedRepository) (runtime
 				return runtimeEvent{Kind: runtimeEventPlans, Repository: watched.repo.ID}, true
 			case "cancel", "known-runs":
 				return runtimeEvent{Kind: runtimeEventVerification, Repository: watched.repo.ID}, true
+			default:
+				return runtimeEvent{}, false
 			}
 		}
 		if relativePathWithin(watched.eveRoot, path) {

@@ -30,6 +30,7 @@ type runtimeServer struct {
 	repo                 repository
 	addr                 string
 	searchCache          *snapshotSearchCache
+	derivedCache         *runtimeDerivedCache
 	verificationRegistry *verificationRegistry
 	events               *runtimeEvents
 	agentLease           *agentLeaseOwner
@@ -242,6 +243,7 @@ func newRuntimeServer(repo repository, addr string) runtimeServer {
 		repo:                 repo,
 		addr:                 addr,
 		searchCache:          &snapshotSearchCache{},
+		derivedCache:         newRuntimeDerivedCache(),
 		verificationRegistry: newVerificationRegistry(),
 		events:               newRuntimeEvents(150 * time.Millisecond),
 	}
@@ -271,7 +273,13 @@ func (server runtimeServer) handleHealth(w http.ResponseWriter, r *http.Request)
 		writeMethodNotAllowed(w)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"service": "eve", "version": eve.CLIVersion})
+	writeJSON(w, http.StatusOK, map[string]any{
+		"service":            "eve",
+		"version":            eve.CLIVersion,
+		"eventSubscribers":   server.events.subscriberCount(),
+		"watchedDirectories": server.events.watchedDirectoryCount(),
+		"derivedCache":       server.derivedCache.stats(),
+	})
 }
 
 func (server runtimeServer) handleCompare(w http.ResponseWriter, r *http.Request) {
@@ -379,13 +387,9 @@ func (server runtimeServer) handleConfig(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	_, err := os.Stat(server.repo.configPath())
-	summary, summaryErr := server.repo.summary()
-	facts, factsErr := deriveGitFacts(server.repo)
+	summary, summaryErr := server.cachedRepoSummary(r.Context(), server.repo)
 	if summaryErr != nil {
 		summary = repoSummary{}
-	}
-	if factsErr != nil {
-		facts = gitFacts{}
 	}
 	writeJSON(w, http.StatusOK, configResponse{
 		SnapshotSchemaVersion: eve.SnapshotSchemaVersion,
@@ -394,9 +398,9 @@ func (server runtimeServer) handleConfig(w http.ResponseWriter, r *http.Request)
 		Addr:                  server.addr,
 		EveDir:                server.repo.eveDir,
 		Initialized:           err == nil,
-		CurrentGitState:       facts.GitState,
-		CurrentBranch:         facts.Branch,
-		CurrentDirty:          facts.Dirty,
+		CurrentGitState:       summary.Head,
+		CurrentBranch:         summary.Branch,
+		CurrentDirty:          summary.Dirty,
 		LatestSnapshot:        summary.LatestSnapshot,
 		LatestGitState:        summary.LatestGitState,
 		PendingSnapshot:       summary.PendingSnapshot,
@@ -411,7 +415,7 @@ func (server runtimeServer) handleRepos(w http.ResponseWriter, r *http.Request) 
 	repos := server.repositories()
 	summaries := make([]repoSummary, 0, len(repos))
 	for _, repo := range repos {
-		summary, err := repo.summary()
+		summary, err := server.cachedRepoSummary(r.Context(), repo)
 		if err != nil {
 			if repo.Root == server.repo.Root {
 				writeAPIError(w, http.StatusInternalServerError, err)
@@ -439,7 +443,7 @@ func (server runtimeServer) handleRepoRoutes(w http.ResponseWriter, r *http.Requ
 	}
 	switch {
 	case len(parts) == 1 && r.Method == http.MethodGet:
-		detail, err := repo.detail()
+		detail, err := server.cachedRepoDetail(r.Context(), repo)
 		if err != nil {
 			writeAPIError(w, http.StatusInternalServerError, err)
 			return
@@ -483,7 +487,42 @@ func (server runtimeServer) handlePendingSnapshot(w http.ResponseWriter, r *http
 }
 
 func (server runtimeServer) repositories() []repository {
-	return knownRepositories(server.repo)
+	repositories, err := cachedRuntimeValue(
+		context.Background(),
+		server.derivedCache,
+		"repositories",
+		server.events.currentGeneration(),
+		runtimeDerivedCacheTTL,
+		func() ([]repository, error) {
+			return knownRepositories(server.repo), nil
+		},
+	)
+	if err != nil {
+		return knownRepositories(server.repo)
+	}
+	return append([]repository(nil), repositories...)
+}
+
+func (server runtimeServer) cachedRepoSummary(ctx context.Context, repo repository) (repoSummary, error) {
+	return cachedRuntimeValue(
+		ctx,
+		server.derivedCache,
+		"summary:"+repo.Root,
+		server.events.currentGeneration(),
+		runtimeDerivedCacheTTL,
+		repo.summary,
+	)
+}
+
+func (server runtimeServer) cachedRepoDetail(ctx context.Context, repo repository) (repoDetail, error) {
+	return cachedRuntimeValue(
+		ctx,
+		server.derivedCache,
+		"detail:"+repo.Root,
+		server.events.currentGeneration(),
+		runtimeDerivedCacheTTL,
+		repo.detail,
+	)
 }
 
 func (server runtimeServer) repoByID(repoID string) (repository, bool) {

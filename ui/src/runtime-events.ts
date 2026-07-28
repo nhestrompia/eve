@@ -8,6 +8,17 @@ export type RuntimeEventSource = {
 
 type RuntimeEventSourceConstructor = new (url: string) => RuntimeEventSource;
 
+export type RuntimeVisibilitySource = {
+  readonly hidden: boolean;
+  addEventListener(name: "visibilitychange", listener: () => void): void;
+  removeEventListener(name: "visibilitychange", listener: () => void): void;
+};
+
+type RuntimeEventEnvironment = {
+  visibilitySource?: RuntimeVisibilitySource;
+  coalesceMs?: number;
+};
+
 const queryKeysByEvent: Record<string, QueryKey[]> = {
   snapshots: [["snapshots"], ["repositories"], ["repository"], ["config"]],
   repositories: [["repositories"], ["repository"], ["config"], ["plan-requests"], ["pending-plan-requests"]],
@@ -20,38 +31,104 @@ const queryKeysByEvent: Record<string, QueryKey[]> = {
 export function connectRuntimeEvents(
   queryClient: QueryClient,
   EventSourceConstructor: RuntimeEventSourceConstructor = EventSource,
+  environment: RuntimeEventEnvironment = {},
 ) {
-  const source = new EventSourceConstructor("/api/events");
+  const visibilitySource =
+    environment.visibilitySource ??
+    (typeof document === "undefined" ? undefined : document);
+  const coalesceMs = environment.coalesceMs ?? 50;
   const listeners = new Map<string, (event: MessageEvent) => void>();
-  let connected = false;
-  const readyListener = () => {
-    if (connected) {
+  const pendingKeys = new Map<string, QueryKey>();
+  let pendingAll = false;
+  let flushTimer: ReturnType<typeof setTimeout> | undefined;
+  let source: RuntimeEventSource | undefined;
+  let connectedOnce = false;
+
+  const flush = () => {
+    flushTimer = undefined;
+    if (pendingAll) {
+      pendingAll = false;
+      pendingKeys.clear();
       void queryClient.invalidateQueries();
       return;
     }
-    connected = true;
+    const queryKeys = [...pendingKeys.values()];
+    pendingKeys.clear();
+    for (const queryKey of queryKeys) {
+      void queryClient.invalidateQueries({ queryKey });
+    }
+  };
+  const scheduleFlush = () => {
+    if (flushTimer === undefined) {
+      flushTimer = setTimeout(flush, coalesceMs);
+    }
+  };
+  const queueKeys = (queryKeys: QueryKey[]) => {
+    if (pendingAll) return;
+    for (const queryKey of queryKeys) {
+      pendingKeys.set(JSON.stringify(queryKey), queryKey);
+    }
+    scheduleFlush();
+  };
+  const queueAll = () => {
+    pendingAll = true;
+    pendingKeys.clear();
+    scheduleFlush();
+  };
+  const readyListener = () => {
+    if (connectedOnce) {
+      queueAll();
+    }
+    connectedOnce = true;
   };
   listeners.set("ready", readyListener);
-  source.addEventListener("ready", readyListener);
   for (const [name, queryKeys] of Object.entries(queryKeysByEvent)) {
     const listener = () => {
-      for (const queryKey of queryKeys) {
-        void queryClient.invalidateQueries({ queryKey });
-      }
+      queueKeys(queryKeys);
     };
     listeners.set(name, listener);
-    source.addEventListener(name, listener);
   }
-  const allListener = () => {
-    void queryClient.invalidateQueries();
-  };
+  const allListener = queueAll;
   listeners.set("all", allListener);
-  source.addEventListener("all", allListener);
 
-  return () => {
+  const disconnectSource = () => {
+    if (!source) return;
     for (const [name, listener] of listeners) {
       source.removeEventListener(name, listener);
     }
     source.close();
+    source = undefined;
+  };
+  const connectSource = () => {
+    if (source || visibilitySource?.hidden) return;
+    source = new EventSourceConstructor("/api/events");
+    for (const [name, listener] of listeners) {
+      source.addEventListener(name, listener);
+    }
+  };
+  const handleVisibilityChange = () => {
+    if (visibilitySource?.hidden) {
+      disconnectSource();
+      if (flushTimer !== undefined) {
+        clearTimeout(flushTimer);
+        flushTimer = undefined;
+      }
+      pendingAll = false;
+      pendingKeys.clear();
+      return;
+    }
+    queueAll();
+    connectSource();
+  };
+
+  visibilitySource?.addEventListener("visibilitychange", handleVisibilityChange);
+  connectSource();
+
+  return () => {
+    visibilitySource?.removeEventListener("visibilitychange", handleVisibilityChange);
+    disconnectSource();
+    if (flushTimer !== undefined) {
+      clearTimeout(flushTimer);
+    }
   };
 }

@@ -396,6 +396,23 @@ func (server runtimeServer) agentActivities(now time.Time) []agentActivity {
 	return result
 }
 
+func (server runtimeServer) cachedAgentActivities(now time.Time) []agentActivity {
+	activities, err := cachedRuntimeValue(
+		context.Background(),
+		server.derivedCache,
+		"agent-activities",
+		server.events.currentGeneration(),
+		runtimeDerivedCacheTTL,
+		func() ([]agentActivity, error) {
+			return server.agentActivities(now), nil
+		},
+	)
+	if err != nil {
+		return server.agentActivities(now)
+	}
+	return append([]agentActivity(nil), activities...)
+}
+
 func agentStatusOrder(status string) int {
 	switch status {
 	case agentStateRunning:
@@ -465,5 +482,5 @@ func (server runtimeServer) handleAgents(w http.ResponseWriter, r *http.Request)
 		writeMethodNotAllowed(w)
 		return
 	}
-	writeJSON(w, http.StatusOK, server.agentActivities(time.Now().UTC()))
+	writeJSON(w, http.StatusOK, server.cachedAgentActivities(time.Now().UTC()))
 }

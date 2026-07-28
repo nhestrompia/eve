@@ -905,6 +905,9 @@ func TestVerificationLockReleaseDoesNotDeleteAnotherOwnerMarker(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if relativePathWithin(repo.verificationRunsDir(), lock.markerPath) {
+		t.Fatalf("verification marker %s must not live in tracked run evidence", lock.markerPath)
+	}
 	replacement := fmt.Sprintf("pid=%d\nrunId=run_replacement\ntoken=lock_replacement\n", os.Getpid())
 	if err := os.WriteFile(lock.markerPath, []byte(replacement), 0o600); err != nil {
 		t.Fatal(err)

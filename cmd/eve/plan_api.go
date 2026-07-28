@@ -15,7 +15,7 @@ func (server runtimeServer) handlePlanRequests(w http.ResponseWriter, r *http.Re
 		return
 	}
 	status := strings.TrimSpace(r.URL.Query().Get("status"))
-	requests, err := server.planRequests(r.Context(), status)
+	requests, err := server.cachedPlanRequests(r.Context(), status)
 	if err != nil {
 		writeAPIError(w, http.StatusInternalServerError, err)
 		return
@@ -112,6 +112,19 @@ func (server runtimeServer) planRequests(ctx context.Context, status string) ([]
 	return planRequestsFromRepositories(ctx, server.planRequestRepositories(), status)
 }
 
+func (server runtimeServer) cachedPlanRequests(ctx context.Context, status string) ([]*planRequest, error) {
+	return cachedRuntimeValue(
+		ctx,
+		server.derivedCache,
+		"plan-requests:"+status,
+		server.events.currentGeneration(),
+		runtimeDerivedCacheTTL,
+		func() ([]*planRequest, error) {
+			return server.planRequests(ctx, status)
+		},
+	)
+}
+
 func planRequestsFromRepositories(ctx context.Context, repositories []repository, status string) ([]*planRequest, error) {
 	result := make([]*planRequest, 0)
 	seen := make(map[string]bool)
@@ -202,7 +215,7 @@ func (server runtimeServer) handlePlanRequestEvents(w http.ResponseWriter, r *ht
 	defer heartbeat.Stop()
 	lastSignature := ""
 	send := func() bool {
-		requests, err := server.planRequests(r.Context(), "")
+		requests, err := server.cachedPlanRequests(r.Context(), "")
 		if err != nil {
 			return false
 		}
