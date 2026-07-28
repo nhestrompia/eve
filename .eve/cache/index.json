@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 88,
-  "commitCount": 104,
-  "decisionCount": 166,
-  "riskCount": 65,
+  "snapshotCount": 89,
+  "commitCount": 106,
+  "decisionCount": 168,
+  "riskCount": 66,
   "artifactCount": 45,
-  "latestAt": "2026-07-28T00:19:34Z",
-  "latestSnapshot": "snap_b149e660394a78fb",
-  "latestTitle": "Shorten Agent Instruction Guidance",
+  "latestAt": "2026-07-28T00:40:42Z",
+  "latestSnapshot": "snap_bf1db1ea5873a6a0",
+  "latestTitle": "Release eve 0.6.0",
   "branch": "main",
-  "head": "a3ac998ddf2b76a1f4116ea568c0213590c89fa2",
+  "head": "191910ccc957d4b833746bf3db2982f6aa0b73fb",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "a3ac998ddf2b76a1f4116ea568c0213590c89fa2"
+  "latestGitState": "191910ccc957d4b833746bf3db2982f6aa0b73fb"
 }

@@ -1,0 +1,58 @@
+{
+  "id": "plan_c5e502771427d20a",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_release_eve_0_6_0_2026_07_28",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Prepare and deploy the EVE 0.6.0 release.",
+      "acceptanceCriteria": "Version metadata is updated to 0.6.0, release notes/changelog reflect the release, the relevant verification suite passes, the release is deployed using the repository's configured release path, and both the implementation commit and EVE product-history commit are created.",
+      "allowedPathGlobs": [
+        "package.json",
+        "package-lock.json",
+        "npm/eve/package.json",
+        "npm/eve/README.md",
+        "README.md",
+        "CHANGELOG.md",
+        "site/**",
+        "ui/**",
+        ".eve/**"
+      ],
+      "milestones": [
+        {
+          "title": "Discover release process",
+          "goal": "Inspect package metadata, changelog, and deploy scripts to determine the correct release steps."
+        },
+        {
+          "title": "Prepare 0.6.0 metadata",
+          "goal": "Update versioned files and release notes for 0.6.0."
+        },
+        {
+          "title": "Verify release",
+          "goal": "Run the relevant tests/builds before creating the EVE snapshot."
+        },
+        {
+          "title": "Deploy and record",
+          "goal": "Deploy the release, commit implementation, record EVE snapshot, and commit the EVE record."
+        }
+      ],
+      "configuredSuite": "Repository release verification and build/test commands discovered from local tooling.",
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "2cb504f59afd25c320754a4127578df3f2936a43",
+      "branch": "main",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-28T00:36:50Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-28T00:37:28Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_bf1db1ea5873a6a0"
+}
