@@ -129,12 +129,7 @@ function PullRequestReview({
             {repository}
           </Link>
           <ChevronRight className="size-3.5" />
-          <a
-            href={`/repositories/${encodeURIComponent(repository)}#pull-requests`}
-            className="font-medium hover:text-blue-700"
-          >
-            Pull requests
-          </a>
+          <PullRequestsBreadcrumbLink repository={repository} />
           <ChevronRight className="size-3.5" />
           <span aria-current="page">#{pullRequest.number}</span>
           {pullRequest.snapshotId ? (
@@ -376,6 +371,29 @@ function MergeImpactSection({
         </div>
       ) : null}
     </section>
+  );
+}
+
+export function pullRequestsBreadcrumbTarget(repository: string) {
+  return {
+    to: "/repositories/$repo" as const,
+    params: { repo: repository },
+    hash: "pull-requests",
+  };
+}
+
+export function PullRequestsBreadcrumbLink({
+  repository,
+}: {
+  repository: string;
+}) {
+  return (
+    <Link
+      {...pullRequestsBreadcrumbTarget(repository)}
+      className="font-medium hover:text-blue-700"
+    >
+      Pull requests
+    </Link>
   );
 }
 

@@ -3,12 +3,61 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { PullRequestSummary, RepositorySummary } from '../types';
 import {
+  hasExactHeadSnapshot,
+  partitionOpenPullRequests,
   pullRequestBannerSignals,
+  pullRequestDisclosureCopy,
   recentOpenPullRequest,
   RepositoryHeaderMark,
   repositoryInitial,
   repositoryTabs,
 } from './repository-page';
+
+describe('EVE pull request context', () => {
+  it('keeps exact-head Snapshot PRs visible and partitions the rest', () => {
+    const contextual = {
+      number: 32,
+      state: 'open',
+      snapshotId: 'snap_32',
+      snapshotHeadMatch: true,
+    } as PullRequestSummary;
+    const stale = {
+      number: 31,
+      state: 'open',
+      snapshotId: 'snap_31',
+      snapshotHeadMatch: false,
+    } as PullRequestSummary;
+    const unlinked = {
+      number: 19,
+      state: 'open',
+      snapshotHeadMatch: false,
+    } as PullRequestSummary;
+
+    expect(hasExactHeadSnapshot(contextual)).toBe(true);
+    expect(hasExactHeadSnapshot(stale)).toBe(false);
+    expect(partitionOpenPullRequests([contextual, stale, unlinked])).toEqual({
+      contextual: [contextual],
+      hidden: [stale, unlinked],
+    });
+  });
+
+  it('describes hidden and expanded open PR counts truthfully', () => {
+    expect(pullRequestDisclosureCopy(13, 14, false, false)).toEqual({
+      label: 'Show all 14 open pull requests',
+      detail: '13 are hidden because they do not have current EVE context.',
+    });
+    expect(pullRequestDisclosureCopy(13, 14, false, true)).toEqual({
+      label: 'Hide 13 other pull requests',
+      detail: '13 shown for reference; they do not have current EVE context.',
+    });
+    expect(pullRequestDisclosureCopy(49, 88, true, false).label).toBe(
+      'Show 49 other loaded pull requests',
+    );
+    expect(pullRequestDisclosureCopy(1, 1, false, false).label).toBe(
+      'Show 1 open pull request',
+    );
+  });
+});
 
 describe('pullRequestBannerSignals', () => {
   it('shows one Snapshot blocker and leaves scope unevaluated without evidence', () => {
@@ -115,14 +164,25 @@ describe('recentOpenPullRequest', () => {
         {
           number: 1,
           state: 'open',
+          snapshotId: 'snap_1',
+          snapshotHeadMatch: true,
           createdAt: '2026-06-01T00:00:00Z',
           updatedAt: '2026-07-28T11:59:00Z',
         },
         {
           number: 2,
           state: 'open',
+          snapshotId: 'snap_2',
+          snapshotHeadMatch: true,
           createdAt: '2026-07-27T00:00:00Z',
           updatedAt: '2026-07-27T01:00:00Z',
+        },
+        {
+          number: 3,
+          state: 'open',
+          snapshotHeadMatch: false,
+          createdAt: '2026-07-28T00:00:00Z',
+          updatedAt: '2026-07-28T01:00:00Z',
         },
       ] as PullRequestSummary[],
       now,

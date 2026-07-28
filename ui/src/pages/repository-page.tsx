@@ -689,7 +689,7 @@ export function pullRequestBannerSignals(
   tone: "success" | "warning" | "neutral";
 }> {
   const exactHeadSnapshot =
-    Boolean(pullRequest.snapshotId) && pullRequest.snapshotHeadMatch;
+    hasExactHeadSnapshot(pullRequest);
   const checkSignal =
     pullRequest.checksTotal === 0
       ? {
@@ -913,6 +913,8 @@ function PullRequestsPanel({
   loading: boolean;
   repository: RepositorySummary;
 }) {
+  const [showOtherPullRequests, setShowOtherPullRequests] = useState(false);
+
   if (loading) {
     return <LoadingState label="Loading pull requests" />;
   }
@@ -939,7 +941,11 @@ function PullRequestsPanel({
     );
   }
 
-  if (collection.pullRequests.length === 0) {
+  const open = collection.pullRequests.filter(
+    (pullRequest) => pullRequest.state === "open",
+  );
+
+  if (open.length === 0 && collection.openCount === 0) {
     return (
       <section className="rounded-lg bg-white p-6 shadow-[var(--shadow-border)] sm:p-8">
         <GitPullRequest className="size-5 text-slate-500" />
@@ -952,24 +958,78 @@ function PullRequestsPanel({
     );
   }
 
-  const open = collection.pullRequests.filter(
-    (pullRequest) => pullRequest.state === "open",
-  );
-
+  const { contextual, hidden } = partitionOpenPullRequests(open);
   const truncated = open.length < collection.openCount;
+  const disclosureCopy = pullRequestDisclosureCopy(
+    hidden.length,
+    collection.openCount,
+    truncated,
+    showOtherPullRequests,
+  );
   return (
     <div className="space-y-4">
       <PullRequestGroup
-        title="Open pull requests"
-        detail={
-          truncated
-            ? `Showing ${open.length} of ${collection.openCount}`
-            : `${collection.openCount} active`
-        }
-        pullRequests={open}
+        title="EVE review queue"
+        detail={`${contextual.length}${truncated ? " loaded" : ""} ${
+          contextual.length === 1 ? "pull request" : "pull requests"
+        } with context`}
+        pullRequests={contextual}
         repository={repository.name}
-        empty="No open pull requests."
+        empty={
+          truncated
+            ? `None of the ${open.length} loaded open pull requests has an exact-head Snapshot. EVE has not classified the remaining ${
+                collection.openCount - open.length
+              }.`
+            : `${collection.openCount} open ${
+                collection.openCount === 1
+                  ? "pull request is"
+                  : "pull requests are"
+              } waiting for an exact-head Snapshot before EVE can review them.`
+        }
       />
+      {hidden.length > 0 ? (
+        <>
+          <button
+            type="button"
+            aria-expanded={showOtherPullRequests}
+            aria-controls="other-open-pull-requests"
+            onClick={() => setShowOtherPullRequests((current) => !current)}
+            className="group flex w-full items-center gap-4 rounded-lg border bg-white px-5 py-4 text-left transition-colors hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+          >
+            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-600">
+              <GitPullRequest className="size-4" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-slate-950">
+                {disclosureCopy.label}
+              </span>
+              <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">
+                {disclosureCopy.detail}
+              </span>
+            </span>
+            <span className="inline-flex shrink-0 items-center gap-2 text-xs font-medium text-blue-700">
+              {showOtherPullRequests ? "Hide" : "Show"}
+              <ChevronDown
+                className={`size-4 transition-transform ${
+                  showOtherPullRequests ? "rotate-180" : ""
+                }`}
+              />
+            </span>
+          </button>
+          <div
+            id="other-open-pull-requests"
+            hidden={!showOtherPullRequests}
+          >
+            <PullRequestGroup
+              title="Other open pull requests"
+              detail={`${hidden.length} without current EVE context`}
+              pullRequests={hidden}
+              repository={repository.name}
+              empty="No other open pull requests."
+            />
+          </div>
+        </>
+      ) : null}
       {truncated && repository.remoteUrl ? (
         <p className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-white px-5 py-4 text-sm text-muted-foreground">
           EVE shows the 50 most recently updated pull requests here.
@@ -990,6 +1050,65 @@ function PullRequestsPanel({
 
 const RECENT_PULL_REQUEST_DAYS = 14;
 
+export function hasExactHeadSnapshot(pullRequest: PullRequestSummary) {
+  return Boolean(pullRequest.snapshotId) && pullRequest.snapshotHeadMatch;
+}
+
+export function partitionOpenPullRequests(
+  pullRequests: PullRequestSummary[],
+): {
+  contextual: PullRequestSummary[];
+  hidden: PullRequestSummary[];
+} {
+  return pullRequests.reduce<{
+    contextual: PullRequestSummary[];
+    hidden: PullRequestSummary[];
+  }>(
+    (groups, pullRequest) => {
+      if (hasExactHeadSnapshot(pullRequest)) {
+        groups.contextual.push(pullRequest);
+      } else {
+        groups.hidden.push(pullRequest);
+      }
+      return groups;
+    },
+    { contextual: [], hidden: [] },
+  );
+}
+
+export function pullRequestDisclosureCopy(
+  hiddenCount: number,
+  openCount: number,
+  truncated: boolean,
+  expanded: boolean,
+) {
+  const singular = hiddenCount === 1;
+
+  if (expanded) {
+    return {
+      label: `Hide ${hiddenCount} other ${
+        singular ? "pull request" : "pull requests"
+      }`,
+      detail: `${hiddenCount} shown for reference; ${
+        singular ? "it does" : "they do"
+      } not have current EVE context.`,
+    };
+  }
+
+  return {
+    label: truncated
+      ? `Show ${hiddenCount} other loaded ${
+          singular ? "pull request" : "pull requests"
+        }`
+      : openCount === 1
+        ? "Show 1 open pull request"
+        : `Show all ${openCount} open pull requests`,
+    detail: `${hiddenCount} ${singular ? "is" : "are"} hidden because ${
+      singular ? "it does" : "they do"
+    } not have current EVE context.`,
+  };
+}
+
 export function recentOpenPullRequest(
   pullRequests: PullRequestSummary[],
   now = Date.now(),
@@ -997,7 +1116,12 @@ export function recentOpenPullRequest(
   const cutoff = now - RECENT_PULL_REQUEST_DAYS * 24 * 60 * 60 * 1000;
   return pullRequests
     .filter((pullRequest) => {
-      if (pullRequest.state !== "open") return false;
+      if (
+        pullRequest.state !== "open" ||
+        !hasExactHeadSnapshot(pullRequest)
+      ) {
+        return false;
+      }
       const createdAt = new Date(pullRequest.createdAt).getTime();
       return Number.isFinite(createdAt) && createdAt >= cutoff;
     })
