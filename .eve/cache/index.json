@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/.codex/worktrees/0def/eve",
-  "snapshotCount": 91,
-  "commitCount": 108,
-  "decisionCount": 174,
-  "riskCount": 69,
+  "snapshotCount": 92,
+  "commitCount": 109,
+  "decisionCount": 178,
+  "riskCount": 70,
   "artifactCount": 45,
-  "latestAt": "2026-07-28T11:41:20Z",
-  "latestSnapshot": "snap_cf14cb6adec48e88",
-  "latestTitle": "Add context-first pull request review",
+  "latestAt": "2026-07-28T13:53:54Z",
+  "latestSnapshot": "snap_542e07406f070dcd",
+  "latestTitle": "Focus pull request review on EVE context",
   "branch": "codex/pr-review-merge-ui",
-  "head": "605abe0df51012dc4e0f2ecb29b2f1860f7ed314",
+  "head": "9401bb455041ac55734e15462e71638dd96ad670",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "605abe0df51012dc4e0f2ecb29b2f1860f7ed314"
+  "latestGitState": "9401bb455041ac55734e15462e71638dd96ad670"
 }
