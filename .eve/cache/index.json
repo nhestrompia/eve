@@ -1,17 +1,17 @@
 {
   "id": "eve",
-  "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 89,
-  "commitCount": 106,
-  "decisionCount": 168,
-  "riskCount": 66,
+  "root": "/Users/nhestrompia/.codex/worktrees/93f8/eve",
+  "snapshotCount": 90,
+  "commitCount": 107,
+  "decisionCount": 170,
+  "riskCount": 67,
   "artifactCount": 45,
-  "latestAt": "2026-07-28T00:40:42Z",
-  "latestSnapshot": "snap_bf1db1ea5873a6a0",
-  "latestTitle": "Release eve 0.6.0",
-  "branch": "main",
-  "head": "191910ccc957d4b833746bf3db2982f6aa0b73fb",
+  "latestAt": "2026-07-28T01:10:03Z",
+  "latestSnapshot": "snap_98b33b7b6df855cc",
+  "latestTitle": "Reduce idle UI polling",
+  "branch": "codex/reduce-eve-idle-cpu",
+  "head": "fc907fae8cc9e6b4424155b073624de1502d457d",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "191910ccc957d4b833746bf3db2982f6aa0b73fb"
+  "latestGitState": "fc907fae8cc9e6b4424155b073624de1502d457d"
 }
