@@ -6,6 +6,15 @@ This project uses Git tags for releases.
 
 ## Unreleased
 
+## 0.7.0 - 2026-07-28
+
+- Reduced idle CPU usage by replacing stale UI polling and runtime fan-out loops
+  with event-driven refreshes.
+- Added context-first pull request review views for inspecting EVE-linked product
+  history during PR review.
+- Fixed recorded artifact rendering and pull request Snapshot context linkage.
+- Kept history-only pull request Snapshots current after their branches merge.
+
 ## 0.6.0 - 2026-07-28
 
 - Kept the local dashboard live after product-history changes by refreshing UI
