@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/.codex/worktrees/93f8/eve",
-  "snapshotCount": 90,
-  "commitCount": 107,
-  "decisionCount": 170,
-  "riskCount": 67,
+  "snapshotCount": 91,
+  "commitCount": 108,
+  "decisionCount": 174,
+  "riskCount": 69,
   "artifactCount": 45,
-  "latestAt": "2026-07-28T01:10:03Z",
-  "latestSnapshot": "snap_98b33b7b6df855cc",
-  "latestTitle": "Reduce idle UI polling",
+  "latestAt": "2026-07-28T02:46:09Z",
+  "latestSnapshot": "snap_2705077f3abe824d",
+  "latestTitle": "Replace runtime polling with event-driven updates",
   "branch": "codex/reduce-eve-idle-cpu",
-  "head": "fc907fae8cc9e6b4424155b073624de1502d457d",
+  "head": "9d4657b3e54ab239de624ebbbf8159774f8b1e52",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "fc907fae8cc9e6b4424155b073624de1502d457d"
+  "latestGitState": "9d4657b3e54ab239de624ebbbf8159774f8b1e52"
 }

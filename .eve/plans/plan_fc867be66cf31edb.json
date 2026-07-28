@@ -1,0 +1,54 @@
+{
+  "id": "plan_fc867be66cf31edb",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_event-runtime-agents-20260728",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Replace EVE's recurring UI and plan polling with a shared event-driven runtime architecture, and report agent liveness from renewable MCP process leases.",
+      "acceptanceCriteria": "- A shared runtime event module fans out repository, plan, verification, configuration, snapshot, and agent-presence invalidations without unbounded queues or leaked subscribers.\n- The daemon watches EVE and Git state changes and emits debounced events, with a low-frequency recovery mechanism only for watcher failure or missed events.\n- The existing plan-request SSE implementation no longer scans every 500 ms and is served through the shared event pipeline.\n- MCP stdio agent processes create and renew leases associated with active plans; leases expire or are removed on process exit/completion, and the API distinguishes live agents from durable locked plans.\n- The UI uses one EventSource connection to invalidate affected TanStack queries and does not use routine interval refetching while connected; focus/reconnect behavior remains a recovery path.\n- Tests prove quiescent runtimes do not repeatedly read repository state, file changes produce coalesced events, disconnected subscribers are cleaned up, leases expire, agent status is accurate, and UI events map to the correct query keys.\n- Go tests, UI tests, and production UI build pass.",
+      "allowedPathGlobs": [
+        "cmd/eve/**",
+        "ui/**",
+        "go.mod",
+        "go.sum",
+        "docs/**",
+        ".eve/**"
+      ],
+      "milestones": [
+        {
+          "title": "Event core",
+          "goal": "Implement and test bounded event fan-out, debouncing, lifecycle, and filesystem adapters."
+        },
+        {
+          "title": "Runtime integration",
+          "goal": "Wire repository, plan, verification, and agent lease events into HTTP SSE and MCP process lifecycle."
+        },
+        {
+          "title": "UI integration",
+          "goal": "Replace interval polling with EventSource-driven query invalidation and truthful agent status."
+        },
+        {
+          "title": "Validation",
+          "goal": "Measure idle behavior and run the full Go/UI test and build suites."
+        }
+      ],
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "1498fc0366570976d72abcde852267f157fcc6b9",
+      "branch": "codex/reduce-eve-idle-cpu",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-28T01:58:56Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-28T02:07:19Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_2705077f3abe824d"
+}
