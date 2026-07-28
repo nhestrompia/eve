@@ -15,7 +15,7 @@ func (server runtimeServer) handlePlanRequests(w http.ResponseWriter, r *http.Re
 		return
 	}
 	status := strings.TrimSpace(r.URL.Query().Get("status"))
-	requests, err := server.planRequests(r.Context(), status)
+	requests, err := server.cachedPlanRequests(r.Context(), status)
 	if err != nil {
 		writeAPIError(w, http.StatusInternalServerError, err)
 		return
@@ -109,8 +109,25 @@ func writePlanMutationError(w http.ResponseWriter, err error) {
 }
 
 func (server runtimeServer) planRequests(ctx context.Context, status string) ([]*planRequest, error) {
+	return planRequestsFromRepositories(ctx, server.planRequestRepositories(), status)
+}
+
+func (server runtimeServer) cachedPlanRequests(ctx context.Context, status string) ([]*planRequest, error) {
+	return cachedRuntimeValue(
+		ctx,
+		server.derivedCache,
+		"plan-requests:"+status,
+		server.events.generationFor(runtimeEventPlans),
+		func() ([]*planRequest, error) {
+			return server.planRequests(ctx, status)
+		},
+	)
+}
+
+func planRequestsFromRepositories(ctx context.Context, repositories []repository, status string) ([]*planRequest, error) {
 	result := make([]*planRequest, 0)
-	for _, repo := range server.planRequestRepositories() {
+	seen := make(map[string]bool)
+	for _, repo := range repositories {
 		requests, err := repo.listPlanRequests()
 		if err != nil {
 			continue
@@ -122,6 +139,10 @@ func (server runtimeServer) planRequests(ctx context.Context, status string) ([]
 				}
 			}
 			if planRequestMatchesStatus(request, status) {
+				if seen[request.PlanRequestID] {
+					continue
+				}
+				seen[request.PlanRequestID] = true
 				result = append(result, request)
 			}
 		}
@@ -183,13 +204,17 @@ func (server runtimeServer) handlePlanRequestEvents(w http.ResponseWriter, r *ht
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
-	ticker := time.NewTicker(500 * time.Millisecond)
+	if server.events == nil {
+		writeAPIError(w, http.StatusServiceUnavailable, fmt.Errorf("runtime events are unavailable"))
+		return
+	}
+	stream, unsubscribe := server.events.subscribe()
+	defer unsubscribe()
 	heartbeat := time.NewTicker(15 * time.Second)
-	defer ticker.Stop()
 	defer heartbeat.Stop()
 	lastSignature := ""
 	send := func() bool {
-		requests, err := server.planRequests(r.Context(), "")
+		requests, err := server.cachedPlanRequests(r.Context(), "")
 		if err != nil {
 			return false
 		}
@@ -210,9 +235,12 @@ func (server runtimeServer) handlePlanRequestEvents(w http.ResponseWriter, r *ht
 		select {
 		case <-r.Context().Done():
 			return
-		case <-ticker.C:
-			if !send() {
-				return
+		case event := <-stream:
+			switch event.Kind {
+			case runtimeEventAll, runtimeEventConfig, runtimeEventPlans, runtimeEventRepositories:
+				if !send() {
+					return
+				}
 			}
 		case <-heartbeat.C:
 			_, _ = fmt.Fprint(w, ": heartbeat\n\n")

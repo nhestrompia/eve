@@ -1,5 +1,6 @@
 import type {
   CheckoutResponse,
+  AgentActivity,
   ComparisonResponse,
   ConfigResponse,
   DetailResponse,
@@ -289,6 +290,7 @@ async function compare(from: string, to: string): Promise<ComparisonResponse> {
 
 export const api = {
   config: () => request<ConfigResponse>('/api/config'),
+  agents: () => request<AgentActivity[]>('/api/agents'),
   planRequests: (status = 'pending_approval') =>
     request<PlanRequest[]>(`/api/plan-requests?status=${encodeURIComponent(status)}`),
   approvePlanRequest: (plan: PlanRequest, proposal?: PlanProposal) =>
