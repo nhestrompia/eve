@@ -1,17 +1,17 @@
 {
   "id": "eve",
-  "root": "/Users/nhestrompia/.codex/worktrees/75cc/eve",
-  "snapshotCount": 86,
-  "commitCount": 100,
-  "decisionCount": 163,
-  "riskCount": 63,
+  "root": "/Users/nhestrompia/Documents/eve",
+  "snapshotCount": 88,
+  "commitCount": 104,
+  "decisionCount": 166,
+  "riskCount": 65,
   "artifactCount": 45,
-  "latestAt": "2026-07-27T23:49:41Z",
-  "latestSnapshot": "snap_c785d7fcd95e65c8",
-  "latestTitle": "Require Plans for Agent Snapshots",
-  "branch": "codex/require-agent-plan-snapshots",
-  "head": "5c9fcc11866757d5e5f64f2def9b7cd05217a3fb",
+  "latestAt": "2026-07-28T00:19:34Z",
+  "latestSnapshot": "snap_b149e660394a78fb",
+  "latestTitle": "Shorten Agent Instruction Guidance",
+  "branch": "main",
+  "head": "a3ac998ddf2b76a1f4116ea568c0213590c89fa2",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "5c9fcc11866757d5e5f64f2def9b7cd05217a3fb"
+  "latestGitState": "a3ac998ddf2b76a1f4116ea568c0213590c89fa2"
 }
