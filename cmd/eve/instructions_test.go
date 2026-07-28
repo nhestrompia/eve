@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -50,17 +49,23 @@ func TestClassifyInstructionData(t *testing.T) {
 
 func TestCanonicalInstructionTemplateIncludesPlanWorkflow(t *testing.T) {
 	for _, want := range []string{
-		`version="3"`,
-		"Create an EVE Plan before making non-trivial",
+		"## EVE Product History",
+		"Before non-trivial product code changes",
 		"`declare_plan`",
+		"`planRequestId`",
 		"`get_plan_request`",
-		"locked Plan ID and revision",
 		"`complete_snapshot`",
 		"`skip_snapshot`",
 	} {
-		if !strings.Contains(canonicalInstructionTemplateV3, want) {
+		if !strings.Contains(canonicalInstructionTemplateV4, want) {
 			t.Fatalf("canonical instruction template missing %q", want)
 		}
+	}
+	if strings.Contains(canonicalInstructionTemplateV4, "<!--") {
+		t.Fatalf("canonical instruction template should not contain HTML comments: %q", canonicalInstructionTemplateV4)
+	}
+	if lines := strings.Count(canonicalInstructionTemplateV4, "\n") + 1; lines > 5 {
+		t.Fatalf("canonical instruction template has %d lines, want at most 5", lines)
 	}
 }
 
@@ -81,7 +86,9 @@ func TestInstructionInstallPreservesContentModeAndIsIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read AGENTS.md: %v", err)
 	}
-	if !bytes.HasPrefix(data, original) || strings.Count(string(data), "<!-- eve:instructions:start") != 1 {
+	if !bytes.HasPrefix(data, original) ||
+		strings.Count(string(data), "## EVE Product History") != 1 ||
+		strings.Contains(string(data), "<!-- eve:instructions:") {
 		t.Fatalf("updated content = %q", data)
 	}
 	info, err := os.Stat(path)
@@ -123,7 +130,7 @@ func TestInstructionInstallProtectsModifiedAndMalformedBlocks(t *testing.T) {
 	if result.Err != nil || result.Action != "updated" {
 		t.Fatalf("forced result = %#v", result)
 	}
-	if got := readTextFile(t, path); !strings.Contains(got, "approve implementation plans") {
+	if got := readTextFile(t, path); !strings.Contains(got, "Before non-trivial product code changes") || strings.Contains(got, "<!-- eve:instructions:") {
 		t.Fatalf("forced content = %q", got)
 	}
 
@@ -164,8 +171,29 @@ func TestInstructionInstallUpgradesExactKnownStaleBlock(t *testing.T) {
 	updated := readTextFile(t, path)
 	if !strings.HasPrefix(updated, "# Existing\n\n") ||
 		!strings.HasSuffix(updated, "\n\nAfter block.\n") ||
-		!strings.Contains(updated, fmt.Sprintf(`version="%d"`, currentInstructionVersion)) {
+		!strings.Contains(updated, canonicalInstructionTemplateV4) {
 		t.Fatalf("updated stale content = %q", updated)
+	}
+}
+
+func TestInstructionInstallReplacesConciseMarkdownBlock(t *testing.T) {
+	repoRoot := initTempGitRepo(t)
+	path := filepath.Join(repoRoot, "AGENTS.md")
+	modified := "# Existing\n\n" + strings.Replace(canonicalInstructionTemplateV4, "`skip_snapshot`", "`skip_snapshot` with a reason", 1) + "\n\n## After\n\nKeep me.\n"
+	if err := os.WriteFile(path, []byte(modified), 0o644); err != nil {
+		t.Fatalf("write modified block: %v", err)
+	}
+	result := installInstructionTarget(repoFromRoot(repoRoot), instructionTargets[0], false)
+	if result.Err == nil || !strings.Contains(result.Err.Error(), "modified") {
+		t.Fatalf("modified result = %#v", result)
+	}
+	result = installInstructionTarget(repoFromRoot(repoRoot), instructionTargets[0], true)
+	if result.Err != nil || result.Action != "updated" {
+		t.Fatalf("forced result = %#v", result)
+	}
+	got := readTextFile(t, path)
+	if !strings.Contains(got, canonicalInstructionTemplateV4) || !strings.Contains(got, "\n\n## After\n\nKeep me.\n") {
+		t.Fatalf("updated content = %q", got)
 	}
 }
 
@@ -276,7 +304,7 @@ func TestInstructionsCLIStatusDiffTargetForceAndTrackedOutput(t *testing.T) {
 
 	stdout.Reset()
 	stderr.Reset()
-	if code := run([]string{"instructions", "diff"}, &stdout, &stderr); code != 0 || !strings.Contains(stdout.String(), "+++ canonical/CLAUDE.md") || !strings.Contains(stdout.String(), "+<!-- eve:instructions:start") {
+	if code := run([]string{"instructions", "diff"}, &stdout, &stderr); code != 0 || !strings.Contains(stdout.String(), "+++ canonical/CLAUDE.md") || !strings.Contains(stdout.String(), "+## EVE Product History") {
 		t.Fatalf("diff code/stdout = %d/%q stderr = %q", code, stdout.String(), stderr.String())
 	}
 

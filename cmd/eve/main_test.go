@@ -225,7 +225,8 @@ func TestInitCreatesSnapshotStructure(t *testing.T) {
 	for _, name := range []string{"AGENTS.md", "CLAUDE.md"} {
 		path := filepath.Join(repo, name)
 		before[name] = readTextFile(t, path)
-		if strings.Count(before[name], "<!-- eve:instructions:start") != 1 ||
+		if strings.Count(before[name], "## EVE Product History") != 1 ||
+			strings.Contains(before[name], "<!-- eve:instructions:") ||
 			!strings.Contains(before[name], "`declare_plan`") ||
 			!strings.Contains(before[name], "`get_plan_request`") ||
 			!strings.Contains(before[name], "`complete_snapshot`") ||

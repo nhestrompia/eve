@@ -14,7 +14,7 @@ import (
 	"strings"
 )
 
-const currentInstructionVersion = 3
+const currentInstructionVersion = 4
 
 const canonicalInstructionTemplateV1 = `<!-- eve:instructions:start version="1" -->
 
@@ -146,10 +146,17 @@ relationships, and session references when available.
 
 <!-- eve:instructions:end -->`
 
+const canonicalInstructionTemplateV4 = `## EVE Product History
+
+- Before non-trivial product code changes, call ` + "`declare_plan`" + ` and wait for a locked Plan.
+- Reuse the same ` + "`planRequestId`" + ` after timeout, cancellation, or restart; recover with ` + "`get_plan_request`" + ` when needed.
+- After implementation and verification, call ` + "`complete_snapshot`" + ` with the locked Plan ID/revision, or ` + "`skip_snapshot`" + ` if no Snapshot is warranted.`
+
 var instructionTemplates = map[int]string{
 	1: canonicalInstructionTemplateV1,
 	2: canonicalInstructionTemplateV2,
 	3: canonicalInstructionTemplateV3,
+	4: canonicalInstructionTemplateV4,
 }
 
 type instructionState string
@@ -194,6 +201,8 @@ type instructionInstallResult struct {
 
 var instructionStartRE = regexp.MustCompile(`(?m)^<!-- eve:instructions:start version="([0-9]+)" -->[ \t]*\r?$`)
 var instructionEndRE = regexp.MustCompile(`(?m)^<!-- eve:instructions:end -->[ \t]*\r?$`)
+var instructionMarkdownStartRE = regexp.MustCompile(`(?m)^## EVE Product History[ \t]*\r?$`)
+var markdownSectionStartRE = regexp.MustCompile(`(?m)^#{1,2} [^\r\n]+[ \t]*\r?$`)
 
 func runInstructions(args []string, stdout io.Writer, stderr io.Writer) int {
 	if len(args) == 0 {
@@ -371,33 +380,23 @@ func classifyInstructionData(target instructionTarget, path string, data []byte,
 	text := string(data)
 	startPrefixCount := strings.Count(text, "<!-- eve:instructions:start")
 	endPrefixCount := strings.Count(text, "<!-- eve:instructions:end")
-	if startPrefixCount == 0 && endPrefixCount == 0 {
+	if startPrefixCount > 0 || endPrefixCount > 0 {
+		return classifyLegacyInstructionData(inspection, text, data, templates, currentVersion, startPrefixCount, endPrefixCount), nil
+	}
+	starts := instructionMarkdownStartRE.FindAllStringIndex(text, -1)
+	if len(starts) == 0 {
 		return inspection, nil
 	}
-	if startPrefixCount != 1 || endPrefixCount != 1 {
+	if len(starts) != 1 {
 		inspection.State = instructionMalformed
 		return inspection, nil
 	}
-	start := instructionStartRE.FindStringSubmatchIndex(text)
-	end := instructionEndRE.FindStringIndex(text)
-	if start == nil || end == nil || start[0] >= end[0] {
-		inspection.State = instructionMalformed
-		return inspection, nil
-	}
-	version, err := strconv.Atoi(text[start[2]:start[3]])
-	if err != nil {
-		inspection.State = instructionMalformed
-		return inspection, nil
-	}
-	inspection.Version = version
-	inspection.BlockStart = start[0]
-	inspection.BlockEnd = end[1]
-	if inspection.BlockEnd > inspection.BlockStart && inspection.BlockEnd < len(data) && data[inspection.BlockEnd-1] == '\r' && data[inspection.BlockEnd] == '\n' {
-		inspection.BlockEnd--
-	}
+	inspection.BlockStart = starts[0][0]
+	inspection.BlockEnd = markdownInstructionSectionEnd(text, starts[0])
 	inspection.Block = append([]byte(nil), data[inspection.BlockStart:inspection.BlockEnd]...)
-	expected, known := templates[version]
-	if known && normalizeInstructionText(string(inspection.Block)) == normalizeInstructionText(expected) {
+	version, known := knownInstructionTemplateVersion(string(inspection.Block), templates)
+	inspection.Version = version
+	if known {
 		if version == currentVersion {
 			inspection.State = instructionCurrent
 		} else if version < currentVersion {
@@ -407,8 +406,72 @@ func classifyInstructionData(target instructionTarget, path string, data []byte,
 		}
 		return inspection, nil
 	}
+	inspection.Version = currentVersion
 	inspection.State = instructionModified
 	return inspection, nil
+}
+
+func classifyLegacyInstructionData(inspection instructionInspection, text string, data []byte, templates map[int]string, currentVersion int, startPrefixCount int, endPrefixCount int) instructionInspection {
+	if startPrefixCount != 1 || endPrefixCount != 1 {
+		inspection.State = instructionMalformed
+		return inspection
+	}
+	start := instructionStartRE.FindStringSubmatchIndex(text)
+	end := instructionEndRE.FindStringIndex(text)
+	if start == nil || end == nil || start[0] >= end[0] {
+		inspection.State = instructionMalformed
+		return inspection
+	}
+	version, err := strconv.Atoi(text[start[2]:start[3]])
+	if err != nil {
+		inspection.State = instructionMalformed
+		return inspection
+	}
+	inspection.Version = version
+	inspection.BlockStart = start[0]
+	inspection.BlockEnd = end[1]
+	if inspection.BlockEnd > inspection.BlockStart && inspection.BlockEnd < len(data) && data[inspection.BlockEnd-1] == '\r' && data[inspection.BlockEnd] == '\n' {
+		inspection.BlockEnd--
+	}
+	inspection.Block = append([]byte(nil), data[inspection.BlockStart:inspection.BlockEnd]...)
+	expected, known := templates[version]
+	if known && normalizeInstructionBlock(string(inspection.Block)) == normalizeInstructionBlock(expected) {
+		if version == currentVersion {
+			inspection.State = instructionCurrent
+		} else if version < currentVersion {
+			inspection.State = instructionStale
+		} else {
+			inspection.State = instructionModified
+		}
+		return inspection
+	}
+	inspection.State = instructionModified
+	return inspection
+}
+
+func markdownInstructionSectionEnd(text string, start []int) int {
+	end := len(text)
+	tailOffset := start[1]
+	if next := markdownSectionStartRE.FindStringIndex(text[tailOffset:]); next != nil {
+		end = tailOffset + next[0]
+		for end > start[0] && (text[end-1] == '\n' || text[end-1] == '\r') {
+			end--
+		}
+	}
+	return end
+}
+
+func knownInstructionTemplateVersion(block string, templates map[int]string) (int, bool) {
+	for version, template := range templates {
+		if normalizeInstructionBlock(block) == normalizeInstructionBlock(template) {
+			return version, true
+		}
+	}
+	return 0, false
+}
+
+func normalizeInstructionBlock(value string) string {
+	return strings.TrimRight(normalizeInstructionText(value), "\n")
 }
 
 func normalizeInstructionText(value string) string {
