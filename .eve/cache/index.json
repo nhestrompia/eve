@@ -1,17 +1,17 @@
 {
   "id": "eve",
-  "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 90,
-  "commitCount": 107,
-  "decisionCount": 170,
-  "riskCount": 67,
+  "root": "/Users/nhestrompia/.codex/worktrees/0def/eve",
+  "snapshotCount": 91,
+  "commitCount": 108,
+  "decisionCount": 174,
+  "riskCount": 69,
   "artifactCount": 45,
-  "latestAt": "2026-07-28T02:12:36Z",
-  "latestSnapshot": "snap_2b258530115749b7",
-  "latestTitle": "Use repository initials for non-EVE header marks",
-  "branch": "main",
-  "head": "5fb017e9dbd70c867b9927647d9fb5f261b183d0",
+  "latestAt": "2026-07-28T11:41:20Z",
+  "latestSnapshot": "snap_cf14cb6adec48e88",
+  "latestTitle": "Add context-first pull request review",
+  "branch": "codex/pr-review-merge-ui",
+  "head": "605abe0df51012dc4e0f2ecb29b2f1860f7ed314",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "5fb017e9dbd70c867b9927647d9fb5f261b183d0"
+  "latestGitState": "605abe0df51012dc4e0f2ecb29b2f1860f7ed314"
 }
