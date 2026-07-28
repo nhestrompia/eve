@@ -11,6 +11,8 @@ import type {
   PlanProposal,
   PlanRequest,
   PendingSnapshotResponse,
+  PullRequestCollection,
+  PullRequestSummary,
   RepositorySummary,
   SearchResponse,
   SessionRecord,
@@ -320,6 +322,12 @@ export const api = {
       })
     }),
   pendingSnapshot: (repo: string) => request<PendingSnapshotResponse>(`/api/repos/${encodeURIComponent(repo)}/pending`),
+  pullRequests: (repo: string) =>
+    request<PullRequestCollection>(`/api/repos/${encodeURIComponent(repo)}/pull-requests`),
+  pullRequest: (repo: string, number: number) =>
+    request<PullRequestSummary>(
+      `/api/repos/${encodeURIComponent(repo)}/pull-requests/${encodeURIComponent(number)}`
+    ),
   repositories: async () => (await repositoriesRaw()).map(adaptRepo),
   repository,
   snapshots,

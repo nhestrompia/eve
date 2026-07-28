@@ -1,0 +1,48 @@
+{
+  "id": "plan_ca59cf15af069432",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_fix-pr36-history-only-snapshot-linkage-20260728",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Make PR #36 and similar eve branches remain current when a completed Snapshot is followed only by its required eve history commit, regardless of unrelated target-branch movement.",
+      "acceptanceCriteria": "1. Reproduce the PR #36 topology where a branch contains earlier feature commits and Snapshots, then a latest implementation Snapshot and a final .eve-only record commit. 2. The latest Snapshot is classified current when no product commit follows it, even if the PR merge-base predates that Snapshot's base commit. 3. PR #36 appears in the eve review queue when it has a Plan reference. 4. A later product change or a product-changing target merge remains stale. 5. The PR detail shows the real GitHub merge-conflict blocker rather than Review stale. 6. Relevant Go/UI tests and builds pass.",
+      "allowedPathGlobs": [
+        "cmd/eve/pull_requests.go",
+        "cmd/eve/pull_requests_test.go",
+        "cmd/eve/ui_dist/**",
+        "ui/src/pages/**"
+      ],
+      "milestones": [
+        {
+          "title": "Reproduce PR #36 topology",
+          "goal": "Add and run a deterministic regression that fails with Review stale / missing queue context."
+        },
+        {
+          "title": "Correct history-only matching",
+          "goal": "Separate harmless eve record commits from target-merge product-delta validation."
+        },
+        {
+          "title": "Verify queue and detail status",
+          "goal": "Run focused and full tests plus browser verification against PR #36."
+        }
+      ],
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "307e61db7139359c7cf2f8000ded44de3533e49b",
+      "branch": "codex/pr-review-merge-ui",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-28T15:15:10Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-28T15:15:19Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_650614e966595922"
+}

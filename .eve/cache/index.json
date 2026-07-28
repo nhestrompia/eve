@@ -1,17 +1,17 @@
 {
   "id": "eve",
-  "root": "/Users/nhestrompia/.codex/worktrees/1658/eve",
-  "snapshotCount": 95,
-  "commitCount": 112,
-  "decisionCount": 185,
-  "riskCount": 73,
+  "root": "/Users/nhestrompia/.codex/worktrees/0def/eve",
+  "snapshotCount": 100,
+  "commitCount": 116,
+  "decisionCount": 202,
+  "riskCount": 79,
   "artifactCount": 48,
-  "latestAt": "2026-07-28T13:34:22Z",
-  "latestSnapshot": "snap_2ad36a27e5e9c108",
-  "latestTitle": "Repair artifact previews and log rendering",
-  "branch": "codex/fix-artifact-rendering",
-  "head": "4317b080c38d945dca86a4a2a145c4c6b9107839",
+  "latestAt": "2026-07-28T15:37:03Z",
+  "latestSnapshot": "snap_a33cc6b0ae5a47c8",
+  "latestTitle": "Resolve PR #36 against current main",
+  "branch": "codex/pr-review-merge-ui",
+  "head": "b4d6f3b511a3b2dd97ecd0a1517d01da55e3f494",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "bbf0c5996e6bc432293a3a2ae86760f1154eaec0"
+  "latestGitState": "b4d6f3b511a3b2dd97ecd0a1517d01da55e3f494"
 }

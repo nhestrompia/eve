@@ -1,0 +1,52 @@
+{
+  "id": "plan_f40809af78984731",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_fix-pr-worktree-snapshot-linkage-20260728",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Make eve correctly associate open pull requests with their Snapshot and Plan context when the records live in another local Git worktree and the PR head includes the required follow-up .eve history commit; normalize product branding to lowercase eve in the pull-request review queue.",
+      "acceptanceCriteria": "1. A PR branch with an implementation commit followed only by the required .eve Snapshot/history commit is linked to that Snapshot even when the daemon runs from another worktree. 2. Snapshot and Plan validation use the worktree that owns the PR record, not the daemon checkout. 3. Later non-.eve code changes after the recorded implementation invalidate the association so stale product evidence is not accepted. 4. Branch identity remains part of matching and ambiguous matches are not linked. 5. Linked PRs appear in the eve review queue and their detail page shows Snapshot evidence instead of Snapshot required. 6. Pull-request queue and evidence copy uses lowercase eve branding, including the heading 'eve review queue'. 7. A deterministic regression test reproduces the two-commit cross-worktree failure before the fix and passes afterward; focused and full repository verification passes.",
+      "allowedPathGlobs": [
+        "cmd/eve/pull_requests.go",
+        "cmd/eve/pull_requests_test.go",
+        "ui/src/pages/repository-page.tsx",
+        "ui/src/pages/repository-page.test.ts",
+        "ui/src/pages/pull-request-page.tsx",
+        "ui/src/pages/pull-request-page.test.ts",
+        "cmd/eve/ui_dist/**",
+        ".eve/**"
+      ],
+      "milestones": [
+        {
+          "title": "Reproduce cross-worktree linkage failure",
+          "goal": "Create a deterministic API test with a PR worktree containing implementation then .eve history commits while the daemon runs elsewhere."
+        },
+        {
+          "title": "Repair secure Snapshot association",
+          "goal": "Discover PR Snapshot/Plan context across local worktrees and accept only .eve-only suffix commits after the recorded implementation."
+        },
+        {
+          "title": "Normalize queue branding and verify",
+          "goal": "Change EVE product copy to lowercase eve, validate the live PR case, run full checks, review, and record the Snapshot."
+        }
+      ],
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "78a9a322d3f63d628a143f8bab4933dbe6b6036c",
+      "branch": "codex/pr-review-merge-ui",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-28T14:29:40Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-28T14:29:51Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_05cd33789972298e"
+}

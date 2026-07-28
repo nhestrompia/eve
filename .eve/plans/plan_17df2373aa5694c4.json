@@ -1,0 +1,53 @@
+{
+  "id": "plan_17df2373aa5694c4",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_pr-review-merge-ui-20260728",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Add repository pull-request navigation, overview affordances, and an EVE-native pull-request review page that prioritizes product context while clearly showing merge impact.",
+      "acceptanceCriteria": "- Repository navigation replaces Settings with Pull requests and shows a pull-request count.\n- Repository overview shows a ready-to-merge banner when a recent qualifying PR exists.\n- Latest snapshot surfaces linked pull-request context only when that snapshot has a PR.\n- Pull requests tab lists repository PRs using existing visual patterns and has useful empty/error states.\n- Selecting a PR opens a dedicated review page with breadcrumbs back to the repository and linked snapshot.\n- PR review defaults to evidence/product context, supports existing code browsing as a secondary view, and clearly communicates what changes on merge.\n- UI is responsive, accessible, type-safe, and covered by focused tests.",
+      "allowedPathGlobs": [
+        "ui/src/**",
+        "cmd/eve/**",
+        "types.go",
+        "eve.go",
+        "eve_test.go"
+      ],
+      "milestones": [
+        {
+          "title": "Data and routing",
+          "goal": "Expose pull-request records and route the repository and PR review surfaces."
+        },
+        {
+          "title": "Repository PR experience",
+          "goal": "Add counts, banner, snapshot linkage, and PR list using existing components."
+        },
+        {
+          "title": "PR review experience",
+          "goal": "Build the evidence-first review page with merge-impact summary, breadcrumbs, and secondary code access."
+        },
+        {
+          "title": "Verification and history",
+          "goal": "Run focused/full checks, review the implementation, commit code, and record the EVE Snapshot."
+        }
+      ],
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "1d461c172602fa05acc8bbaa4dc34c68e072e3ed",
+      "branch": "codex/pr-review-merge-ui",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-28T02:43:01Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-28T02:43:15Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_cf14cb6adec48e88"
+}

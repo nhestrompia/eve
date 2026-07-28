@@ -11,6 +11,7 @@ import { PlansPage } from './pages/plans-page';
 import { RawJsonPage } from './pages/raw-json-page';
 import { RepositoriesPage } from './pages/repositories-page';
 import { RepositoryPage } from './pages/repository-page';
+import { PullRequestPage } from './pages/pull-request-page';
 import { RelationshipsPage } from './pages/relationships-page';
 import { RisksPage } from './pages/risks-page';
 import { SnapshotPage } from './pages/snapshot-page';
@@ -53,6 +54,12 @@ const repositoryRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/repositories/$repo',
   component: RepositoryPage
+});
+
+const pullRequestRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/repositories/$repo/pull-requests/$number',
+  component: PullRequestPage
 });
 
 const snapshotRoute = createRoute({
@@ -121,6 +128,7 @@ const routeTree = rootRoute.addChildren([
   snapshotsIndexRoute,
   repositoriesIndexRoute,
   repositoryRoute,
+  pullRequestRoute,
   evolutionRoute,
   snapshotRoute,
   verificationRoute,

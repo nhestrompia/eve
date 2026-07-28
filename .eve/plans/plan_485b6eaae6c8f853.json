@@ -1,0 +1,50 @@
+{
+  "id": "plan_485b6eaae6c8f853",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_pr-context-filter-navigation-20260728",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Make pull-request navigation stay inside the client app and focus the repository PR tab on pull requests that have the exact Snapshot and EVE context required for review, with intuitive progressive disclosure for all other open PRs.",
+      "acceptanceCriteria": "1. The Pull requests breadcrumb on a PR detail page returns to the repository Pull requests tab through TanStack Router without a full document reload. 2. The repository Pull requests tab initially lists only open PRs with an exact-head linked Snapshot and the required EVE review context. 3. Open PRs without that context are excluded from the primary list and summarized behind a clear control that states how many are hidden. 4. Activating the control reveals all other open PRs inline and can hide them again without navigation or refetch. 5. Empty states distinguish between no open PRs and open PRs that are all awaiting EVE context. 6. Counts and truncation disclosures remain truthful, keyboard accessible, responsive, and visually consistent. 7. Focused tests cover filtering, disclosure counts, and the client-routed breadcrumb; full Go/UI/package verification passes.",
+      "allowedPathGlobs": [
+        "ui/src/pages/pull-request-page.tsx",
+        "ui/src/pages/pull-request-page.test.ts",
+        "ui/src/pages/repository-page.tsx",
+        "ui/src/pages/repository-page.test.ts",
+        "cmd/eve/ui_dist/**",
+        ".eve/**"
+      ],
+      "milestones": [
+        {
+          "title": "Repair client-side PR navigation",
+          "goal": "Replace the raw hashed repository anchor with a router-aware link that preserves the Pull requests tab destination."
+        },
+        {
+          "title": "Add EVE-context filtering and disclosure",
+          "goal": "Show exact-head contextual PRs by default and reveal other open PRs through an intuitive inline control."
+        },
+        {
+          "title": "Verify and record the change",
+          "goal": "Test the navigation and filter state, build embedded assets, run repository verification, and create the EVE Snapshot."
+        }
+      ],
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "18bf5ffc2d4bf3f1789c515256f7cf53398ed157",
+      "branch": "codex/pr-review-merge-ui",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-28T13:39:48Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-28T13:40:59Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_542e07406f070dcd"
+}

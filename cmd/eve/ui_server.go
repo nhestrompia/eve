@@ -32,6 +32,7 @@ type runtimeServer struct {
 	searchCache          *snapshotSearchCache
 	derivedCache         *runtimeDerivedCache
 	verificationRegistry *verificationRegistry
+	pullRequestLoader    pullRequestLoader
 	events               *runtimeEvents
 	agentLease           *agentLeaseOwner
 }
@@ -463,6 +464,10 @@ func (server runtimeServer) handleRepoRoutes(w http.ResponseWriter, r *http.Requ
 		server.handleRecordedRepoFile(w, r, repo, artifactPath)
 	case len(parts) == 2 && parts[1] == "snapshots" && r.Method == http.MethodGet:
 		server.handleSnapshots(w, r, repo)
+	case len(parts) == 2 && parts[1] == "pull-requests" && r.Method == http.MethodGet:
+		server.handlePullRequests(w, r, repo)
+	case len(parts) == 3 && parts[1] == "pull-requests" && r.Method == http.MethodGet:
+		server.handlePullRequest(w, r, repo, parts[2])
 	case len(parts) == 3 && parts[1] == "snapshots" && r.Method == http.MethodGet:
 		server.handleSnapshotDetail(w, r, repo, parts[2])
 	case len(parts) == 5 && parts[1] == "snapshots" && parts[3] == "code" && parts[4] == "files" && r.Method == http.MethodGet:
