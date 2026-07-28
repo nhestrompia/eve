@@ -689,7 +689,7 @@ export function pullRequestBannerSignals(
   tone: "success" | "warning" | "neutral";
 }> {
   const exactHeadSnapshot =
-    hasExactHeadSnapshot(pullRequest);
+    hasCurrentSnapshotContext(pullRequest);
   const checkSignal =
     pullRequest.checksTotal === 0
       ? {
@@ -762,10 +762,10 @@ export function pullRequestBannerSignals(
           ? "Snapshot out of date"
           : "Snapshot required",
       detail: exactHeadSnapshot
-        ? "Exact PR head is recorded"
+        ? "Current product changes are recorded"
         : pullRequest.snapshotId
           ? "Linked evidence does not match the PR head"
-          : "No exact-head product record is linked",
+          : "No current product record is linked",
       tone: exactHeadSnapshot ? "success" : "warning",
     },
     checkSignal,
@@ -780,7 +780,7 @@ export function pullRequestBannerSignals(
             ? "Scope not confirmed"
           : "Within plan scope",
       detail: !exactHeadSnapshot
-        ? "Requires exact-head product evidence"
+        ? "Requires current product evidence"
         : !pullRequest.planValid
           ? "The locked plan record is no longer valid"
           : pullRequest.planAligned
@@ -927,7 +927,7 @@ function PullRequestsPanel({
         <h2 className="mt-5 text-lg font-semibold">Connect GitHub pull requests</h2>
         <p className="mt-2 max-w-[62ch] text-sm leading-6 text-muted-foreground">
           {collection.reason ||
-            "EVE could not read pull requests for this repository."}
+            "eve could not read pull requests for this repository."}
         </p>
         {repository.remoteUrl ? (
           <Button asChild variant="outline" className="mt-5">
@@ -969,7 +969,7 @@ function PullRequestsPanel({
   return (
     <div className="space-y-4">
       <PullRequestGroup
-        title="EVE review queue"
+        title="eve review queue"
         detail={`${contextual.length}${truncated ? " loaded" : ""} ${
           contextual.length === 1 ? "pull request" : "pull requests"
         } with context`}
@@ -977,14 +977,14 @@ function PullRequestsPanel({
         repository={repository.name}
         empty={
           truncated
-            ? `None of the ${open.length} loaded open pull requests has an exact-head Snapshot. EVE has not classified the remaining ${
+            ? `None of the ${open.length} loaded open pull requests has a current Snapshot. eve has not classified the remaining ${
                 collection.openCount - open.length
               }.`
             : `${collection.openCount} open ${
                 collection.openCount === 1
                   ? "pull request is"
                   : "pull requests are"
-              } waiting for an exact-head Snapshot before EVE can review them.`
+              } waiting for a current Snapshot before eve can review them.`
         }
       />
       {hidden.length > 0 ? (
@@ -1022,7 +1022,7 @@ function PullRequestsPanel({
           >
             <PullRequestGroup
               title="Other open pull requests"
-              detail={`${hidden.length} without current EVE context`}
+              detail={`${hidden.length} without current eve context`}
               pullRequests={hidden}
               repository={repository.name}
               empty="No other open pull requests."
@@ -1032,7 +1032,7 @@ function PullRequestsPanel({
       ) : null}
       {truncated && repository.remoteUrl ? (
         <p className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-white px-5 py-4 text-sm text-muted-foreground">
-          EVE shows the 50 most recently updated pull requests here.
+          eve shows the 50 most recently updated pull requests here.
           <a
             href={`${repository.remoteUrl}/pulls`}
             target="_blank"
@@ -1050,8 +1050,12 @@ function PullRequestsPanel({
 
 const RECENT_PULL_REQUEST_DAYS = 14;
 
-export function hasExactHeadSnapshot(pullRequest: PullRequestSummary) {
-  return Boolean(pullRequest.snapshotId) && pullRequest.snapshotHeadMatch;
+export function hasCurrentSnapshotContext(pullRequest: PullRequestSummary) {
+  return (
+    Boolean(pullRequest.snapshotId) &&
+    pullRequest.snapshotHeadMatch &&
+    (pullRequest.planRevision ?? 0) > 0
+  );
 }
 
 export function partitionOpenPullRequests(
@@ -1065,7 +1069,7 @@ export function partitionOpenPullRequests(
     hidden: PullRequestSummary[];
   }>(
     (groups, pullRequest) => {
-      if (hasExactHeadSnapshot(pullRequest)) {
+      if (hasCurrentSnapshotContext(pullRequest)) {
         groups.contextual.push(pullRequest);
       } else {
         groups.hidden.push(pullRequest);
@@ -1091,7 +1095,7 @@ export function pullRequestDisclosureCopy(
       }`,
       detail: `${hiddenCount} shown for reference; ${
         singular ? "it does" : "they do"
-      } not have current EVE context.`,
+      } not have current eve context.`,
     };
   }
 
@@ -1105,7 +1109,7 @@ export function pullRequestDisclosureCopy(
         : `Show all ${openCount} open pull requests`,
     detail: `${hiddenCount} ${singular ? "is" : "are"} hidden because ${
       singular ? "it does" : "they do"
-    } not have current EVE context.`,
+    } not have current eve context.`,
   };
 }
 
@@ -1118,7 +1122,7 @@ export function recentOpenPullRequest(
     .filter((pullRequest) => {
       if (
         pullRequest.state !== "open" ||
-        !hasExactHeadSnapshot(pullRequest)
+        !hasCurrentSnapshotContext(pullRequest)
       ) {
         return false;
       }

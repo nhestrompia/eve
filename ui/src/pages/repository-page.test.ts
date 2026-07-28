@@ -3,7 +3,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { PullRequestSummary, RepositorySummary } from '../types';
 import {
-  hasExactHeadSnapshot,
+  hasCurrentSnapshotContext,
   partitionOpenPullRequests,
   pullRequestBannerSignals,
   pullRequestDisclosureCopy,
@@ -13,19 +13,27 @@ import {
   repositoryTabs,
 } from './repository-page';
 
-describe('EVE pull request context', () => {
-  it('keeps exact-head Snapshot PRs visible and partitions the rest', () => {
+describe('eve pull request context', () => {
+  it('keeps current Snapshot PRs visible and partitions the rest', () => {
     const contextual = {
       number: 32,
       state: 'open',
       snapshotId: 'snap_32',
       snapshotHeadMatch: true,
+      planRevision: 2,
     } as PullRequestSummary;
     const stale = {
       number: 31,
       state: 'open',
       snapshotId: 'snap_31',
       snapshotHeadMatch: false,
+      planRevision: 2,
+    } as PullRequestSummary;
+    const missingPlan = {
+      number: 30,
+      state: 'open',
+      snapshotId: 'snap_30',
+      snapshotHeadMatch: true,
     } as PullRequestSummary;
     const unlinked = {
       number: 19,
@@ -33,22 +41,25 @@ describe('EVE pull request context', () => {
       snapshotHeadMatch: false,
     } as PullRequestSummary;
 
-    expect(hasExactHeadSnapshot(contextual)).toBe(true);
-    expect(hasExactHeadSnapshot(stale)).toBe(false);
-    expect(partitionOpenPullRequests([contextual, stale, unlinked])).toEqual({
+    expect(hasCurrentSnapshotContext(contextual)).toBe(true);
+    expect(hasCurrentSnapshotContext(stale)).toBe(false);
+    expect(hasCurrentSnapshotContext(missingPlan)).toBe(false);
+    expect(
+      partitionOpenPullRequests([contextual, stale, missingPlan, unlinked]),
+    ).toEqual({
       contextual: [contextual],
-      hidden: [stale, unlinked],
+      hidden: [stale, missingPlan, unlinked],
     });
   });
 
   it('describes hidden and expanded open PR counts truthfully', () => {
     expect(pullRequestDisclosureCopy(13, 14, false, false)).toEqual({
       label: 'Show all 14 open pull requests',
-      detail: '13 are hidden because they do not have current EVE context.',
+      detail: '13 are hidden because they do not have current eve context.',
     });
     expect(pullRequestDisclosureCopy(13, 14, false, true)).toEqual({
       label: 'Hide 13 other pull requests',
-      detail: '13 shown for reference; they do not have current EVE context.',
+      detail: '13 shown for reference; they do not have current eve context.',
     });
     expect(pullRequestDisclosureCopy(49, 88, true, false).label).toBe(
       'Show 49 other loaded pull requests',
@@ -76,17 +87,18 @@ describe('pullRequestBannerSignals', () => {
     expect(signals.filter((signal) => signal.label.includes('Snapshot'))).toHaveLength(1);
     expect(signals).toContainEqual({
       label: 'Scope not evaluated',
-      detail: 'Requires exact-head product evidence',
+      detail: 'Requires current product evidence',
       tone: 'neutral',
     });
     expect(signals.map((signal) => signal.label)).not.toContain('No scope drift');
     expect(signals.at(-1)?.label).toBe('GitHub permits merge');
   });
 
-  it('reports scope positively only for an exact-head Snapshot', () => {
+  it('reports scope positively only for a current Snapshot', () => {
     const signals = pullRequestBannerSignals({
       snapshotId: 'EV-032',
       snapshotHeadMatch: true,
+      planRevision: 2,
       checksPassed: 4,
       checksTotal: 4,
       checksFailed: 0,
@@ -166,6 +178,7 @@ describe('recentOpenPullRequest', () => {
           state: 'open',
           snapshotId: 'snap_1',
           snapshotHeadMatch: true,
+          planRevision: 1,
           createdAt: '2026-06-01T00:00:00Z',
           updatedAt: '2026-07-28T11:59:00Z',
         },
@@ -174,6 +187,7 @@ describe('recentOpenPullRequest', () => {
           state: 'open',
           snapshotId: 'snap_2',
           snapshotHeadMatch: true,
+          planRevision: 1,
           createdAt: '2026-07-27T00:00:00Z',
           updatedAt: '2026-07-27T01:00:00Z',
         },

@@ -442,11 +442,11 @@ function ReviewSignals({
       detail: pullRequest.planRevision
         ? exactHeadSnapshot
           ? `Locked revision ${pullRequest.planRevision}`
-          : "Requires exact-head product evidence"
+          : "Requires current product evidence"
         : "No linked locked revision",
     },
     {
-      label: "EVE checks",
+      label: "eve checks",
       value: !exactHeadSnapshot
         ? "Not evaluated"
         : pullRequest.eveChecksPassed
@@ -459,7 +459,7 @@ function ReviewSignals({
           : "warning",
       detail: exactHeadSnapshot
         ? "Required repository verification"
-        : "Requires exact-head product evidence",
+        : "Requires current product evidence",
     },
     {
       label: "Scope",
@@ -480,7 +480,7 @@ function ReviewSignals({
           ? "warning"
           : "success",
       detail: !exactHeadSnapshot
-        ? "Requires exact-head product evidence"
+        ? "Requires current product evidence"
         : pullRequest.planValid && pullRequest.planAligned
           ? "Compared with the declared path scope"
           : "Plan conformance evidence is incomplete",
@@ -619,8 +619,8 @@ function ImplementationEvidence({
         />
         <EvidenceMetric label="Risks" value={String(risks.length)} />
         <EvidenceMetric
-          label="Snapshot head"
-          value={pullRequest.snapshotHeadMatch ? "Exact match" : "Stale"}
+          label="Snapshot coverage"
+          value={pullRequest.snapshotHeadMatch ? "Current" : "Stale"}
         />
       </dl>
 
@@ -926,9 +926,9 @@ function UnlinkedEvidenceState({
       <p className="mt-2 max-w-[68ch] text-sm leading-6 text-amber-950/75">
         The pull request head{" "}
         <code className="font-mono">{shortCommit(pullRequest.headSha)}</code>{" "}
-        does not match a completed EVE Snapshot. Product evidence, plan
-        alignment, and code curation cannot be trusted until an exact-head
-        Snapshot exists.
+        does not match a completed eve Snapshot. Product evidence, plan
+        alignment, and code curation cannot be trusted until a current Snapshot
+        exists.
       </p>
     </section>
   );
@@ -940,7 +940,7 @@ function UnlinkedCodeState() {
       <Code2 className="size-5 text-slate-500" />
       <h2 className="mt-4 text-lg font-semibold">Code review needs a Snapshot</h2>
       <p className="mt-2 max-w-[64ch] text-sm leading-6 text-muted-foreground">
-        EVE’s code viewer is scoped to the exact code recorded by a Snapshot.
+        eve’s code viewer is scoped to the exact code recorded by a Snapshot.
         Create a fresh Snapshot at this pull request head to inspect its curated
         files and full diff.
       </p>
@@ -961,7 +961,7 @@ function pullRequestReadiness(pullRequest: PullRequestSummary): {
       badge: "Ready to merge",
       title: "Ready to merge",
       detail:
-        "EVE trusts the linked Snapshot and GitHub currently permits the merge.",
+        "eve trusts the linked Snapshot and GitHub currently permits the merge.",
       variant: "success",
     };
   }
@@ -971,7 +971,7 @@ function pullRequestReadiness(pullRequest: PullRequestSummary): {
       badge: "Snapshot required",
       title: "Snapshot required",
       detail:
-        "Create a Snapshot at the current pull request head before relying on EVE evidence.",
+        "Create a Snapshot for the current pull request code before relying on eve evidence.",
       variant: "warning",
     };
   }
@@ -1009,9 +1009,9 @@ function pullRequestReadiness(pullRequest: PullRequestSummary): {
       ready: false,
       badge: "Evidence incomplete",
       title: pullRequest.planAligned
-        ? "EVE checks incomplete"
+        ? "eve checks incomplete"
         : "Plan alignment incomplete",
-      detail: "The linked Snapshot has unresolved EVE evidence.",
+      detail: "The linked Snapshot has unresolved eve evidence.",
       variant: "warning",
     };
   }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -102,6 +103,11 @@ type githubStatusCheck struct {
 
 type pullRequestLoader func(context.Context, repository) ([]githubPullRequest, string, int, error)
 
+type pullRequestSnapshotContext struct {
+	Snapshot   *eve.Snapshot
+	Repository repository
+}
+
 func (server runtimeServer) handlePullRequests(w http.ResponseWriter, r *http.Request, repo repository) {
 	if r.Method != http.MethodGet {
 		writeMethodNotAllowed(w)
@@ -161,16 +167,15 @@ func (server runtimeServer) pullRequests(ctx context.Context, repo repository) p
 		}
 	}
 
-	snapshots, snapshotErr := repo.listSnapshots("")
+	snapshotContexts, snapshotErr := loadPullRequestSnapshotContexts(repo)
 	if snapshotErr != nil {
 		return pullRequestCollection{
 			Connected:    false,
 			Repository:   repo.ID,
-			Reason:       fmt.Sprintf("read Snapshots: %v", snapshotErr),
+			Reason:       fmt.Sprintf("read Snapshots from Git worktrees: %v", snapshotErr),
 			PullRequests: []pullRequestSummary{},
 		}
 	}
-	byHead := snapshotsByPullRequestHead(snapshots)
 	pullRequestsByHead := make(map[string]int, len(rows))
 	for _, row := range rows {
 		pullRequestsByHead[pullRequestHeadKey(row.HeadRefOID, row.HeadRefName)]++
@@ -178,14 +183,14 @@ func (server runtimeServer) pullRequests(ctx context.Context, repo repository) p
 	pullRequests := make([]pullRequestSummary, 0, len(rows))
 	for _, row := range rows {
 		key := pullRequestHeadKey(row.HeadRefOID, row.HeadRefName)
-		var snapshot *eve.Snapshot
-		if pullRequestsByHead[key] == 1 {
-			snapshot = byHead[key]
-		}
-		planValid := snapshotPlanIsValid(repo, snapshot)
 		pullRequests = append(
 			pullRequests,
-			summarizePullRequest(githubRepository, row, snapshot, planValid),
+			summarizePullRequestWithSnapshotContext(
+				githubRepository,
+				row,
+				snapshotContexts,
+				pullRequestsByHead[key] == 1,
+			),
 		)
 	}
 	sort.SliceStable(pullRequests, func(i, j int) bool {
@@ -206,7 +211,7 @@ func loadGitHubPullRequests(ctx context.Context, repo repository) ([]githubPullR
 	}
 	githubRepository, ok := githubRepositorySlug(summary.RemoteURL)
 	if !ok {
-		return nil, "", 0, errors.New("Add a GitHub remote to review pull requests in EVE.")
+		return nil, "", 0, errors.New("Add a GitHub remote to review pull requests in eve.")
 	}
 	command := exec.CommandContext(
 		ctx,
@@ -263,24 +268,334 @@ func githubRepositorySlug(remoteURL string) (string, bool) {
 	return value, true
 }
 
-func snapshotsByPullRequestHead(snapshots []*eve.Snapshot) map[string]*eve.Snapshot {
-	result := make(map[string]*eve.Snapshot, len(snapshots))
-	for _, snapshot := range snapshots {
-		if snapshot == nil ||
-			strings.TrimSpace(snapshot.Implementation.GitState) == "" ||
-			strings.TrimSpace(snapshot.Implementation.Branch) == "" {
-			continue
-		}
-		key := pullRequestHeadKey(
-			snapshot.Implementation.GitState,
-			snapshot.Implementation.Branch,
-		)
-		current := result[key]
-		if current == nil || snapshot.CreatedAt > current.CreatedAt {
-			result[key] = snapshot
+func loadPullRequestSnapshotContexts(repo repository) ([]pullRequestSnapshotContext, error) {
+	worktrees := repo.gitWorktreeRepositories()
+	currentIncluded := false
+	for _, worktree := range worktrees {
+		if worktree.Root == repo.Root {
+			currentIncluded = true
+			break
 		}
 	}
-	return result
+	if !currentIncluded {
+		worktrees = append(worktrees, repo)
+	}
+
+	bySnapshotID := make(map[string]pullRequestSnapshotContext)
+	for _, worktree := range worktrees {
+		snapshots, err := worktree.listSnapshots("")
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", worktree.Root, err)
+		}
+		for _, snapshot := range snapshots {
+			if snapshot == nil ||
+				strings.TrimSpace(snapshot.ID) == "" ||
+				strings.TrimSpace(snapshot.Implementation.GitState) == "" ||
+				strings.TrimSpace(snapshot.Implementation.Branch) == "" {
+				continue
+			}
+			if _, exists := bySnapshotID[snapshot.ID]; !exists {
+				bySnapshotID[snapshot.ID] = pullRequestSnapshotContext{
+					Snapshot:   snapshot,
+					Repository: worktree,
+				}
+			}
+		}
+	}
+
+	contexts := make([]pullRequestSnapshotContext, 0, len(bySnapshotID))
+	for _, context := range bySnapshotID {
+		contexts = append(contexts, context)
+	}
+	sort.Slice(contexts, func(i, j int) bool {
+		if contexts[i].Snapshot.CreatedAt == contexts[j].Snapshot.CreatedAt {
+			return contexts[i].Snapshot.ID < contexts[j].Snapshot.ID
+		}
+		return contexts[i].Snapshot.CreatedAt > contexts[j].Snapshot.CreatedAt
+	})
+	return contexts, nil
+}
+
+func matchingPullRequestSnapshot(
+	contexts []pullRequestSnapshotContext,
+	row githubPullRequest,
+) *pullRequestSnapshotContext {
+	context, current := pullRequestSnapshotForRow(contexts, row)
+	if !current {
+		return nil
+	}
+	return context
+}
+
+func pullRequestSnapshotForRow(
+	contexts []pullRequestSnapshotContext,
+	row githubPullRequest,
+) (*pullRequestSnapshotContext, bool) {
+	var fallback *pullRequestSnapshotContext
+	var matched *pullRequestSnapshotContext
+	for index := range contexts {
+		context := &contexts[index]
+		snapshot := context.Snapshot
+		if strings.TrimSpace(snapshot.Implementation.Branch) != strings.TrimSpace(row.HeadRefName) {
+			continue
+		}
+		if fallback == nil &&
+			snapshotRecordedOnPullRequestHead(context.Repository, snapshot, row.HeadRefOID) {
+			fallback = context
+		}
+		if !snapshotMatchesPullRequestHead(
+			context.Repository,
+			snapshot,
+			row.HeadRefOID,
+			row.BaseRefName,
+		) {
+			continue
+		}
+		if matched != nil && matched.Snapshot.ID != snapshot.ID {
+			return fallback, false
+		}
+		matched = context
+	}
+	if matched != nil {
+		return matched, true
+	}
+	return fallback, false
+}
+
+func snapshotRecordedOnPullRequestHead(
+	repo repository,
+	snapshot *eve.Snapshot,
+	pullRequestHead string,
+) bool {
+	implementationHead := strings.TrimSpace(snapshot.Implementation.GitState)
+	pullRequestHead = strings.TrimSpace(pullRequestHead)
+	if implementationHead == "" || pullRequestHead == "" ||
+		!repo.isAncestor(implementationHead, pullRequestHead) {
+		return false
+	}
+	snapshotPath := ".eve/snapshots/" + snapshot.ID + ".json"
+	_, err := gitOutput(repo.Root, "cat-file", "-e", pullRequestHead+":"+snapshotPath)
+	return err == nil
+}
+
+func snapshotMatchesPullRequestHead(
+	repo repository,
+	snapshot *eve.Snapshot,
+	pullRequestHead string,
+	baseBranch string,
+) bool {
+	implementationHead := strings.TrimSpace(snapshot.Implementation.GitState)
+	pullRequestHead = strings.TrimSpace(pullRequestHead)
+	if implementationHead == "" || pullRequestHead == "" {
+		return false
+	}
+	if implementationHead == pullRequestHead {
+		return true
+	}
+	if !repo.isAncestor(implementationHead, pullRequestHead) {
+		return false
+	}
+	if !snapshotRecordedOnPullRequestHead(repo, snapshot, pullRequestHead) {
+		return false
+	}
+	return snapshotFollowedOnlyByHistoryAndBaseMerges(
+		repo,
+		snapshot,
+		pullRequestHead,
+		baseBranch,
+	)
+}
+
+func snapshotFollowedOnlyByHistoryAndBaseMerges(
+	repo repository,
+	snapshot *eve.Snapshot,
+	pullRequestHead string,
+	baseBranch string,
+) bool {
+	implementationHead := strings.TrimSpace(snapshot.Implementation.GitState)
+	output, err := gitOutput(
+		repo.Root,
+		"rev-list",
+		"--first-parent",
+		"--reverse",
+		implementationHead+".."+pullRequestHead,
+	)
+	if err != nil {
+		return false
+	}
+
+	previous := implementationHead
+	baseHead := ""
+	for _, commit := range strings.Fields(output) {
+		parentOutput, err := gitOutput(repo.Root, "show", "-s", "--format=%P", commit)
+		if err != nil {
+			return false
+		}
+		parents := strings.Fields(parentOutput)
+		if len(parents) == 0 || parents[0] != previous {
+			return false
+		}
+		if len(parents) == 1 {
+			if !commitChangesOnlyEVEHistory(repo, previous, commit) {
+				return false
+			}
+		} else {
+			if baseHead == "" {
+				baseHead = resolvePullRequestBaseHead(repo, baseBranch)
+			}
+			if baseHead == "" {
+				return false
+			}
+			for _, mergedParent := range parents[1:] {
+				if !repo.isAncestor(mergedParent, baseHead) {
+					return false
+				}
+			}
+		}
+		previous = commit
+	}
+	return previous == pullRequestHead &&
+		snapshotProductPatchMatchesPullRequest(repo, snapshot, pullRequestHead, baseBranch)
+}
+
+func commitChangesOnlyEVEHistory(repo repository, from string, to string) bool {
+	changedPaths, err := gitOutput(
+		repo.Root,
+		"diff",
+		"--name-only",
+		"--no-renames",
+		from+".."+to,
+		"--",
+	)
+	if err != nil {
+		return false
+	}
+	for _, changedPath := range strings.Split(changedPaths, "\n") {
+		changedPath = strings.TrimSpace(changedPath)
+		if changedPath == "" {
+			continue
+		}
+		if changedPath != ".eve" && !strings.HasPrefix(changedPath, ".eve/") {
+			return false
+		}
+	}
+	return true
+}
+
+func resolvePullRequestBaseHead(repo repository, branch string) string {
+	branch = strings.TrimSpace(branch)
+	if branch == "" {
+		return ""
+	}
+	for _, ref := range []string{
+		"refs/remotes/origin/" + branch,
+		"refs/heads/" + branch,
+	} {
+		value, err := gitOutput(repo.Root, "rev-parse", "--verify", ref+"^{commit}")
+		if err == nil && strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
+}
+
+func snapshotProductPatchMatchesPullRequest(
+	repo repository,
+	snapshot *eve.Snapshot,
+	pullRequestHead string,
+	baseBranch string,
+) bool {
+	snapshotBase := strings.TrimSpace(snapshot.Implementation.BaseCommit)
+	implementationHead := strings.TrimSpace(snapshot.Implementation.GitState)
+	baseHead := resolvePullRequestBaseHead(repo, baseBranch)
+	if snapshotBase == "" || implementationHead == "" || baseHead == "" {
+		return false
+	}
+	pullRequestBase, err := gitOutput(repo.Root, "merge-base", baseHead, pullRequestHead)
+	if err != nil || strings.TrimSpace(pullRequestBase) == "" {
+		return false
+	}
+	snapshotPatchID, err := normalizedProductDiffID(repo, snapshotBase, implementationHead)
+	if err != nil {
+		return false
+	}
+	pullRequestPatchID, err := normalizedProductDiffID(
+		repo,
+		strings.TrimSpace(pullRequestBase),
+		pullRequestHead,
+	)
+	return err == nil && snapshotPatchID == pullRequestPatchID
+}
+
+func normalizedProductDiffID(repo repository, from string, to string) (string, error) {
+	diff := exec.Command(
+		"git",
+		"diff",
+		"--unified=0",
+		"--no-ext-diff",
+		"--no-textconv",
+		"--no-renames",
+		strings.TrimSpace(from)+".."+strings.TrimSpace(to),
+		"--",
+		".",
+		":(exclude).eve",
+		":(exclude).eve/**",
+		":(exclude)cmd/eve/ui_dist",
+		":(exclude)cmd/eve/ui_dist/**",
+	)
+	diff.Dir = repo.Root
+	patch, err := diff.Output()
+	if err != nil {
+		return "", err
+	}
+	normalized := normalizeProductDiff(string(patch))
+	if strings.TrimSpace(normalized) == "" {
+		return "", nil
+	}
+	sum := sha256.Sum256([]byte(normalized))
+	return fmt.Sprintf("%x", sum), nil
+}
+
+func normalizeProductDiff(diff string) string {
+	lines := strings.Split(diff, "\n")
+	normalized := make([]string, 0, len(lines))
+	for _, line := range lines {
+		if strings.HasPrefix(line, "index ") {
+			continue
+		}
+		if strings.HasPrefix(line, "@@ ") {
+			if marker := strings.Index(line, " @@"); marker >= 0 {
+				line = "@@" + line[marker+3:]
+			}
+		}
+		normalized = append(normalized, line)
+	}
+	return strings.Join(normalized, "\n")
+}
+
+func summarizePullRequestWithSnapshotContext(
+	githubRepository string,
+	row githubPullRequest,
+	contexts []pullRequestSnapshotContext,
+	allowMatch bool,
+) pullRequestSummary {
+	var snapshot *eve.Snapshot
+	var snapshotRepo repository
+	snapshotHeadMatches := false
+	if allowMatch {
+		if context, current := pullRequestSnapshotForRow(contexts, row); context != nil {
+			snapshot = context.Snapshot
+			snapshotRepo = context.Repository
+			snapshotHeadMatches = current
+		}
+	}
+	return summarizePullRequest(
+		githubRepository,
+		row,
+		snapshot,
+		snapshotPlanIsValid(snapshotRepo, snapshot),
+		snapshotHeadMatches,
+	)
 }
 
 func pullRequestHeadKey(sha string, branch string) string {
@@ -292,6 +607,7 @@ func summarizePullRequest(
 	row githubPullRequest,
 	snapshot *eve.Snapshot,
 	planValid bool,
+	snapshotHeadMatches bool,
 ) pullRequestSummary {
 	passed, failed, pending := summarizeGitHubChecks(row.StatusChecks)
 	state := strings.ToLower(row.State)
@@ -342,7 +658,7 @@ func summarizePullRequest(
 	result.CommitCount = len(snapshot.Implementation.Commits)
 	result.SnapshotID = snapshot.ID
 	result.SnapshotTitle = snapshot.Title
-	result.SnapshotHeadMatch = snapshot.Implementation.GitState == row.HeadRefOID
+	result.SnapshotHeadMatch = snapshotHeadMatches
 	result.PlanValid = planValid
 	if snapshot.Plan != nil {
 		result.PlanRevision = snapshot.Plan.Revision
@@ -473,17 +789,15 @@ func (server runtimeServer) pullRequestByNumber(
 	if err := json.Unmarshal(output, &row); err != nil {
 		return pullRequestSummary{}, fmt.Errorf("decode pull request #%d: %w", number, err)
 	}
-	snapshots, err := repo.listSnapshots("")
+	snapshotContexts, err := loadPullRequestSnapshotContexts(repo)
 	if err != nil {
-		return pullRequestSummary{}, fmt.Errorf("read Snapshots: %w", err)
+		return pullRequestSummary{}, fmt.Errorf("read Snapshots from Git worktrees: %w", err)
 	}
-	byHead := snapshotsByPullRequestHead(snapshots)
-	snapshot := byHead[pullRequestHeadKey(row.HeadRefOID, row.HeadRefName)]
-	return summarizePullRequest(
+	return summarizePullRequestWithSnapshotContext(
 		githubRepository,
 		row,
-		snapshot,
-		snapshotPlanIsValid(repo, snapshot),
+		snapshotContexts,
+		true,
 	), nil
 }
 
