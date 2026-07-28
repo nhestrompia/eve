@@ -6,6 +6,17 @@ This project uses Git tags for releases.
 
 ## Unreleased
 
+## 0.6.0 - 2026-07-28
+
+- Kept the local dashboard live after product-history changes by refreshing UI
+  queries when Plans and Snapshots change.
+- Fixed pending Snapshot resolution for branches that were merged before the
+  Snapshot was recorded.
+- Required agent workflows to declare Plans before snapshot-worthy product
+  changes, and updated generated agent instructions with the shorter release
+  guidance.
+- Renamed the local web app title to `eve UI`.
+
 ## 0.5.0 - 2026-07-27
 
 - Fixed Snapshots and Plans dashboard filters so page-local search, status,
