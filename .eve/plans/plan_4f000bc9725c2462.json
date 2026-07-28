@@ -1,0 +1,49 @@
+{
+  "id": "plan_4f000bc9725c2462",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_fix_idle_cache_expiry_20260728",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Eliminate sustained idle CPU caused by legacy or stale UI polling by making runtime derivation caching event-generation driven instead of expiring every two seconds, while preserving recovery from missed watcher events and validating real process CPU behavior.",
+      "acceptanceCriteria": "Repeated API request waves without runtime events reuse derived repository data and do not relaunch Git work; filesystem and agent lifecycle events still invalidate affected runtime views; the local UI remains event-driven and hidden views stay disconnected; an end-to-end idle benchmark shows near-zero backend CPU after warmup even with legacy polling traffic; Go, race, vet, UI tests, and production build pass.",
+      "allowedPathGlobs": [
+        "cmd/eve/**",
+        "ui/src/**",
+        "ui/dist/**",
+        ".eve/**"
+      ],
+      "milestones": [
+        {
+          "title": "Lock regression signal",
+          "goal": "Add a focused test that simulates repeated stale-client requests and proves derived loaders run once per event generation."
+        },
+        {
+          "title": "Make cache event-driven",
+          "goal": "Remove short wall-clock expiry from successful derived entries while retaining singleflight, cancellation, and explicit invalidation through event generations."
+        },
+        {
+          "title": "Verify runtime behavior",
+          "goal": "Run full tests and a live CPU/request benchmark against the optimized daemon, then record the change in EVE."
+        }
+      ],
+      "configuredSuite": "go test ./... \u0026\u0026 go test -race ./cmd/eve \u0026\u0026 go vet ./... \u0026\u0026 cd ui \u0026\u0026 npm test \u0026\u0026 npm run build",
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "c822910af2b96aa3647ad142e30c68d59672fb07",
+      "branch": "codex/reduce-eve-idle-cpu",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-28T12:00:14Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-28T12:00:40Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_860d0c3f5f561a88"
+}

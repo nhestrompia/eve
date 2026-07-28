@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/.codex/worktrees/93f8/eve",
-  "snapshotCount": 92,
-  "commitCount": 109,
-  "decisionCount": 177,
-  "riskCount": 70,
-  "artifactCount": 46,
-  "latestAt": "2026-07-28T11:44:41Z",
-  "latestSnapshot": "snap_dd8e6e2195d4ce1d",
-  "latestTitle": "Bound runtime fan-out under many dashboard clients",
+  "snapshotCount": 93,
+  "commitCount": 110,
+  "decisionCount": 180,
+  "riskCount": 71,
+  "artifactCount": 48,
+  "latestAt": "2026-07-28T12:23:55Z",
+  "latestSnapshot": "snap_860d0c3f5f561a88",
+  "latestTitle": "Eliminate stale UI idle CPU loops",
   "branch": "codex/reduce-eve-idle-cpu",
-  "head": "541ea861e60cc2919e4580bd383ace0862e8bf97",
+  "head": "c1757e4ab6ed85f9bfcb44d469f1b31c236e44a5",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "541ea861e60cc2919e4580bd383ace0862e8bf97"
+  "latestGitState": "c1757e4ab6ed85f9bfcb44d469f1b31c236e44a5"
 }
