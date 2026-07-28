@@ -1,0 +1,45 @@
+{
+  "id": "plan_b812200aebe72a93",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_repo_initial_avatar_fallback_20260728",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Update the repository UI so unrelated/non-EVE repositories do not show the EVE wordmark as their image; instead they should show an initial-based fallback in that image section.",
+      "acceptanceCriteria": "Repository header/image components render the EVE mark only for the EVE repository/brand asset cases, and render a readable initial placeholder for unrelated repositories lacking a specific image. Relevant tests or build checks pass.",
+      "allowedPathGlobs": [
+        "**/*"
+      ],
+      "milestones": [
+        {
+          "title": "Find avatar source",
+          "goal": "Locate the component/helper that chooses the repository image or fallback."
+        },
+        {
+          "title": "Implement fallback",
+          "goal": "Replace the global EVE fallback with an initial-based visual for unrelated repositories."
+        },
+        {
+          "title": "Verify",
+          "goal": "Run focused tests or build/lint checks covering the change."
+        }
+      ],
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "71a000351a7b57bbb2c2bbfec0652e9a13b99ac6",
+      "branch": "main",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-28T02:08:49Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-28T02:09:04Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_2b258530115749b7"
+}

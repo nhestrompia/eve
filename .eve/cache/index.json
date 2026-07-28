@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 89,
-  "commitCount": 106,
-  "decisionCount": 168,
-  "riskCount": 66,
+  "snapshotCount": 90,
+  "commitCount": 107,
+  "decisionCount": 170,
+  "riskCount": 67,
   "artifactCount": 45,
-  "latestAt": "2026-07-28T00:40:42Z",
-  "latestSnapshot": "snap_bf1db1ea5873a6a0",
-  "latestTitle": "Release eve 0.6.0",
+  "latestAt": "2026-07-28T02:12:36Z",
+  "latestSnapshot": "snap_2b258530115749b7",
+  "latestTitle": "Use repository initials for non-EVE header marks",
   "branch": "main",
-  "head": "191910ccc957d4b833746bf3db2982f6aa0b73fb",
+  "head": "5fb017e9dbd70c867b9927647d9fb5f261b183d0",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "191910ccc957d4b833746bf3db2982f6aa0b73fb"
+  "latestGitState": "5fb017e9dbd70c867b9927647d9fb5f261b183d0"
 }
