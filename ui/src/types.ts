@@ -174,6 +174,18 @@ export type PlanRequest = {
   fulfilledSnapshotId?: string;
 };
 
+export type AgentActivity = {
+  agentId: string;
+  provider: string;
+  repository: string;
+  planRequestId: string;
+  planId?: string;
+  label: string;
+  status: 'running' | 'waiting' | 'offline';
+  updatedAt?: string;
+  expiresAt?: string;
+};
+
 export type SnapshotArtifact = {
   type: string;
   uri?: string;

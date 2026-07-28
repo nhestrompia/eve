@@ -4,7 +4,6 @@ import { useRouterState } from '@tanstack/react-router';
 import { Toaster } from 'sonner';
 import { useEffect, useState } from 'react';
 import { api } from '../api';
-import { PENDING_PLAN_REFETCH_INTERVAL_MS } from '../query-client';
 import { SearchCommand } from './search-command';
 import { Sidebar } from './sidebar';
 import { PendingSnapshotBanner } from './pending-snapshot-banner';
@@ -18,7 +17,6 @@ export function AppShell() {
   const pendingPlans = useQuery({
     queryKey: ['pending-plan-requests'],
     queryFn: () => api.planRequests('review'),
-    refetchInterval: PENDING_PLAN_REFETCH_INTERVAL_MS,
     retry: false
   });
 

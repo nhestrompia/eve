@@ -19,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/nhestrompia/eve"
 )
 
@@ -892,7 +893,42 @@ func watchVerificationCancellation(ctx context.Context, repo repository, runID s
 	if err != nil {
 		return
 	}
-	ticker := time.NewTicker(25 * time.Millisecond)
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return
+	}
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil || watcher.Add(filepath.Dir(path)) != nil {
+		if watcher != nil {
+			_ = watcher.Close()
+		}
+		watchVerificationCancellationFallback(ctx, path, cancel)
+		return
+	}
+	defer watcher.Close()
+	for {
+		if _, err := os.Stat(path); err == nil {
+			cancel()
+			return
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case event, ok := <-watcher.Events:
+			if !ok {
+				return
+			}
+			if filepath.Clean(event.Name) != filepath.Clean(path) {
+				continue
+			}
+		case <-watcher.Errors:
+			watchVerificationCancellationFallback(ctx, path, cancel)
+			return
+		}
+	}
+}
+
+func watchVerificationCancellationFallback(ctx context.Context, path string, cancel context.CancelFunc) {
+	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 	for {
 		if _, err := os.Stat(path); err == nil {
@@ -908,6 +944,27 @@ func watchVerificationCancellation(ctx context.Context, repo repository, runID s
 }
 
 func (server runtimeServer) awaitVerificationLock(ctx context.Context, repo repository, run *verificationRun, config verificationConfig, checks []string) {
+	if err := os.MkdirAll(repo.verificationRunsDir(), 0o755); err != nil {
+		server.verificationRegistry.mu.Lock()
+		run.Status, run.DriftReason, run.CompletedAt = "invalidated", err.Error(), nowUTC()
+		server.verificationRegistry.mu.Unlock()
+		_ = server.persistVerificationRun(repo, run)
+		server.cleanupVerificationRun(repo, run.RunID)
+		return
+	}
+	watcher, watchErr := fsnotify.NewWatcher()
+	if watchErr == nil {
+		watchErr = watcher.Add(repo.verificationRunsDir())
+	}
+	if watcher != nil {
+		defer watcher.Close()
+	}
+	var recovery *time.Ticker
+	if watchErr != nil {
+		recovery = time.NewTicker(time.Second)
+		defer recovery.Stop()
+	}
+	markerPath := filepath.Join(repo.verificationRunsDir(), ".active.lock")
 	for {
 		if ctx.Err() != nil {
 			server.verificationRegistry.mu.Lock()
@@ -944,11 +1001,31 @@ func (server runtimeServer) awaitVerificationLock(ctx context.Context, repo repo
 			server.cleanupVerificationRun(repo, run.RunID)
 			return
 		}
-		timer := time.NewTimer(100 * time.Millisecond)
 		select {
 		case <-ctx.Done():
-			timer.Stop()
-		case <-timer.C:
+		case event, ok := <-watcherEvents(watcher, watchErr):
+			if !ok {
+				watchErr = errors.New("verification lock watcher closed")
+				if recovery == nil {
+					recovery = time.NewTicker(time.Second)
+					defer recovery.Stop()
+				}
+				continue
+			}
+			if filepath.Clean(event.Name) != filepath.Clean(markerPath) {
+				continue
+			}
+		case _, ok := <-watcherErrors(watcher, watchErr):
+			if !ok {
+				watchErr = errors.New("verification lock watcher closed")
+			} else {
+				watchErr = errors.New("verification lock watcher failed")
+			}
+			if recovery == nil {
+				recovery = time.NewTicker(time.Second)
+				defer recovery.Stop()
+			}
+		case <-tickerChannel(recovery):
 		}
 	}
 }

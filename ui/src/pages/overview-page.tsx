@@ -23,11 +23,12 @@ import {
 import { ErrorState } from "../components/error-state";
 import { PlanApprovalDialog, currentRevision } from "../components/pending-plan-banner";
 import { LoadingState } from "../components/loading-state";
-import type { EvolutionSummary, PlanRequest, RepositorySummary } from "../types";
+import type { AgentActivity, EvolutionSummary, PlanRequest, RepositorySummary } from "../types";
 
 export function OverviewPage() {
   const snapshots = useQuery({ queryKey: ["snapshots"], queryFn: api.snapshots });
   const repositories = useQuery({ queryKey: ["repositories"], queryFn: api.repositories });
+  const agents = useQuery({ queryKey: ["agents"], queryFn: api.agents });
   const plans = useQuery({
     queryKey: ["plan-requests", "all"],
     queryFn: () => api.planRequests(""),
@@ -48,6 +49,7 @@ export function OverviewPage() {
           snapshots={snapshots.data}
           repositories={repositories.data}
           plans={plans.data ?? []}
+          agents={agents.data ?? []}
         />
       ) : null}
     </DashboardShell>
@@ -58,17 +60,20 @@ function OverviewContent({
   snapshots,
   repositories,
   plans,
+  agents,
 }: {
   snapshots: EvolutionSummary[];
   repositories: RepositorySummary[];
   plans: PlanRequest[];
+  agents: AgentActivity[];
 }) {
   const pendingPlans = plans.filter((plan) => plan.state === "pending_approval");
   const [approvalOpen, setApprovalOpen] = useState(false);
   const latestSnapshots = snapshots.slice(0, 5);
   const failed = snapshots.filter((snapshot) => snapshot.failedValidationCount > 0).length;
   const percent = verificationPercent(snapshots.length, failed);
-  const activeAgents = buildActiveAgentRows(plans);
+  const agentRows = buildAgentRows(agents);
+  const activeAgents = agentRows.filter((agent) => agent.status !== "offline");
   const activePlans = plans.filter((plan) => ["pending_approval", "locked"].includes(plan.state));
   const agentsPaused = pendingPlans.length;
   const showAttention = pendingPlans.length > 0 || failed > 0 || agentsPaused > 0;
@@ -146,16 +151,16 @@ function OverviewContent({
 
         <OverviewCard>
           <div className="flex items-center justify-between gap-3">
-            <h2 className="font-semibold text-slate-950">Active agents</h2>
+            <h2 className="font-semibold text-slate-950">Agent activity</h2>
             <span className="inline-flex items-center gap-2 text-xs text-slate-500">
               <span className={`size-1.5 rounded-full ${activeAgents.length > 0 ? "bg-emerald-500" : "bg-slate-300"}`} />
               {activeAgents.length} running
             </span>
           </div>
-          {activeAgents.length > 0 ? (
+          {agentRows.length > 0 ? (
             <div className="mt-6 space-y-6">
-              {activeAgents.slice(0, 2).map((agent) => (
-                <ActiveAgentRow key={`${agent.repository}-${agent.label}`} {...agent} />
+              {agentRows.slice(0, 2).map((agent) => (
+                <ActiveAgentRow key={agent.agentId} {...agent} />
               ))}
             </div>
           ) : (
@@ -261,17 +266,25 @@ function MiniStat({ icon: Icon, value, label }: { icon: typeof Gauge; value: num
   );
 }
 
-function ActiveAgentRow({ agent, label, repository }: { agent: string; label: string; repository: string }) {
+function ActiveAgentRow({
+  provider,
+  label,
+  repository,
+  status,
+}: Pick<AgentActivity, "provider" | "label" | "repository" | "status">) {
+  const statusLabel = status === "running" ? "Running" : status === "waiting" ? "Waiting" : "Offline";
   return (
     <div className="grid grid-cols-[36px_minmax(0,1fr)] gap-3">
-      <AgentAvatar agent={agent} />
+      <AgentAvatar agent={provider} />
       <div className="min-w-0">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="truncate font-semibold text-slate-950">{agent}</p>
+            <p className="truncate font-semibold text-slate-950">{provider}</p>
             <p className="mt-0.5 truncate text-[11px] text-slate-500">{label}</p>
           </div>
-          <Pill tone="progress">In progress</Pill>
+          <Pill tone={status === "offline" ? "pending" : status === "waiting" ? "waiting" : "progress"}>
+            {statusLabel}
+          </Pill>
         </div>
         <p className="mt-2 truncate text-[11px] text-slate-500">{repository}</p>
       </div>
@@ -284,12 +297,10 @@ function agentName(snapshot: EvolutionSummary) {
   return provider.charAt(0).toUpperCase() + provider.slice(1);
 }
 
-export function buildActiveAgentRows(plans: PlanRequest[]) {
-  return plans
-    .filter((plan) => plan.state === "locked")
-    .map((plan) => ({
-      agent: "Agent",
-      label: currentRevision(plan)?.goal || "Implementing an approved plan",
-      repository: plan.repository,
-    }));
+export function buildAgentRows(agents: AgentActivity[]) {
+  const order = { running: 0, waiting: 1, offline: 2 };
+  return [...agents].sort((left, right) => {
+    const statusOrder = order[left.status] - order[right.status];
+    return statusOrder || left.repository.localeCompare(right.repository) || left.label.localeCompare(right.label);
+  });
 }

@@ -31,6 +31,8 @@ type runtimeServer struct {
 	addr                 string
 	searchCache          *snapshotSearchCache
 	verificationRegistry *verificationRegistry
+	events               *runtimeEvents
+	agentLease           *agentLeaseOwner
 }
 
 type apiError struct {
@@ -236,12 +238,20 @@ type legacySession struct {
 }
 
 func newRuntimeServer(repo repository, addr string) runtimeServer {
-	return runtimeServer{repo: repo, addr: addr, searchCache: &snapshotSearchCache{}, verificationRegistry: newVerificationRegistry()}
+	return runtimeServer{
+		repo:                 repo,
+		addr:                 addr,
+		searchCache:          &snapshotSearchCache{},
+		verificationRegistry: newVerificationRegistry(),
+		events:               newRuntimeEvents(150 * time.Millisecond),
+	}
 }
 
 func (server runtimeServer) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/config", server.handleConfig)
+	mux.HandleFunc("/api/events", server.handleRuntimeEvents)
+	mux.HandleFunc("/api/agents", server.handleAgents)
 	mux.HandleFunc("/api/health", server.handleHealth)
 	mux.HandleFunc("/api/plan-requests", server.handlePlanRequests)
 	mux.HandleFunc("/api/plan-requests/", server.handlePlanRequestRoutes)
@@ -1848,10 +1858,20 @@ func (server runtimeServer) callMCPTool(ctx context.Context, params json.RawMess
 		if err != nil {
 			return toolError(err.Error()), nil
 		}
+		if server.agentLease != nil {
+			_ = server.agentLease.update(request, agentStateWaiting, time.Now().UTC())
+		}
 		if request.State == "pending_approval" {
 			request, err = repo.waitForPlanRequest(ctx, request.PlanRequestID)
 			if err != nil {
 				return toolError(err.Error()), nil
+			}
+		}
+		if server.agentLease != nil {
+			if request.State == "locked" {
+				_ = server.agentLease.update(request, agentStateRunning, time.Now().UTC())
+			} else {
+				_ = server.agentLease.remove()
 			}
 		}
 		return toolResult(request), nil
@@ -1869,6 +1889,16 @@ func (server runtimeServer) callMCPTool(ctx context.Context, params json.RawMess
 		request, err := repo.refreshPlanRequestState(ctx, input.PlanRequestID)
 		if err != nil {
 			return toolError(err.Error()), nil
+		}
+		if server.agentLease != nil {
+			switch request.State {
+			case "locked":
+				_ = server.agentLease.update(request, agentStateRunning, time.Now().UTC())
+			case "pending_approval":
+				_ = server.agentLease.update(request, agentStateWaiting, time.Now().UTC())
+			default:
+				_ = server.agentLease.remove()
+			}
 		}
 		return toolResult(request), nil
 	case "start_suite":
@@ -1939,7 +1969,11 @@ func (server runtimeServer) callMCPTool(ctx context.Context, params json.RawMess
 		}
 		return toolResult(run), nil
 	case "complete_snapshot":
-		return server.completeSnapshotTool(ctx, call.Arguments)
+		result, rpcErr := server.completeSnapshotTool(ctx, call.Arguments)
+		if rpcErr == nil && toolCallSucceeded(result) && server.agentLease != nil {
+			_ = server.agentLease.remove()
+		}
+		return result, rpcErr
 	case "skip_snapshot":
 		var input struct {
 			CWD      string `json:"cwd"`
@@ -1961,6 +1995,9 @@ func (server runtimeServer) callMCPTool(ctx context.Context, params json.RawMess
 		record, err := repo.createSkip(input.Reason, skipAgent{Provider: input.Provider, ID: input.AgentID})
 		if err != nil {
 			return toolError(err.Error()), nil
+		}
+		if server.agentLease != nil {
+			_ = server.agentLease.remove()
 		}
 		return toolResult(record), nil
 	case "checkout_snapshot":
@@ -2228,6 +2265,15 @@ func toolError(message string) map[string]any {
 		"content": []map[string]string{{"type": "text", "text": message}},
 		"isError": true,
 	}
+}
+
+func toolCallSucceeded(result any) bool {
+	value, ok := result.(map[string]any)
+	if !ok {
+		return false
+	}
+	isError, _ := value["isError"].(bool)
+	return !isError
 }
 
 func (server runtimeServer) mcpResources() ([]map[string]string, error) {
