@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/.codex/worktrees/0def/eve",
-  "snapshotCount": 93,
-  "commitCount": 110,
-  "decisionCount": 181,
-  "riskCount": 71,
+  "snapshotCount": 94,
+  "commitCount": 111,
+  "decisionCount": 184,
+  "riskCount": 72,
   "artifactCount": 45,
-  "latestAt": "2026-07-28T14:55:43Z",
-  "latestSnapshot": "snap_05cd33789972298e",
-  "latestTitle": "Fix pull request Snapshot context linkage",
+  "latestAt": "2026-07-28T15:24:55Z",
+  "latestSnapshot": "snap_650614e966595922",
+  "latestTitle": "Keep history-only PR Snapshots current",
   "branch": "codex/pr-review-merge-ui",
-  "head": "e0cee9405721afb1ab3a31115503aeabfb246fb3",
+  "head": "b43c97fd38d8f48a0b53fbdb511bb6375a13195e",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "e0cee9405721afb1ab3a31115503aeabfb246fb3"
+  "latestGitState": "b43c97fd38d8f48a0b53fbdb511bb6375a13195e"
 }
