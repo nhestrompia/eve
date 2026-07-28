@@ -36,7 +36,6 @@ func TestRuntimeDerivedCacheSharesConcurrentLoads(t *testing.T) {
 				cache,
 				"repository:fixture",
 				1,
-				time.Minute,
 				load,
 			)
 			if err != nil {
@@ -72,7 +71,6 @@ func TestRuntimeHealthReportsFanoutDiagnostics(t *testing.T) {
 		server.derivedCache,
 		"fixture",
 		server.events.currentGeneration(),
-		time.Minute,
 		func() (string, error) { return "cached", nil },
 	); err != nil {
 		t.Fatal(err)
@@ -100,19 +98,104 @@ func TestRuntimeDerivedCacheInvalidatesOnGenerationChange(t *testing.T) {
 		return loads.Add(1), nil
 	}
 
-	first, err := cachedRuntimeValue(context.Background(), cache, "repos", 1, time.Minute, load)
+	first, err := cachedRuntimeValue(context.Background(), cache, "repos", 1, load)
 	if err != nil {
 		t.Fatal(err)
 	}
-	reused, err := cachedRuntimeValue(context.Background(), cache, "repos", 1, time.Minute, load)
+	reused, err := cachedRuntimeValue(context.Background(), cache, "repos", 1, load)
 	if err != nil {
 		t.Fatal(err)
 	}
-	refreshed, err := cachedRuntimeValue(context.Background(), cache, "repos", 2, time.Minute, load)
+	refreshed, err := cachedRuntimeValue(context.Background(), cache, "repos", 2, load)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if first != 1 || reused != 1 || refreshed != 2 {
 		t.Fatalf("values = %d, %d, %d; want 1, 1, 2", first, reused, refreshed)
+	}
+}
+
+func TestRuntimeDerivedCacheDoesNotExpireWithinGeneration(t *testing.T) {
+	cache := newRuntimeDerivedCache()
+	var loads atomic.Int32
+	load := func() (int32, error) {
+		return loads.Add(1), nil
+	}
+
+	first, err := cachedRuntimeValue(
+		context.Background(),
+		cache,
+		"repos",
+		1,
+		load,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(20 * time.Millisecond)
+	reused, err := cachedRuntimeValue(
+		context.Background(),
+		cache,
+		"repos",
+		1,
+		load,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first != 1 || reused != 1 {
+		t.Fatalf("values = %d, %d; want 1, 1", first, reused)
+	}
+	if got := loads.Load(); got != 1 {
+		t.Fatalf("loads = %d, want 1 without a generation change", got)
+	}
+}
+
+func TestRuntimeDerivedCacheIgnoresUnrelatedEvents(t *testing.T) {
+	cache := newRuntimeDerivedCache()
+	events := newRuntimeEvents(time.Millisecond)
+	var loads atomic.Int32
+	load := func() (int32, error) {
+		return loads.Add(1), nil
+	}
+	repositoryGeneration := func() uint64 {
+		return events.generationFor(runtimeEventRepositories, runtimeEventSnapshots)
+	}
+
+	if _, err := cachedRuntimeValue(
+		context.Background(),
+		cache,
+		"repos",
+		repositoryGeneration(),
+		load,
+	); err != nil {
+		t.Fatal(err)
+	}
+	events.publish(runtimeEvent{Kind: runtimeEventAgents})
+	if _, err := cachedRuntimeValue(
+		context.Background(),
+		cache,
+		"repos",
+		repositoryGeneration(),
+		load,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if got := loads.Load(); got != 1 {
+		t.Fatalf("loads after agent event = %d, want 1", got)
+	}
+
+	events.publish(runtimeEvent{Kind: runtimeEventRepositories})
+	if _, err := cachedRuntimeValue(
+		context.Background(),
+		cache,
+		"repos",
+		repositoryGeneration(),
+		load,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if got := loads.Load(); got != 2 {
+		t.Fatalf("loads after repository event = %d, want 2", got)
 	}
 }

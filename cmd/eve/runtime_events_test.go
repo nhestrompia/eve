@@ -93,6 +93,25 @@ func TestRuntimeEventsBoundSlowSubscribersAndCleanUp(t *testing.T) {
 	}
 }
 
+func TestRuntimeEventGenerationsAreScoped(t *testing.T) {
+	events := newRuntimeEvents(time.Millisecond)
+	repositoriesBefore := events.generationFor(runtimeEventRepositories)
+	agentsBefore := events.generationFor(runtimeEventAgents)
+
+	events.publish(runtimeEvent{Kind: runtimeEventAgents})
+	if got := events.generationFor(runtimeEventRepositories); got != repositoriesBefore {
+		t.Fatalf("repository generation = %d after agent event, want %d", got, repositoriesBefore)
+	}
+	if got := events.generationFor(runtimeEventAgents); got <= agentsBefore {
+		t.Fatalf("agent generation = %d, want newer than %d", got, agentsBefore)
+	}
+
+	events.publish(runtimeEvent{Kind: runtimeEventAll})
+	if got := events.generationFor(runtimeEventRepositories); got <= repositoriesBefore {
+		t.Fatalf("repository generation = %d after all event, want newer than %d", got, repositoriesBefore)
+	}
+}
+
 func TestRuntimeEventsIgnoreWatchedDirectorySelfNotifications(t *testing.T) {
 	root := t.TempDir()
 	watched := watchedRepository{
@@ -107,6 +126,63 @@ func TestRuntimeEventsIgnoreWatchedDirectorySelfNotifications(t *testing.T) {
 		if event, ok := classifyRuntimePath(path, []watchedRepository{watched}); ok {
 			t.Fatalf("directory self notification %q emitted %#v", path, event)
 		}
+	}
+}
+
+func TestRuntimeEventsIgnoreCodexTurnDiffRefs(t *testing.T) {
+	root := t.TempDir()
+	gitDir := filepath.Join(root, ".git")
+	watched := watchedRepository{
+		repo:      repository{ID: "fixture", Root: root, eveDir: filepath.Join(root, ".eve")},
+		root:      root,
+		eveRoot:   filepath.Join(root, ".eve"),
+		gitDir:    gitDir,
+		commonDir: gitDir,
+	}
+	privateRef := filepath.Join(gitDir, "refs", "codex", "turn-diffs", "captures", "task", "base")
+	if event, ok := classifyRuntimePath(privateRef, []watchedRepository{watched}); ok {
+		t.Fatalf("Codex turn-diff ref emitted %#v", event)
+	}
+	branchRef := filepath.Join(gitDir, "refs", "heads", "codex", "feature")
+	if event, ok := classifyRuntimePath(branchRef, []watchedRepository{watched}); !ok ||
+		event.Kind != runtimeEventRepositories {
+		t.Fatalf("branch ref event = %#v, %t", event, ok)
+	}
+}
+
+func TestRuntimeEventsDoNotWatchCodexTurnDiffTrees(t *testing.T) {
+	root := initTempGitRepo(t)
+	repo := repoFromRoot(root)
+	if err := os.MkdirAll(repo.eveDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	gitDir, err := resolveGitPath(repo, "--git-dir")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for index := 0; index < 40; index++ {
+		path := filepath.Join(
+			gitDir,
+			"refs",
+			"codex",
+			"turn-diffs",
+			"captures",
+			fmt.Sprintf("%04d", index),
+			"task",
+		)
+		if err := os.MkdirAll(path, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	events := newRuntimeEvents(time.Millisecond)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	if err := events.watch(ctx, []repository{repo}); err != nil {
+		t.Fatal(err)
+	}
+	if got := events.watchedDirectoryCount(); got >= 40 {
+		t.Fatalf("watched directories = %d, includes Codex turn-diff tree", got)
 	}
 }
 

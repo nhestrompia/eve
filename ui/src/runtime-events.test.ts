@@ -92,6 +92,13 @@ describe("runtime events", () => {
       ["pending-plan-requests"],
       ["agents"],
     ]);
+
+    invalidate.mockClear();
+    FakeEventSource.instance.emit("agents");
+    await vi.waitFor(() => expect(invalidate).toHaveBeenCalled());
+    expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([
+      ["agents"],
+    ]);
     disconnect();
   });
 

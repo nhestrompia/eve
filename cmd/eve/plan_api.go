@@ -117,8 +117,7 @@ func (server runtimeServer) cachedPlanRequests(ctx context.Context, status strin
 		ctx,
 		server.derivedCache,
 		"plan-requests:"+status,
-		server.events.currentGeneration(),
-		runtimeDerivedCacheTTL,
+		server.events.generationFor(runtimeEventPlans),
 		func() ([]*planRequest, error) {
 			return server.planRequests(ctx, status)
 		},

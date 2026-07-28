@@ -1534,6 +1534,40 @@ func TestGlobalSnapshotListRefreshesWhenSnapshotIsAdded(t *testing.T) {
 	}
 }
 
+func TestGlobalSnapshotListRefreshesOnRuntimeGeneration(t *testing.T) {
+	repo := initTempGitRepo(t)
+	head := gitOutputForTest(t, repo, "rev-parse", "HEAD")
+	mustRunInRepo(t, repo, []string{"init"})
+	writeSnapshot(t, repo, sampleSnapshot("snap_first", "First Snapshot", head))
+
+	server := newRuntimeServer(repoFromRoot(repo), "localhost:0")
+	handler := server.routes()
+	var rows []snapshotSummary
+	requestJSON(t, handler, http.MethodGet, "/api/snapshots", nil, &rows)
+	if len(rows) != 1 || rows[0].Title != "First Snapshot" {
+		t.Fatalf("initial snapshots = %#v", rows)
+	}
+
+	updated := sampleSnapshot("snap_first", "Updated Snapshot", head)
+	canonical, err := eve.CanonicalSnapshotJSON(updated)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(
+		repoFromRoot(repo).snapshotPath(updated.ID),
+		append(canonical, '\n'),
+		0o644,
+	); err != nil {
+		t.Fatal(err)
+	}
+	server.events.publish(runtimeEvent{Kind: runtimeEventSnapshots, Repository: server.repo.ID})
+
+	requestJSON(t, handler, http.MethodGet, "/api/snapshots", nil, &rows)
+	if len(rows) != 1 || rows[0].Title != "Updated Snapshot" {
+		t.Fatalf("refreshed snapshots = %#v", rows)
+	}
+}
+
 func TestDynamicAPIResponsesDisableBrowserCaching(t *testing.T) {
 	repo := initTempGitRepo(t)
 	mustRunInRepo(t, repo, []string{"init"})

@@ -39,12 +39,13 @@ type runtimeEvent struct {
 }
 
 type runtimeEvents struct {
-	mu          sync.RWMutex
-	subscribers map[uint64]chan runtimeEvent
-	nextID      uint64
-	debounce    time.Duration
-	watchedDirs int
-	generation  atomic.Uint64
+	mu              sync.RWMutex
+	subscribers     map[uint64]chan runtimeEvent
+	kindGenerations map[runtimeEventKind]uint64
+	nextID          uint64
+	debounce        time.Duration
+	watchedDirs     int
+	generation      atomic.Uint64
 }
 
 func newRuntimeEvents(debounce time.Duration) *runtimeEvents {
@@ -52,8 +53,9 @@ func newRuntimeEvents(debounce time.Duration) *runtimeEvents {
 		debounce = 150 * time.Millisecond
 	}
 	return &runtimeEvents{
-		subscribers: make(map[uint64]chan runtimeEvent),
-		debounce:    debounce,
+		subscribers:     make(map[uint64]chan runtimeEvent),
+		kindGenerations: make(map[runtimeEventKind]uint64),
+		debounce:        debounce,
 	}
 }
 
@@ -76,9 +78,10 @@ func (events *runtimeEvents) subscribe() (<-chan runtimeEvent, func()) {
 }
 
 func (events *runtimeEvents) publish(event runtimeEvent) {
-	events.generation.Add(1)
-	events.mu.RLock()
-	defer events.mu.RUnlock()
+	generation := events.generation.Add(1)
+	events.mu.Lock()
+	defer events.mu.Unlock()
+	events.kindGenerations[event.Kind] = generation
 	for _, channel := range events.subscribers {
 		select {
 		case channel <- event:
@@ -100,6 +103,21 @@ func (events *runtimeEvents) currentGeneration() uint64 {
 		return 0
 	}
 	return events.generation.Load()
+}
+
+func (events *runtimeEvents) generationFor(kinds ...runtimeEventKind) uint64 {
+	if events == nil {
+		return 0
+	}
+	events.mu.RLock()
+	defer events.mu.RUnlock()
+	generation := events.kindGenerations[runtimeEventAll]
+	for _, kind := range kinds {
+		if candidate := events.kindGenerations[kind]; candidate > generation {
+			generation = candidate
+		}
+	}
+	return generation
 }
 
 func (events *runtimeEvents) subscriberCount() int {
@@ -170,6 +188,9 @@ func (events *runtimeEvents) watch(ctx context.Context, repositories []repositor
 		_ = filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
 			if walkErr != nil || !entry.IsDir() {
 				return nil
+			}
+			if runtimeTransientGitPath(path, watched) {
+				return filepath.SkipDir
 			}
 			addDir(path)
 			return nil
@@ -334,6 +355,9 @@ func (events *runtimeEvents) runWatcher(
 
 func classifyRuntimePath(path string, repositories []watchedRepository) (runtimeEvent, bool) {
 	path = filepath.Clean(path)
+	if runtimeTransientGitPath(path, repositories) {
+		return runtimeEvent{}, false
+	}
 	for _, watched := range repositories {
 		if path == watched.root || path == watched.eveRoot || path == watched.privateEve ||
 			path == watched.gitDir || path == watched.commonDir {
@@ -405,6 +429,9 @@ func trackedWorktreeDirectories(repo repository) []string {
 }
 
 func runtimeWatchPathIgnored(path string, repositories []watchedRepository) bool {
+	if runtimeTransientGitPath(path, repositories) {
+		return true
+	}
 	for _, watched := range repositories {
 		if relativePathWithin(watched.eveRoot, path) ||
 			relativePathWithin(watched.privateEve, path) ||
@@ -424,6 +451,27 @@ func runtimeWatchPathIgnored(path string, repositories []watchedRepository) bool
 		}
 	}
 	return true
+}
+
+func runtimeTransientGitPath(path string, repositories []watchedRepository) bool {
+	path = filepath.Clean(path)
+	for _, watched := range repositories {
+		for _, gitRoot := range []string{watched.gitDir, watched.commonDir} {
+			if !relativePathWithin(gitRoot, path) {
+				continue
+			}
+			relative, err := filepath.Rel(gitRoot, path)
+			if err != nil {
+				continue
+			}
+			relative = filepath.ToSlash(relative)
+			if relative == "refs/codex/turn-diffs" ||
+				strings.HasPrefix(relative, "refs/codex/turn-diffs/") {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func relativePathWithin(root, path string) bool {

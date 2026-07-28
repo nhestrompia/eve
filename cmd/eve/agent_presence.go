@@ -401,8 +401,7 @@ func (server runtimeServer) cachedAgentActivities(now time.Time) []agentActivity
 		context.Background(),
 		server.derivedCache,
 		"agent-activities",
-		server.events.currentGeneration(),
-		runtimeDerivedCacheTTL,
+		server.events.generationFor(runtimeEventAgents, runtimeEventPlans),
 		func() ([]agentActivity, error) {
 			return server.agentActivities(now), nil
 		},

@@ -24,7 +24,7 @@ const queryKeysByEvent: Record<string, QueryKey[]> = {
   repositories: [["repositories"], ["repository"], ["config"], ["plan-requests"], ["pending-plan-requests"]],
   config: [["config"], ["repositories"], ["repository"], ["plan-requests"], ["pending-plan-requests"]],
   plans: [["plan-requests"], ["pending-plan-requests"], ["agents"]],
-  agents: [["agents"], ["repositories"], ["repository"], ["config"]],
+  agents: [["agents"]],
   verification: [["repositories"], ["repository"], ["config"]],
 };
 

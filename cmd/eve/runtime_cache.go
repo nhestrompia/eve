@@ -3,14 +3,10 @@ package main
 import (
 	"context"
 	"sync"
-	"time"
 )
-
-const runtimeDerivedCacheTTL = 2 * time.Second
 
 type runtimeDerivedCacheEntry struct {
 	generation uint64
-	expiresAt  time.Time
 	value      any
 }
 
@@ -53,21 +49,14 @@ func cachedRuntimeValue[T any](
 	cache *runtimeDerivedCache,
 	key string,
 	generation uint64,
-	ttl time.Duration,
 	load func() (T, error),
 ) (T, error) {
 	if cache == nil {
 		return load()
 	}
-	if ttl <= 0 {
-		ttl = runtimeDerivedCacheTTL
-	}
 	for {
-		now := time.Now()
 		cache.mu.Lock()
-		if entry, ok := cache.entries[key]; ok &&
-			entry.generation == generation &&
-			now.Before(entry.expiresAt) {
+		if entry, ok := cache.entries[key]; ok && entry.generation == generation {
 			value := entry.value.(T)
 			cache.mu.Unlock()
 			return value, nil
@@ -92,7 +81,6 @@ func cachedRuntimeValue[T any](
 		if err == nil {
 			cache.entries[key] = runtimeDerivedCacheEntry{
 				generation: generation,
-				expiresAt:  time.Now().Add(ttl),
 				value:      value,
 			}
 		}

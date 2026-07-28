@@ -103,10 +103,10 @@ type indexedSnapshot struct {
 }
 
 type snapshotSearchCache struct {
-	mu        sync.Mutex
-	expiresAt time.Time
-	signature string
-	entries   []indexedSnapshot
+	mu         sync.Mutex
+	generation uint64
+	signature  string
+	entries    []indexedSnapshot
 }
 
 type sessionListResponse struct {
@@ -491,8 +491,7 @@ func (server runtimeServer) repositories() []repository {
 		context.Background(),
 		server.derivedCache,
 		"repositories",
-		server.events.currentGeneration(),
-		runtimeDerivedCacheTTL,
+		server.events.generationFor(runtimeEventRepositories),
 		func() ([]repository, error) {
 			return knownRepositories(server.repo), nil
 		},
@@ -508,8 +507,12 @@ func (server runtimeServer) cachedRepoSummary(ctx context.Context, repo reposito
 		ctx,
 		server.derivedCache,
 		"summary:"+repo.Root,
-		server.events.currentGeneration(),
-		runtimeDerivedCacheTTL,
+		server.events.generationFor(
+			runtimeEventRepositories,
+			runtimeEventSnapshots,
+			runtimeEventConfig,
+			runtimeEventVerification,
+		),
 		repo.summary,
 	)
 }
@@ -519,8 +522,12 @@ func (server runtimeServer) cachedRepoDetail(ctx context.Context, repo repositor
 		ctx,
 		server.derivedCache,
 		"detail:"+repo.Root,
-		server.events.currentGeneration(),
-		runtimeDerivedCacheTTL,
+		server.events.generationFor(
+			runtimeEventRepositories,
+			runtimeEventSnapshots,
+			runtimeEventConfig,
+			runtimeEventVerification,
+		),
 		repo.detail,
 	)
 }
@@ -812,11 +819,11 @@ func summarizeSnapshotForRepo(repo repository, snapshot *eve.Snapshot) snapshotS
 func (server runtimeServer) indexedSnapshots() ([]indexedSnapshot, error) {
 	repos := server.repositories()
 	signature := repositorySignature(repos)
-	now := time.Now()
+	generation := server.events.generationFor(runtimeEventRepositories, runtimeEventSnapshots)
 	cache := server.searchCache
 	cache.mu.Lock()
 	defer cache.mu.Unlock()
-	if cache.signature == signature && now.Before(cache.expiresAt) {
+	if cache.generation == generation && cache.signature == signature {
 		return append([]indexedSnapshot(nil), cache.entries...), nil
 	}
 
@@ -844,8 +851,8 @@ func (server runtimeServer) indexedSnapshots() ([]indexedSnapshot, error) {
 		}
 		return entries[i].Summary.CreatedAt > entries[j].Summary.CreatedAt
 	})
+	cache.generation = generation
 	cache.signature = signature
-	cache.expiresAt = now.Add(5 * time.Second)
 	cache.entries = append([]indexedSnapshot(nil), entries...)
 	return entries, nil
 }
