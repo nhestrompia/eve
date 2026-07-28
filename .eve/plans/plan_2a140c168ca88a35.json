@@ -1,0 +1,50 @@
+{
+  "id": "plan_2a140c168ca88a35",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_cpu-usage-ui-polling-20260728",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Reduce idle CPU usage from the EVE local UI by lowering unnecessary background polling and avoiding repeated expensive refreshes while preserving eventual freshness for snapshots, repositories, and plan request state.",
+      "acceptanceCriteria": "The UI no longer aggressively refetches snapshot/repository/plan data every five seconds in background tabs; fast-changing pending state still refreshes often enough for approval workflows; tests cover the new query refresh policy; relevant verification passes.",
+      "allowedPathGlobs": [
+        "ui/src/query-client.ts",
+        "ui/src/query-client.test.ts",
+        "cmd/eve/*.go",
+        "cmd/eve/*_test.go",
+        ".eve/**"
+      ],
+      "milestones": [
+        {
+          "title": "Measure idle refresh path",
+          "goal": "Identify expensive routes repeatedly hit by the open UI and establish a targeted test or benchmark signal."
+        },
+        {
+          "title": "Tune live query policy",
+          "goal": "Reduce global background polling and limit frequent refresh to pending/active workflows."
+        },
+        {
+          "title": "Verify and record",
+          "goal": "Run focused tests, commit implementation, record the EVE snapshot, and commit the generated product-history record."
+        }
+      ],
+      "configuredSuite": "go test ./cmd/eve ./... and npm tests for the UI query refresh policy",
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "71a000351a7b57bbb2c2bbfec0652e9a13b99ac6",
+      "branch": "codex/reduce-eve-idle-cpu",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-28T01:06:07Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-28T01:06:12Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_98b33b7b6df855cc"
+}

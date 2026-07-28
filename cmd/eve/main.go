@@ -662,6 +662,16 @@ func serveRuntime(repo repository, options runtimeLaunchOptions, stdout io.Write
 	rememberRepository(repo)
 
 	server := newRuntimeServer(repo, strings.TrimSpace(options.Addr))
+	eventContext, stopEvents := context.WithCancel(context.Background())
+	defer stopEvents()
+	eventRepositories := server.repositories()
+	if err := server.events.watch(eventContext, eventRepositories); err != nil {
+		fmt.Fprintf(stderr, "watch runtime events: %v; using recovery refreshes\n", err)
+		go server.events.runRecoveryRefresh(eventContext, time.Minute)
+	} else {
+		go server.events.runRecoveryRefresh(eventContext, 5*time.Minute)
+	}
+	go server.events.watchAgentExpirations(eventContext, eventRepositories)
 	listener, err := net.Listen("tcp", server.addr)
 	if err != nil {
 		fmt.Fprintf(stderr, "serve runtime: %v\n", err)
@@ -852,6 +862,9 @@ func runMCPStdio(args []string, stdin io.Reader, stdout io.Writer, stderr io.Wri
 		return 1
 	}
 	server := newRuntimeServer(repo, "")
+	provider, agentID := detectedAgentIdentity()
+	server.agentLease = newAgentLeaseOwner(repo, provider, agentID, defaultAgentLeaseTTL, defaultAgentLeaseRenewal)
+	defer server.agentLease.close()
 	scanner := bufio.NewScanner(stdin)
 	var writerMu sync.Mutex
 	var waitersMu sync.Mutex
@@ -1633,7 +1646,8 @@ func snapshotVerification(repo repository, facts gitFacts) (*eve.Verification, e
 }
 
 func gitOutput(root string, args ...string) (string, error) {
-	cmd := exec.Command("git", args...)
+	commandArgs := append([]string{"--no-optional-locks"}, args...)
+	cmd := exec.Command("git", commandArgs...)
 	cmd.Dir = root
 	output, err := cmd.Output()
 	if err != nil {

@@ -1,0 +1,55 @@
+{
+  "id": "plan_1087618f39c693a5",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_optimize_runtime_fanout_20260728",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Eliminate EVE CPU spikes across the daemon, dashboard, repository watcher, and agent-presence stack under many simultaneous clients while preserving prompt event-driven updates.",
+      "acceptanceCriteria": "No timer-based dashboard polling; hidden tabs do not maintain live event activity; bursty filesystem changes produce bounded/coalesced refreshes; concurrent identical API requests share expensive derivation work; agent running/waiting/offline state remains correct; multi-client idle CPU is at measurement floor and event-driven updates still arrive promptly; all Go/UI/race tests pass.",
+      "allowedPathGlobs": [
+        "cmd/eve/**",
+        "ui/src/**",
+        "ui/package.json",
+        "ui/package-lock.json",
+        "go.mod",
+        "go.sum"
+      ],
+      "milestones": [
+        {
+          "title": "Reproduce and measure fan-out",
+          "goal": "Add a deterministic multi-client benchmark/regression seam that exposes repeated repository derivation and event bursts."
+        },
+        {
+          "title": "Coalesce runtime work",
+          "goal": "Deduplicate bursty filesystem notifications and share expensive repository/Git derivations across concurrent API clients."
+        },
+        {
+          "title": "Suspend hidden dashboard activity",
+          "goal": "Keep hidden tabs disconnected from live events and recover state when visible, preventing background-tab fan-out."
+        },
+        {
+          "title": "Verify whole-stack behavior",
+          "goal": "Run Go, race, UI, browser, and multi-client CPU/request benchmarks against the optimized runtime."
+        }
+      ],
+      "configuredSuite": "change",
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "62357cd1ae7591c396ea76820f3fe65731e08057",
+      "branch": "codex/reduce-eve-idle-cpu",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-28T11:26:46Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-28T11:27:06Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_dd8e6e2195d4ce1d"
+}

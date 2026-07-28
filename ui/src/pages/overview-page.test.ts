@@ -1,47 +1,28 @@
 import { describe, expect, it } from "vitest";
-import type { PlanRequest } from "../types";
-import { buildActiveAgentRows } from "./overview-page";
+import type { AgentActivity } from "../types";
+import { buildAgentRows } from "./overview-page";
 
-function plan(state: string, goal: string): PlanRequest {
+function agent(status: AgentActivity["status"], label: string): AgentActivity {
   return {
-    planRequestId: `planreq_${state}`,
+    agentId: `agent_${status}`,
+    provider: "Codex",
     repository: "eve",
-    repositoryRoot: "/tmp/eve",
-    branch: "main",
-    state,
-    currentRevision: 1,
-    revisions: [
-      {
-        revision: 1,
-        source: "agent",
-        goal,
-        acceptanceCriteria: "- It works",
-        allowedPathGlobs: ["ui/**"],
-        milestones: [],
-        resolvedCheckIds: [],
-        policyHash: "",
-        checkDefinitionsHash: "",
-        suiteDigest: "",
-        baseCommit: "abc123",
-        branch: "main",
-        createdAt: "2026-07-28T10:00:00Z",
-      },
-    ],
+    planRequestId: `planreq_${status}`,
+    label,
+    status,
   };
 }
 
 describe("overview active agents", () => {
-  it("does not present completed work as a running agent", () => {
-    expect(buildActiveAgentRows([plan("fulfilled", "Prepare eve 0.5.0 release")])).toEqual([]);
+  it("keeps offline work visible without counting it as live", () => {
+    expect(buildAgentRows([agent("offline", "Prepare eve 0.5.0 release")])[0]?.status).toBe("offline");
   });
 
-  it("uses only locked plans as the durable signal for active work", () => {
-    expect(buildActiveAgentRows([plan("locked", "Fix live dashboard updates")])).toEqual([
-      {
-        agent: "Agent",
-        label: "Fix live dashboard updates",
-        repository: "eve",
-      },
-    ]);
+  it("sorts live agents ahead of disconnected plans", () => {
+    expect(buildAgentRows([
+      agent("offline", "Old task"),
+      agent("running", "Fix live dashboard updates"),
+      agent("waiting", "Await approval"),
+    ]).map((row) => row.status)).toEqual(["running", "waiting", "offline"]);
   });
 });

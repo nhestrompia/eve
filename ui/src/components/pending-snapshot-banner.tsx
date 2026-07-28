@@ -7,7 +7,6 @@ export function PendingSnapshotBanner() {
   const config = useQuery({
     queryKey: ['config'],
     queryFn: api.config,
-    refetchInterval: 10_000
   });
   const pending = config.data?.pendingSnapshot;
 
