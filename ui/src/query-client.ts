@@ -1,26 +1,27 @@
 import { QueryClient, type QueryClientConfig } from "@tanstack/react-query";
 
-export const LIVE_REFETCH_INTERVAL_MS = 5_000;
-
-const liveQueryDefaults = {
-  refetchInterval: LIVE_REFETCH_INTERVAL_MS,
-  refetchIntervalInBackground: true,
+const foregroundRefreshDefaults = {
+  refetchIntervalInBackground: false,
   refetchOnWindowFocus: "always" as const,
   refetchOnReconnect: "always" as const,
 };
 
 const liveQueryPrefixes = [
+  ["config"],
   ["snapshots"],
   ["repositories"],
   ["repository"],
   ["plan-requests"],
   ["pending-plan-requests"],
+  ["agents"],
 ] as const;
 
 export function createAppQueryClient(config?: QueryClientConfig) {
   const client = new QueryClient(config);
   for (const queryKey of liveQueryPrefixes) {
-    client.setQueryDefaults(queryKey, liveQueryDefaults);
+    client.setQueryDefaults(queryKey, {
+      ...foregroundRefreshDefaults,
+    });
   }
   return client;
 }

@@ -1,0 +1,50 @@
+{
+  "id": "plan_307dcd3d0cfa2ca5",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_artifact_rendering_20260728",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Fix broken repository-relative Playwright screenshot artifacts and render log artifacts as text evidence instead of image placeholders.",
+      "acceptanceCriteria": "Repository-relative image artifacts resolve through a safe EVE API URL and render in thumbnails/modals; .eve artifact paths continue to work; log artifacts use a compact monospace text preview and text viewer with useful fallback states; generic non-image artifacts no longer show a broken-image-style placeholder; targeted UI and Go regression tests, UI build, and relevant repository tests pass.",
+      "allowedPathGlobs": [
+        "ui/src/pages/repository-page.tsx",
+        "ui/src/pages/repository-page.test.ts",
+        "ui/src/lib/artifacts.ts",
+        "ui/src/lib/artifacts.test.ts",
+        "cmd/eve/ui_server.go",
+        "cmd/eve/ui_server_test.go"
+      ],
+      "milestones": [
+        {
+          "title": "Regression coverage",
+          "goal": "Add deterministic tests for repository-relative artifact URLs, route safety, and log classification."
+        },
+        {
+          "title": "Artifact rendering",
+          "goal": "Serve safe repository-relative artifacts and add type-appropriate log/file cards and previews."
+        },
+        {
+          "title": "Verification",
+          "goal": "Run targeted tests, build the UI, and visually verify screenshot and log behavior."
+        }
+      ],
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "1d461c172602fa05acc8bbaa4dc34c68e072e3ed",
+      "branch": "codex/fix-artifact-rendering",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-28T12:40:43Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-28T13:13:44Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_2ad36a27e5e9c108"
+}

@@ -17,7 +17,6 @@ export function AppShell() {
   const pendingPlans = useQuery({
     queryKey: ['pending-plan-requests'],
     queryFn: () => api.planRequests('review'),
-    refetchInterval: 2_000,
     retry: false
   });
 

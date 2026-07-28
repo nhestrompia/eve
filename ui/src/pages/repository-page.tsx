@@ -26,6 +26,7 @@ import {
   Save,
   Search,
   Sparkles,
+  Terminal,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -54,6 +55,12 @@ import {
   defaultComparisonPair,
   orderedComparisonPair,
 } from "../lib/comparison";
+import {
+  artifactHref,
+  artifactKind,
+  artifactSource,
+  type ArtifactKind,
+} from "../lib/artifacts";
 import type {
   ComparisonResponse,
   ComparisonTimelineItem,
@@ -63,7 +70,6 @@ import type {
   PullRequestCollection,
   PullRequestSummary,
   RepositorySummary,
-  SnapshotArtifact,
 } from "../types";
 
 export function RepositoryPage() {
@@ -2277,23 +2283,20 @@ function ArtifactsPanel({
   const [selectedArtifact, setSelectedArtifact] =
     useState<ArtifactCardRow | null>(null);
   const artifacts: ArtifactCardRow[] = details.flatMap((detail) =>
-    detail.snapshot.artifacts.map((artifact, index) => ({
-      id: `${detail.snapshot.id}-${index}`,
-      type: artifact.type,
-      description:
-        artifact.description ||
-        artifact.path ||
-        artifact.url ||
-        artifact.uri ||
-        "Artifact",
-      href:
-        artifact.url ||
-        artifact.uri ||
-        localArtifactHref(repository.name, artifact.path),
-      imageSrc: artifactImageSrc(repository.name, artifact),
-      source: artifact.path || artifact.url || artifact.uri,
-      isImage: isImageArtifact(artifact),
-    })),
+    detail.snapshot.artifacts.map((artifact, index) => {
+      const kind = artifactKind(artifact);
+      const href = artifactHref(repository.name, artifact);
+      return {
+        id: `${detail.snapshot.id}-${index}`,
+        type: artifact.type,
+        description:
+          artifact.description || artifactSource(artifact) || "Artifact",
+        href,
+        imageSrc: kind === "image" ? href : undefined,
+        source: artifactSource(artifact),
+        kind,
+      };
+    }),
   );
 
   return (
@@ -2311,60 +2314,11 @@ function ArtifactsPanel({
       ) : (
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           {artifacts.map((artifact) => (
-            <article
+            <ArtifactCard
               key={artifact.id}
-              className="overflow-hidden rounded-lg border bg-slate-50/70"
-            >
-              {artifact.isImage && artifact.imageSrc ? (
-                <button
-                  type="button"
-                  className="block aspect-video w-full overflow-hidden bg-white text-left"
-                  onClick={() => setSelectedArtifact(artifact)}
-                  aria-label={`Open ${artifact.description}`}
-                >
-                  <img
-                    src={artifact.imageSrc}
-                    alt={artifact.description}
-                    className="size-full object-cover transition-transform duration-150 hover:scale-[1.02]"
-                    loading="lazy"
-                  />
-                </button>
-              ) : (
-                <div className="flex aspect-video items-center justify-center bg-white text-slate-400">
-                  <ImageIcon className="size-8" />
-                </div>
-              )}
-              <div className="flex items-start justify-between gap-4 p-4">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold capitalize">
-                    {artifact.type}
-                  </p>
-                  <p className="mt-1 text-sm text-muted-foreground text-pretty">
-                    {artifact.description}
-                  </p>
-                </div>
-                {artifact.isImage ? (
-                  <button
-                    type="button"
-                    className="inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-white text-slate-600 shadow-[0_0_0_1px_rgba(15,23,42,0.1)] hover:text-slate-950"
-                    aria-label="Preview artifact"
-                    onClick={() => setSelectedArtifact(artifact)}
-                  >
-                    <ExternalLink className="size-4" />
-                  </button>
-                ) : artifact.href ? (
-                  <a
-                    href={artifact.href}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-white text-slate-600 shadow-[0_0_0_1px_rgba(15,23,42,0.1)] hover:text-slate-950"
-                    aria-label="Open artifact"
-                  >
-                    <ExternalLink className="size-4" />
-                  </a>
-                ) : null}
-              </div>
-            </article>
+              artifact={artifact}
+              onPreview={setSelectedArtifact}
+            />
           ))}
         </div>
       )}
@@ -2385,13 +2339,17 @@ function ArtifactsPanel({
                   {selectedArtifact.source}
                 </DialogDescription>
               </DialogHeader>
-              <div className="max-h-[78dvh] overflow-auto bg-slate-950 p-3">
-                <img
-                  src={selectedArtifact.imageSrc ?? ""}
-                  alt={selectedArtifact.description}
-                  className="mx-auto max-h-[72dvh] w-auto max-w-full rounded-md object-contain"
-                />
-              </div>
+              {selectedArtifact.kind === "image" ? (
+                <div className="max-h-[78dvh] overflow-auto bg-slate-950 p-3">
+                  <img
+                    src={selectedArtifact.imageSrc ?? ""}
+                    alt={selectedArtifact.description}
+                    className="mx-auto max-h-[72dvh] w-auto max-w-full rounded-md object-contain outline outline-1 -outline-offset-1 outline-white/10"
+                  />
+                </div>
+              ) : (
+                <ArtifactLogContent artifact={selectedArtifact} expanded />
+              )}
             </div>
           ) : null}
         </DialogContent>
@@ -2407,36 +2365,154 @@ type ArtifactCardRow = {
   href?: string;
   imageSrc?: string;
   source?: string;
-  isImage: boolean;
+  kind: ArtifactKind;
 };
 
-function isImageArtifact(artifact: SnapshotArtifact) {
-  const source = artifact.path || artifact.url || artifact.uri || "";
-  const lower = source.toLowerCase();
+function ArtifactCard({
+  artifact,
+  onPreview,
+}: {
+  artifact: ArtifactCardRow;
+  onPreview: (artifact: ArtifactCardRow) => void;
+}) {
+  const [imageUnavailable, setImageUnavailable] = useState(false);
+  const canPreviewImage =
+    artifact.kind === "image" &&
+    Boolean(artifact.imageSrc) &&
+    !imageUnavailable;
+
   return (
-    artifact.mimeType?.startsWith("image/") ||
-    artifact.type.toLowerCase().includes("screenshot") ||
-    artifact.type.toLowerCase().includes("image") ||
-    /\.(png|jpe?g|gif|webp|avif|svg)$/i.test(lower)
+    <article className="overflow-hidden rounded-lg bg-slate-50/70 shadow-[0_0_0_1px_rgba(15,23,42,0.1)]">
+      {artifact.kind === "image" ? (
+        canPreviewImage ? (
+          <button
+            type="button"
+            className="block aspect-video w-full overflow-hidden bg-white text-left active:scale-[0.96] transition-transform"
+            onClick={() => onPreview(artifact)}
+            aria-label={`Open ${artifact.description}`}
+          >
+            <img
+              src={artifact.imageSrc}
+              alt={artifact.description}
+              className="size-full object-cover outline outline-1 -outline-offset-1 outline-black/10 transition-transform duration-150 hover:scale-[1.02]"
+              loading="lazy"
+              onError={() => setImageUnavailable(true)}
+            />
+          </button>
+        ) : (
+          <ArtifactUnavailable kind="image" />
+        )
+      ) : artifact.kind === "log" ? (
+        <ArtifactLogContent artifact={artifact} />
+      ) : (
+        <div className="flex min-h-28 items-center gap-3 bg-white px-4 py-5 text-slate-500">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-slate-50 shadow-[0_0_0_1px_rgba(15,23,42,0.08)]">
+            <FileText className="size-5" />
+          </span>
+          <span className="min-w-0 text-sm">
+            Recorded file evidence
+          </span>
+        </div>
+      )}
+      <div className="flex items-start justify-between gap-4 p-4">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold capitalize">{artifact.type}</p>
+          <p className="mt-1 text-sm text-muted-foreground text-pretty">
+            {artifact.description}
+          </p>
+        </div>
+        {canPreviewImage || artifact.kind === "log" ? (
+          <button
+            type="button"
+            className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg bg-white text-slate-600 shadow-[0_0_0_1px_rgba(15,23,42,0.1)] transition-transform hover:text-slate-950 active:scale-[0.96]"
+            aria-label={`Preview ${artifact.type} artifact`}
+            onClick={() => onPreview(artifact)}
+          >
+            <ExternalLink className="size-4" />
+          </button>
+        ) : artifact.href ? (
+          <a
+            href={artifact.href}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg bg-white text-slate-600 shadow-[0_0_0_1px_rgba(15,23,42,0.1)] transition-transform hover:text-slate-950 active:scale-[0.96]"
+            aria-label="Open artifact"
+          >
+            <ExternalLink className="size-4" />
+          </a>
+        ) : null}
+      </div>
+    </article>
   );
 }
 
-function artifactImageSrc(repo: string, artifact: SnapshotArtifact) {
-  if (!isImageArtifact(artifact)) return undefined;
-  return artifact.url || artifact.uri || localArtifactHref(repo, artifact.path);
+function ArtifactUnavailable({ kind }: { kind: "image" | "log" }) {
+  const Icon = kind === "image" ? ImageIcon : Terminal;
+  return (
+    <div className="flex min-h-36 flex-col items-center justify-center gap-2 bg-white px-5 text-center text-slate-400">
+      <Icon className="size-7" />
+      <p className="text-xs font-medium">
+        {kind === "image"
+          ? "Image unavailable in this checkout"
+          : "Log preview unavailable"}
+      </p>
+    </div>
+  );
 }
 
-function localArtifactHref(repo: string, artifactPath?: string) {
-  if (!artifactPath) return undefined;
-  if (/^https?:\/\//i.test(artifactPath)) return artifactPath;
-  const normalized = artifactPath.replace(/^\/+/, "");
-  const prefix = ".eve/artifacts/";
-  if (!normalized.startsWith(prefix)) return undefined;
-  const relative = normalized.slice(prefix.length);
-  return `/api/repos/${encodeURIComponent(repo)}/artifacts/${relative
-    .split("/")
-    .map(encodeURIComponent)
-    .join("/")}`;
+function ArtifactLogContent({
+  artifact,
+  expanded = false,
+}: {
+  artifact: ArtifactCardRow;
+  expanded?: boolean;
+}) {
+  const canLoad = Boolean(artifact.href?.startsWith("/api/"));
+  const content = useQuery({
+    queryKey: ["artifact-text", artifact.href],
+    queryFn: async () => {
+      const response = await fetch(artifact.href!, {
+        headers: { Range: "bytes=0-131071" },
+      });
+      if (!response.ok) throw new Error(`Artifact returned ${response.status}`);
+      return response.text();
+    },
+    enabled: canLoad,
+    retry: false,
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+
+  if (!canLoad || content.isError) {
+    return <ArtifactUnavailable kind="log" />;
+  }
+
+  return (
+    <div
+      className={
+        expanded
+          ? "max-h-[72dvh] min-h-64 overflow-auto bg-slate-950 p-5"
+          : "h-44 overflow-hidden bg-slate-950 p-4"
+      }
+    >
+      <div className="mb-3 flex items-center gap-2 text-xs font-medium text-slate-400">
+        <Terminal className="size-4" />
+        <span>{content.isPending ? "Loading log…" : "Log output"}</span>
+      </div>
+      {content.data ? (
+        <pre className="whitespace-pre-wrap break-words font-mono text-xs leading-5 text-slate-200">
+          {expanded ? content.data : content.data.slice(0, 4_000)}
+        </pre>
+      ) : content.isPending ? (
+        <div className="space-y-2" aria-label="Loading log preview">
+          <div className="h-2 w-4/5 animate-pulse rounded bg-slate-800" />
+          <div className="h-2 w-3/5 animate-pulse rounded bg-slate-800" />
+          <div className="h-2 w-2/3 animate-pulse rounded bg-slate-800" />
+        </div>
+      ) : (
+        <p className="font-mono text-xs text-slate-400">The log is empty.</p>
+      )}
+    </div>
+  );
 }
 
 function RepositoryFactsCard({

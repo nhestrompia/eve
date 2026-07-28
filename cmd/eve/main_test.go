@@ -905,6 +905,9 @@ func TestVerificationLockReleaseDoesNotDeleteAnotherOwnerMarker(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if relativePathWithin(repo.verificationRunsDir(), lock.markerPath) {
+		t.Fatalf("verification marker %s must not live in tracked run evidence", lock.markerPath)
+	}
 	replacement := fmt.Sprintf("pid=%d\nrunId=run_replacement\ntoken=lock_replacement\n", os.Getpid())
 	if err := os.WriteFile(lock.markerPath, []byte(replacement), 0o600); err != nil {
 		t.Fatal(err)
@@ -1528,6 +1531,40 @@ func TestGlobalSnapshotListRefreshesWhenSnapshotIsAdded(t *testing.T) {
 	requestJSON(t, handler, http.MethodGet, "/api/snapshots", nil, &rows)
 	if len(rows) != 2 || !slices.ContainsFunc(rows, func(row snapshotSummary) bool { return row.ID == "snap_second" }) {
 		t.Fatalf("refreshed snapshots = %#v, want newly added snapshot immediately", rows)
+	}
+}
+
+func TestGlobalSnapshotListRefreshesOnRuntimeGeneration(t *testing.T) {
+	repo := initTempGitRepo(t)
+	head := gitOutputForTest(t, repo, "rev-parse", "HEAD")
+	mustRunInRepo(t, repo, []string{"init"})
+	writeSnapshot(t, repo, sampleSnapshot("snap_first", "First Snapshot", head))
+
+	server := newRuntimeServer(repoFromRoot(repo), "localhost:0")
+	handler := server.routes()
+	var rows []snapshotSummary
+	requestJSON(t, handler, http.MethodGet, "/api/snapshots", nil, &rows)
+	if len(rows) != 1 || rows[0].Title != "First Snapshot" {
+		t.Fatalf("initial snapshots = %#v", rows)
+	}
+
+	updated := sampleSnapshot("snap_first", "Updated Snapshot", head)
+	canonical, err := eve.CanonicalSnapshotJSON(updated)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(
+		repoFromRoot(repo).snapshotPath(updated.ID),
+		append(canonical, '\n'),
+		0o644,
+	); err != nil {
+		t.Fatal(err)
+	}
+	server.events.publish(runtimeEvent{Kind: runtimeEventSnapshots, Repository: server.repo.ID})
+
+	requestJSON(t, handler, http.MethodGet, "/api/snapshots", nil, &rows)
+	if len(rows) != 1 || rows[0].Title != "Updated Snapshot" {
+		t.Fatalf("refreshed snapshots = %#v", rows)
 	}
 }
 

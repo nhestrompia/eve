@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/nhestrompia/eve"
 )
 
@@ -490,8 +491,17 @@ func (repo repository) planStaleReasons(revision eve.PlanRevision) []string {
 }
 
 func (repo repository) waitForPlanRequest(ctx context.Context, id string) (*planRequest, error) {
-	ticker := time.NewTicker(200 * time.Millisecond)
-	defer ticker.Stop()
+	events := newRuntimeEvents(25 * time.Millisecond)
+	stream, unsubscribe := events.subscribe()
+	defer unsubscribe()
+	watchErr := events.watch(ctx, []repository{repo})
+	var recovery <-chan time.Time
+	var ticker *time.Ticker
+	if watchErr != nil {
+		ticker = time.NewTicker(5 * time.Second)
+		recovery = ticker.C
+		defer ticker.Stop()
+	}
 	for {
 		request, err := repo.refreshPlanRequestState(ctx, id)
 		if err != nil {
@@ -503,7 +513,8 @@ func (repo repository) waitForPlanRequest(ctx context.Context, id string) (*plan
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
-		case <-ticker.C:
+		case <-stream:
+		case <-recovery:
 		}
 	}
 }
@@ -720,6 +731,18 @@ func (repo repository) withPlanLock(ctx context.Context, operation func() error)
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
+	watcher, watchErr := fsnotify.NewWatcher()
+	if watchErr == nil {
+		watchErr = watcher.Add(filepath.Dir(path))
+	}
+	if watcher != nil {
+		defer watcher.Close()
+	}
+	var recovery *time.Ticker
+	if watchErr != nil {
+		recovery = time.NewTicker(time.Second)
+		defer recovery.Stop()
+	}
 	for {
 		file, openErr := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 		if openErr == nil {
@@ -738,9 +761,52 @@ func (repo repository) withPlanLock(ctx context.Context, operation func() error)
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-time.After(25 * time.Millisecond):
+		case event, ok := <-watcherEvents(watcher, watchErr):
+			if !ok {
+				watchErr = errors.New("plan lock watcher closed")
+				if recovery == nil {
+					recovery = time.NewTicker(time.Second)
+					defer recovery.Stop()
+				}
+				continue
+			}
+			if filepath.Clean(event.Name) != filepath.Clean(path) {
+				continue
+			}
+		case _, ok := <-watcherErrors(watcher, watchErr):
+			if !ok {
+				watchErr = errors.New("plan lock watcher closed")
+			} else {
+				watchErr = errors.New("plan lock watcher failed")
+			}
+			if recovery == nil {
+				recovery = time.NewTicker(time.Second)
+				defer recovery.Stop()
+			}
+		case <-tickerChannel(recovery):
 		}
 	}
+}
+
+func watcherEvents(watcher *fsnotify.Watcher, err error) <-chan fsnotify.Event {
+	if watcher == nil || err != nil {
+		return nil
+	}
+	return watcher.Events
+}
+
+func watcherErrors(watcher *fsnotify.Watcher, err error) <-chan error {
+	if watcher == nil || err != nil {
+		return nil
+	}
+	return watcher.Errors
+}
+
+func tickerChannel(ticker *time.Ticker) <-chan time.Time {
+	if ticker == nil {
+		return nil
+	}
+	return ticker.C
 }
 
 func (repo repository) findLockedPlan(planID string, revision int) (*planRequest, error) {

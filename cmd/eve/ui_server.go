@@ -30,8 +30,11 @@ type runtimeServer struct {
 	repo                 repository
 	addr                 string
 	searchCache          *snapshotSearchCache
+	derivedCache         *runtimeDerivedCache
 	verificationRegistry *verificationRegistry
 	pullRequestLoader    pullRequestLoader
+	events               *runtimeEvents
+	agentLease           *agentLeaseOwner
 }
 
 type apiError struct {
@@ -101,10 +104,10 @@ type indexedSnapshot struct {
 }
 
 type snapshotSearchCache struct {
-	mu        sync.Mutex
-	expiresAt time.Time
-	signature string
-	entries   []indexedSnapshot
+	mu         sync.Mutex
+	generation uint64
+	signature  string
+	entries    []indexedSnapshot
 }
 
 type sessionListResponse struct {
@@ -237,12 +240,21 @@ type legacySession struct {
 }
 
 func newRuntimeServer(repo repository, addr string) runtimeServer {
-	return runtimeServer{repo: repo, addr: addr, searchCache: &snapshotSearchCache{}, verificationRegistry: newVerificationRegistry()}
+	return runtimeServer{
+		repo:                 repo,
+		addr:                 addr,
+		searchCache:          &snapshotSearchCache{},
+		derivedCache:         newRuntimeDerivedCache(),
+		verificationRegistry: newVerificationRegistry(),
+		events:               newRuntimeEvents(150 * time.Millisecond),
+	}
 }
 
 func (server runtimeServer) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/config", server.handleConfig)
+	mux.HandleFunc("/api/events", server.handleRuntimeEvents)
+	mux.HandleFunc("/api/agents", server.handleAgents)
 	mux.HandleFunc("/api/health", server.handleHealth)
 	mux.HandleFunc("/api/plan-requests", server.handlePlanRequests)
 	mux.HandleFunc("/api/plan-requests/", server.handlePlanRequestRoutes)
@@ -262,7 +274,13 @@ func (server runtimeServer) handleHealth(w http.ResponseWriter, r *http.Request)
 		writeMethodNotAllowed(w)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"service": "eve", "version": eve.CLIVersion})
+	writeJSON(w, http.StatusOK, map[string]any{
+		"service":            "eve",
+		"version":            eve.CLIVersion,
+		"eventSubscribers":   server.events.subscriberCount(),
+		"watchedDirectories": server.events.watchedDirectoryCount(),
+		"derivedCache":       server.derivedCache.stats(),
+	})
 }
 
 func (server runtimeServer) handleCompare(w http.ResponseWriter, r *http.Request) {
@@ -370,13 +388,9 @@ func (server runtimeServer) handleConfig(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	_, err := os.Stat(server.repo.configPath())
-	summary, summaryErr := server.repo.summary()
-	facts, factsErr := deriveGitFacts(server.repo)
+	summary, summaryErr := server.cachedRepoSummary(r.Context(), server.repo)
 	if summaryErr != nil {
 		summary = repoSummary{}
-	}
-	if factsErr != nil {
-		facts = gitFacts{}
 	}
 	writeJSON(w, http.StatusOK, configResponse{
 		SnapshotSchemaVersion: eve.SnapshotSchemaVersion,
@@ -385,9 +399,9 @@ func (server runtimeServer) handleConfig(w http.ResponseWriter, r *http.Request)
 		Addr:                  server.addr,
 		EveDir:                server.repo.eveDir,
 		Initialized:           err == nil,
-		CurrentGitState:       facts.GitState,
-		CurrentBranch:         facts.Branch,
-		CurrentDirty:          facts.Dirty,
+		CurrentGitState:       summary.Head,
+		CurrentBranch:         summary.Branch,
+		CurrentDirty:          summary.Dirty,
 		LatestSnapshot:        summary.LatestSnapshot,
 		LatestGitState:        summary.LatestGitState,
 		PendingSnapshot:       summary.PendingSnapshot,
@@ -402,7 +416,7 @@ func (server runtimeServer) handleRepos(w http.ResponseWriter, r *http.Request) 
 	repos := server.repositories()
 	summaries := make([]repoSummary, 0, len(repos))
 	for _, repo := range repos {
-		summary, err := repo.summary()
+		summary, err := server.cachedRepoSummary(r.Context(), repo)
 		if err != nil {
 			if repo.Root == server.repo.Root {
 				writeAPIError(w, http.StatusInternalServerError, err)
@@ -430,7 +444,7 @@ func (server runtimeServer) handleRepoRoutes(w http.ResponseWriter, r *http.Requ
 	}
 	switch {
 	case len(parts) == 1 && r.Method == http.MethodGet:
-		detail, err := repo.detail()
+		detail, err := server.cachedRepoDetail(r.Context(), repo)
 		if err != nil {
 			writeAPIError(w, http.StatusInternalServerError, err)
 			return
@@ -442,6 +456,12 @@ func (server runtimeServer) handleRepoRoutes(w http.ResponseWriter, r *http.Requ
 		writeJSON(w, http.StatusOK, openRepositoryInEditor(repo))
 	case len(parts) >= 3 && parts[1] == "artifacts" && r.Method == http.MethodGet:
 		server.handleArtifactFile(w, r, repo, strings.Join(parts[2:], "/"))
+	case len(parts) >= 2 && parts[1] == "files" && r.Method == http.MethodGet:
+		artifactPath := r.URL.Query().Get("path")
+		if len(parts) >= 3 {
+			artifactPath = strings.Join(parts[2:], "/")
+		}
+		server.handleRecordedRepoFile(w, r, repo, artifactPath)
 	case len(parts) == 2 && parts[1] == "snapshots" && r.Method == http.MethodGet:
 		server.handleSnapshots(w, r, repo)
 	case len(parts) == 2 && parts[1] == "pull-requests" && r.Method == http.MethodGet:
@@ -478,7 +498,49 @@ func (server runtimeServer) handlePendingSnapshot(w http.ResponseWriter, r *http
 }
 
 func (server runtimeServer) repositories() []repository {
-	return knownRepositories(server.repo)
+	repositories, err := cachedRuntimeValue(
+		context.Background(),
+		server.derivedCache,
+		"repositories",
+		server.events.generationFor(runtimeEventRepositories),
+		func() ([]repository, error) {
+			return knownRepositories(server.repo), nil
+		},
+	)
+	if err != nil {
+		return knownRepositories(server.repo)
+	}
+	return append([]repository(nil), repositories...)
+}
+
+func (server runtimeServer) cachedRepoSummary(ctx context.Context, repo repository) (repoSummary, error) {
+	return cachedRuntimeValue(
+		ctx,
+		server.derivedCache,
+		"summary:"+repo.Root,
+		server.events.generationFor(
+			runtimeEventRepositories,
+			runtimeEventSnapshots,
+			runtimeEventConfig,
+			runtimeEventVerification,
+		),
+		repo.summary,
+	)
+}
+
+func (server runtimeServer) cachedRepoDetail(ctx context.Context, repo repository) (repoDetail, error) {
+	return cachedRuntimeValue(
+		ctx,
+		server.derivedCache,
+		"detail:"+repo.Root,
+		server.events.generationFor(
+			runtimeEventRepositories,
+			runtimeEventSnapshots,
+			runtimeEventConfig,
+			runtimeEventVerification,
+		),
+		repo.detail,
+	)
 }
 
 func (server runtimeServer) repoByID(repoID string) (repository, bool) {
@@ -515,6 +577,86 @@ func (server runtimeServer) handleArtifactFile(w http.ResponseWriter, r *http.Re
 		return
 	}
 	http.ServeFile(w, r, target)
+}
+
+func (server runtimeServer) handleRecordedRepoFile(w http.ResponseWriter, r *http.Request, repo repository, artifactPath string) {
+	cleanPath, ok := cleanRecordedArtifactPath(artifactPath)
+	if !ok {
+		writeAPIError(w, http.StatusNotFound, fmt.Errorf("artifact not found"))
+		return
+	}
+	recorded, err := repo.hasRecordedArtifactPath(cleanPath)
+	if err != nil {
+		writeAPIError(w, http.StatusInternalServerError, err)
+		return
+	}
+	if !recorded {
+		writeAPIError(w, http.StatusNotFound, fmt.Errorf("artifact not found"))
+		return
+	}
+
+	targetPath := filepath.FromSlash(cleanPath)
+	if !filepath.IsAbs(targetPath) {
+		targetPath = filepath.Join(repo.Root, targetPath)
+	}
+	target, err := filepath.EvalSymlinks(targetPath)
+	if err != nil {
+		writeAPIError(w, http.StatusNotFound, fmt.Errorf("artifact not found"))
+		return
+	}
+	if !filepath.IsAbs(filepath.FromSlash(cleanPath)) {
+		root, err := filepath.EvalSymlinks(repo.Root)
+		if err != nil {
+			writeAPIError(w, http.StatusInternalServerError, err)
+			return
+		}
+		if target != root && !strings.HasPrefix(target, root+string(os.PathSeparator)) {
+			writeAPIError(w, http.StatusNotFound, fmt.Errorf("artifact not found"))
+			return
+		}
+	}
+	if info, err := os.Stat(target); err != nil || info.IsDir() {
+		writeAPIError(w, http.StatusNotFound, fmt.Errorf("artifact not found"))
+		return
+	}
+	http.ServeFile(w, r, target)
+}
+
+func (repo repository) hasRecordedArtifactPath(want string) (bool, error) {
+	snapshots, err := repo.listSnapshots("")
+	if err != nil {
+		return false, err
+	}
+	for _, snapshot := range snapshots {
+		for _, artifact := range snapshot.Artifacts {
+			for _, candidate := range []string{artifact.Path, artifact.URI, artifact.URL} {
+				if clean, ok := cleanRecordedArtifactPath(candidate); ok && clean == want {
+					return true, nil
+				}
+			}
+		}
+	}
+	return false, nil
+}
+
+func cleanRecordedArtifactPath(value string) (string, bool) {
+	normalized := strings.TrimSpace(strings.ReplaceAll(value, "\\", "/"))
+	if normalized == "" || strings.Contains(normalized, "://") {
+		return "", false
+	}
+	if filepath.IsAbs(filepath.FromSlash(normalized)) {
+		return filepath.ToSlash(filepath.Clean(filepath.FromSlash(normalized))), true
+	}
+	clean := strings.TrimPrefix(path.Clean("/"+normalized), "/")
+	if clean == "" || clean == "." || clean == ".." || strings.HasPrefix(clean, "../") {
+		return "", false
+	}
+	for _, part := range strings.Split(normalized, "/") {
+		if part == ".." {
+			return "", false
+		}
+	}
+	return clean, true
 }
 
 func (server runtimeServer) handleSnapshots(w http.ResponseWriter, r *http.Request, repo repository) {
@@ -768,11 +910,11 @@ func summarizeSnapshotForRepo(repo repository, snapshot *eve.Snapshot) snapshotS
 func (server runtimeServer) indexedSnapshots() ([]indexedSnapshot, error) {
 	repos := server.repositories()
 	signature := repositorySignature(repos)
-	now := time.Now()
+	generation := server.events.generationFor(runtimeEventRepositories, runtimeEventSnapshots)
 	cache := server.searchCache
 	cache.mu.Lock()
 	defer cache.mu.Unlock()
-	if cache.signature == signature && now.Before(cache.expiresAt) {
+	if cache.generation == generation && cache.signature == signature {
 		return append([]indexedSnapshot(nil), cache.entries...), nil
 	}
 
@@ -800,8 +942,8 @@ func (server runtimeServer) indexedSnapshots() ([]indexedSnapshot, error) {
 		}
 		return entries[i].Summary.CreatedAt > entries[j].Summary.CreatedAt
 	})
+	cache.generation = generation
 	cache.signature = signature
-	cache.expiresAt = now.Add(5 * time.Second)
 	cache.entries = append([]indexedSnapshot(nil), entries...)
 	return entries, nil
 }
@@ -1853,10 +1995,20 @@ func (server runtimeServer) callMCPTool(ctx context.Context, params json.RawMess
 		if err != nil {
 			return toolError(err.Error()), nil
 		}
+		if server.agentLease != nil {
+			_ = server.agentLease.update(request, agentStateWaiting, time.Now().UTC())
+		}
 		if request.State == "pending_approval" {
 			request, err = repo.waitForPlanRequest(ctx, request.PlanRequestID)
 			if err != nil {
 				return toolError(err.Error()), nil
+			}
+		}
+		if server.agentLease != nil {
+			if request.State == "locked" {
+				_ = server.agentLease.update(request, agentStateRunning, time.Now().UTC())
+			} else {
+				_ = server.agentLease.remove()
 			}
 		}
 		return toolResult(request), nil
@@ -1874,6 +2026,16 @@ func (server runtimeServer) callMCPTool(ctx context.Context, params json.RawMess
 		request, err := repo.refreshPlanRequestState(ctx, input.PlanRequestID)
 		if err != nil {
 			return toolError(err.Error()), nil
+		}
+		if server.agentLease != nil {
+			switch request.State {
+			case "locked":
+				_ = server.agentLease.update(request, agentStateRunning, time.Now().UTC())
+			case "pending_approval":
+				_ = server.agentLease.update(request, agentStateWaiting, time.Now().UTC())
+			default:
+				_ = server.agentLease.remove()
+			}
 		}
 		return toolResult(request), nil
 	case "start_suite":
@@ -1944,7 +2106,11 @@ func (server runtimeServer) callMCPTool(ctx context.Context, params json.RawMess
 		}
 		return toolResult(run), nil
 	case "complete_snapshot":
-		return server.completeSnapshotTool(ctx, call.Arguments)
+		result, rpcErr := server.completeSnapshotTool(ctx, call.Arguments)
+		if rpcErr == nil && toolCallSucceeded(result) && server.agentLease != nil {
+			_ = server.agentLease.remove()
+		}
+		return result, rpcErr
 	case "skip_snapshot":
 		var input struct {
 			CWD      string `json:"cwd"`
@@ -1966,6 +2132,9 @@ func (server runtimeServer) callMCPTool(ctx context.Context, params json.RawMess
 		record, err := repo.createSkip(input.Reason, skipAgent{Provider: input.Provider, ID: input.AgentID})
 		if err != nil {
 			return toolError(err.Error()), nil
+		}
+		if server.agentLease != nil {
+			_ = server.agentLease.remove()
 		}
 		return toolResult(record), nil
 	case "checkout_snapshot":
@@ -2233,6 +2402,15 @@ func toolError(message string) map[string]any {
 		"content": []map[string]string{{"type": "text", "text": message}},
 		"isError": true,
 	}
+}
+
+func toolCallSucceeded(result any) bool {
+	value, ok := result.(map[string]any)
+	if !ok {
+		return false
+	}
+	isError, _ := value["isError"].(bool)
+	return !isError
 }
 
 func (server runtimeServer) mcpResources() ([]map[string]string, error) {

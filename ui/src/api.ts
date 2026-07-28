@@ -1,5 +1,6 @@
 import type {
   CheckoutResponse,
+  AgentActivity,
   ComparisonResponse,
   ConfigResponse,
   DetailResponse,
@@ -25,6 +26,7 @@ import type {
   SnapshotSummary,
   Verification
 } from './types';
+import { artifactHref, artifactKind } from './lib/artifacts';
 
 type RepoAPI = {
   id: string;
@@ -251,7 +253,7 @@ async function snapshotDetail(id: string, repo?: string): Promise<DetailResponse
 async function snapshot(id: string, repo?: string): Promise<SnapshotResponse> {
   const detail = await snapshotDetail(id, repo);
   const repoId = detail.repository;
-  const imageArtifacts = detail.snapshot.artifacts.filter(isImageArtifact);
+  const imageArtifacts = detail.snapshot.artifacts.filter((artifact) => artifactKind(artifact) === 'image');
   return {
     id: detail.snapshot.id,
     title: detail.snapshot.title,
@@ -265,7 +267,7 @@ async function snapshot(id: string, repo?: string): Promise<SnapshotResponse> {
       .map((artifact, index) => ({
         id: artifact.path || artifact.url || artifact.uri || `artifact-${index}`,
         title: artifact.description || artifact.path || artifact.url || artifact.uri || `Artifact ${index + 1}`,
-        url: artifact.url || artifact.uri || localArtifactHref(repoId, artifact.path) || '',
+        url: artifactHref(repoId, artifact) || '',
         mimeType: artifact.mimeType || 'image/png',
         source: artifact.path || artifact.url || artifact.uri
       }))
@@ -288,31 +290,9 @@ async function compare(from: string, to: string): Promise<ComparisonResponse> {
   };
 }
 
-function isImageArtifact(artifact: { type: string; path?: string; url?: string; uri?: string; mimeType?: string }) {
-  const source = artifact.path || artifact.url || artifact.uri || '';
-  return (
-    artifact.mimeType?.startsWith('image/') ||
-    artifact.type.toLowerCase().includes('screenshot') ||
-    artifact.type.toLowerCase().includes('image') ||
-    /\.(png|jpe?g|gif|webp|avif|svg)$/i.test(source)
-  );
-}
-
-function localArtifactHref(repo: string, artifactPath?: string) {
-  if (!artifactPath) return undefined;
-  if (/^https?:\/\//i.test(artifactPath)) return artifactPath;
-  const normalized = artifactPath.replace(/^\/+/, '');
-  const prefix = '.eve/artifacts/';
-  if (!normalized.startsWith(prefix)) return undefined;
-  const relative = normalized.slice(prefix.length);
-  return `/api/repos/${encodeURIComponent(repo)}/artifacts/${relative
-    .split('/')
-    .map(encodeURIComponent)
-    .join('/')}`;
-}
-
 export const api = {
   config: () => request<ConfigResponse>('/api/config'),
+  agents: () => request<AgentActivity[]>('/api/agents'),
   planRequests: (status = 'pending_approval') =>
     request<PlanRequest[]>(`/api/plan-requests?status=${encodeURIComponent(status)}`),
   approvePlanRequest: (plan: PlanRequest, proposal?: PlanProposal) =>

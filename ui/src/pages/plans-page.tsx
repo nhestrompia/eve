@@ -60,7 +60,6 @@ export function PlansPage() {
   const plans = useQuery({
     queryKey: ["plan-requests", "all"],
     queryFn: () => api.planRequests(""),
-    refetchInterval: 5_000,
     retry: false,
   });
   const snapshots = useQuery({ queryKey: ["snapshots"], queryFn: api.snapshots });
