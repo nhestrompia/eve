@@ -455,6 +455,12 @@ func (server runtimeServer) handleRepoRoutes(w http.ResponseWriter, r *http.Requ
 		writeJSON(w, http.StatusOK, openRepositoryInEditor(repo))
 	case len(parts) >= 3 && parts[1] == "artifacts" && r.Method == http.MethodGet:
 		server.handleArtifactFile(w, r, repo, strings.Join(parts[2:], "/"))
+	case len(parts) >= 2 && parts[1] == "files" && r.Method == http.MethodGet:
+		artifactPath := r.URL.Query().Get("path")
+		if len(parts) >= 3 {
+			artifactPath = strings.Join(parts[2:], "/")
+		}
+		server.handleRecordedRepoFile(w, r, repo, artifactPath)
 	case len(parts) == 2 && parts[1] == "snapshots" && r.Method == http.MethodGet:
 		server.handleSnapshots(w, r, repo)
 	case len(parts) == 3 && parts[1] == "snapshots" && r.Method == http.MethodGet:
@@ -566,6 +572,86 @@ func (server runtimeServer) handleArtifactFile(w http.ResponseWriter, r *http.Re
 		return
 	}
 	http.ServeFile(w, r, target)
+}
+
+func (server runtimeServer) handleRecordedRepoFile(w http.ResponseWriter, r *http.Request, repo repository, artifactPath string) {
+	cleanPath, ok := cleanRecordedArtifactPath(artifactPath)
+	if !ok {
+		writeAPIError(w, http.StatusNotFound, fmt.Errorf("artifact not found"))
+		return
+	}
+	recorded, err := repo.hasRecordedArtifactPath(cleanPath)
+	if err != nil {
+		writeAPIError(w, http.StatusInternalServerError, err)
+		return
+	}
+	if !recorded {
+		writeAPIError(w, http.StatusNotFound, fmt.Errorf("artifact not found"))
+		return
+	}
+
+	targetPath := filepath.FromSlash(cleanPath)
+	if !filepath.IsAbs(targetPath) {
+		targetPath = filepath.Join(repo.Root, targetPath)
+	}
+	target, err := filepath.EvalSymlinks(targetPath)
+	if err != nil {
+		writeAPIError(w, http.StatusNotFound, fmt.Errorf("artifact not found"))
+		return
+	}
+	if !filepath.IsAbs(filepath.FromSlash(cleanPath)) {
+		root, err := filepath.EvalSymlinks(repo.Root)
+		if err != nil {
+			writeAPIError(w, http.StatusInternalServerError, err)
+			return
+		}
+		if target != root && !strings.HasPrefix(target, root+string(os.PathSeparator)) {
+			writeAPIError(w, http.StatusNotFound, fmt.Errorf("artifact not found"))
+			return
+		}
+	}
+	if info, err := os.Stat(target); err != nil || info.IsDir() {
+		writeAPIError(w, http.StatusNotFound, fmt.Errorf("artifact not found"))
+		return
+	}
+	http.ServeFile(w, r, target)
+}
+
+func (repo repository) hasRecordedArtifactPath(want string) (bool, error) {
+	snapshots, err := repo.listSnapshots("")
+	if err != nil {
+		return false, err
+	}
+	for _, snapshot := range snapshots {
+		for _, artifact := range snapshot.Artifacts {
+			for _, candidate := range []string{artifact.Path, artifact.URI, artifact.URL} {
+				if clean, ok := cleanRecordedArtifactPath(candidate); ok && clean == want {
+					return true, nil
+				}
+			}
+		}
+	}
+	return false, nil
+}
+
+func cleanRecordedArtifactPath(value string) (string, bool) {
+	normalized := strings.TrimSpace(strings.ReplaceAll(value, "\\", "/"))
+	if normalized == "" || strings.Contains(normalized, "://") {
+		return "", false
+	}
+	if filepath.IsAbs(filepath.FromSlash(normalized)) {
+		return filepath.ToSlash(filepath.Clean(filepath.FromSlash(normalized))), true
+	}
+	clean := strings.TrimPrefix(path.Clean("/"+normalized), "/")
+	if clean == "" || clean == "." || clean == ".." || strings.HasPrefix(clean, "../") {
+		return "", false
+	}
+	for _, part := range strings.Split(normalized, "/") {
+		if part == ".." {
+			return "", false
+		}
+	}
+	return clean, true
 }
 
 func (server runtimeServer) handleSnapshots(w http.ResponseWriter, r *http.Request, repo repository) {

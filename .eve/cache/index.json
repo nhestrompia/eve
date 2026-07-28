@@ -1,17 +1,17 @@
 {
   "id": "eve",
-  "root": "/Users/nhestrompia/.codex/worktrees/93f8/eve",
-  "snapshotCount": 94,
-  "commitCount": 111,
-  "decisionCount": 182,
-  "riskCount": 72,
+  "root": "/Users/nhestrompia/.codex/worktrees/1658/eve",
+  "snapshotCount": 95,
+  "commitCount": 112,
+  "decisionCount": 185,
+  "riskCount": 73,
   "artifactCount": 48,
-  "latestAt": "2026-07-28T12:23:55Z",
-  "latestSnapshot": "snap_860d0c3f5f561a88",
-  "latestTitle": "Eliminate stale UI idle CPU loops",
-  "branch": "codex/reduce-eve-idle-cpu",
-  "head": "2c56b4ed477b40c79634f7066ab2a585b6ee4191",
+  "latestAt": "2026-07-28T13:34:22Z",
+  "latestSnapshot": "snap_2ad36a27e5e9c108",
+  "latestTitle": "Repair artifact previews and log rendering",
+  "branch": "codex/fix-artifact-rendering",
+  "head": "4317b080c38d945dca86a4a2a145c4c6b9107839",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "c1757e4ab6ed85f9bfcb44d469f1b31c236e44a5"
+  "latestGitState": "bbf0c5996e6bc432293a3a2ae86760f1154eaec0"
 }
