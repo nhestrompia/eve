@@ -1,0 +1,49 @@
+{
+  "id": "plan_5feefbc500a19771",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_eve_release_0_7_0_2026_07_28",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Prepare and deploy the eve 0.7.0 release from current main, including changelog/package version updates, verification, EVE release Snapshot, Git commits, tag, and push for release workflow deployment.",
+      "acceptanceCriteria": "npm/eve package metadata is set to 0.7.0; CHANGELOG.md has a dated 0.7.0 section summarizing user-visible changes since 0.6.0; relevant local verification passes or any failures are recorded; implementation changes are committed; an EVE release Snapshot is recorded and committed; tag v0.7.0 is created and pushed to origin to trigger the release deployment.",
+      "allowedPathGlobs": [
+        "npm/eve/package.json",
+        "npm/eve/package-lock.json",
+        "CHANGELOG.md",
+        ".eve/**"
+      ],
+      "milestones": [
+        {
+          "title": "Prepare release metadata",
+          "goal": "Populate changelog and update npm package version to 0.7.0."
+        },
+        {
+          "title": "Verify release candidate",
+          "goal": "Run the local verification suite relevant to the release."
+        },
+        {
+          "title": "Record and deploy",
+          "goal": "Commit release metadata, record the EVE release Snapshot, commit the .eve record, tag v0.7.0, and push branch/tag."
+        }
+      ],
+      "configuredSuite": "go test ./...; go test -run TestRunVersion ./cmd/eve with version injection; npm --prefix npm/eve test; npm --prefix npm/eve run pack:check; npm --prefix ui test; npm --prefix ui run build; npm --prefix site run build",
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "cac462b8f63a4d81e289b389d44802d2772b2564",
+      "branch": "main",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-28T15:44:55Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-07-28T15:45:01Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_17560d6bf3d046d0"
+}
