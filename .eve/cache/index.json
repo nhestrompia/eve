@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/.codex/worktrees/0def/eve",
-  "snapshotCount": 99,
+  "snapshotCount": 100,
   "commitCount": 116,
-  "decisionCount": 199,
-  "riskCount": 78,
+  "decisionCount": 202,
+  "riskCount": 79,
   "artifactCount": 48,
-  "latestAt": "2026-07-28T15:24:55Z",
-  "latestSnapshot": "snap_650614e966595922",
-  "latestTitle": "Keep history-only PR Snapshots current",
+  "latestAt": "2026-07-28T15:37:03Z",
+  "latestSnapshot": "snap_a33cc6b0ae5a47c8",
+  "latestTitle": "Resolve PR #36 against current main",
   "branch": "codex/pr-review-merge-ui",
-  "head": "40d89168ae9e0ebf228e4ca31c84e0504b76361f",
+  "head": "b4d6f3b511a3b2dd97ecd0a1517d01da55e3f494",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "b43c97fd38d8f48a0b53fbdb511bb6375a13195e"
+  "latestGitState": "b4d6f3b511a3b2dd97ecd0a1517d01da55e3f494"
 }

@@ -1,0 +1,87 @@
+{
+  "id": "plan_02d4fea142d6751d",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_resolve-pr36-main-conflict-20260728",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Resolve PR #36 against the latest main branch while preserving the pull-request review UI, runtime-event/idle-CPU work, artifact rendering fixes, and complete eve product history.",
+      "acceptanceCriteria": "1. Merge latest origin/main into codex/pr-review-merge-ui without dropping either branch's intended source changes. 2. Resolve .eve history by retaining records from both branches and rebuilding any derived index through eve tooling or deterministic merge. 3. Resolve UI/API/type overlaps so pull-request review, runtime events, and artifact previews all compile and retain their tests. 4. Regenerate embedded UI assets from the resolved source instead of hand-merging hashed bundles. 5. Full Go, UI, npm package, and production build verification passes. 6. PR #36 is pushed with GitHub reporting no merge conflict. 7. Record a fresh eve Snapshot at the resolved head so PR #36 remains in the eve review queue with current context.",
+      "allowedPathGlobs": [
+        ".eve/**",
+        "cmd/eve/**",
+        "ui/**",
+        "docs/rfcs/0001-eve.md",
+        "go.mod",
+        "go.sum"
+      ],
+      "milestones": [
+        {
+          "title": "Merge and resolve source conflicts",
+          "goal": "Combine latest main with the PR branch, preserving runtime, artifact, and pull-request-review behavior."
+        },
+        {
+          "title": "Regenerate derived records and assets",
+          "goal": "Rebuild embedded UI output and ensure eve history contains both branches' records."
+        },
+        {
+          "title": "Verify and update PR #36",
+          "goal": "Run the full suite, record a fresh Snapshot, push, and confirm GitHub mergeability."
+        }
+      ],
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "40d89168ae9e0ebf228e4ca31c84e0504b76361f",
+      "branch": "codex/pr-review-merge-ui",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-28T15:30:35Z"
+    },
+    {
+      "revision": 2,
+      "source": "human",
+      "goal": "Resolve PR #36 against the latest main branch while preserving the pull-request review UI, runtime-event/idle-CPU work, artifact rendering fixes, and complete eve product history. Dont break the main, it has ui changes also cpu optimizations all over the stack for eve. dont override those",
+      "acceptanceCriteria": "1. Merge latest origin/main into codex/pr-review-merge-ui without dropping either branch's intended source changes. 2. Resolve .eve history by retaining records from both branches and rebuilding any derived index through eve tooling or deterministic merge. 3. Resolve UI/API/type overlaps so pull-request review, runtime events, and artifact previews all compile and retain their tests. 4. Regenerate embedded UI assets from the resolved source instead of hand-merging hashed bundles. 5. Full Go, UI, npm package, and production build verification passes. 6. PR #36 is pushed with GitHub reporting no merge conflict. 7. Record a fresh eve Snapshot at the resolved head so PR #36 remains in the eve review queue with current context.",
+      "allowedPathGlobs": [
+        ".eve/**",
+        "cmd/eve/**",
+        "ui/**",
+        "docs/rfcs/0001-eve.md",
+        "go.mod",
+        "go.sum"
+      ],
+      "milestones": [
+        {
+          "title": "Merge and resolve source conflicts",
+          "goal": "Combine latest main with the PR branch, preserving runtime, artifact, and pull-request-review behavior."
+        },
+        {
+          "title": "Regenerate derived records and assets",
+          "goal": "Rebuild embedded UI output and ensure eve history contains both branches' records."
+        },
+        {
+          "title": "Verify and update PR #36",
+          "goal": "Run the full suite, record a fresh Snapshot, push, and confirm GitHub mergeability."
+        }
+      ],
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "40d89168ae9e0ebf228e4ca31c84e0504b76361f",
+      "branch": "codex/pr-review-merge-ui",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-07-28T15:31:13Z"
+    }
+  ],
+  "lockedRevision": 2,
+  "lockedAt": "2026-07-28T15:31:13Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_a33cc6b0ae5a47c8"
+}
