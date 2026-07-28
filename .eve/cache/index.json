@@ -1,17 +1,17 @@
 {
   "id": "eve",
-  "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 90,
-  "commitCount": 107,
-  "decisionCount": 170,
-  "riskCount": 67,
+  "root": "/Users/nhestrompia/.codex/worktrees/1658/eve",
+  "snapshotCount": 91,
+  "commitCount": 108,
+  "decisionCount": 173,
+  "riskCount": 68,
   "artifactCount": 45,
-  "latestAt": "2026-07-28T02:12:36Z",
-  "latestSnapshot": "snap_2b258530115749b7",
-  "latestTitle": "Use repository initials for non-EVE header marks",
-  "branch": "main",
-  "head": "5fb017e9dbd70c867b9927647d9fb5f261b183d0",
+  "latestAt": "2026-07-28T13:34:22Z",
+  "latestSnapshot": "snap_2ad36a27e5e9c108",
+  "latestTitle": "Repair artifact previews and log rendering",
+  "branch": "codex/fix-artifact-rendering",
+  "head": "bbf0c5996e6bc432293a3a2ae86760f1154eaec0",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "5fb017e9dbd70c867b9927647d9fb5f261b183d0"
+  "latestGitState": "bbf0c5996e6bc432293a3a2ae86760f1154eaec0"
 }
