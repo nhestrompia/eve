@@ -142,9 +142,7 @@ function RepositoryOverviewPage({
         <div className="min-w-0">
           <section className="bg-white px-4 pt-7 sm:px-6 lg:px-8">
             <div className="flex min-w-0 flex-col gap-5 sm:flex-row sm:items-start">
-              <div className="flex h-[70px] w-[170px] shrink-0 items-center rounded-lg bg-white px-3 ring-1 ring-inset ring-slate-200">
-                <img src="/eve.svg" alt="eve" className="eve-logo h-full w-full object-contain object-left" />
-              </div>
+              <RepositoryHeaderMark repository={repository} />
               <div className="min-w-0 pb-6">
                 <div className="flex min-w-0 flex-wrap items-center gap-3">
                   <h1 className="truncate text-[28px] font-semibold leading-tight tracking-normal text-slate-950">
@@ -256,6 +254,40 @@ export function repositoryTabs(
     { id: "artifacts", label: "Artifacts" },
     { id: "settings", label: "Settings" },
   ];
+}
+
+export function RepositoryHeaderMark({
+  repository,
+}: {
+  repository: RepositorySummary;
+}) {
+  if (repository.name.toLowerCase() === "eve") {
+    return (
+      <div className="flex h-[70px] w-[170px] shrink-0 items-center rounded-lg bg-white px-3 ring-1 ring-inset ring-slate-200">
+        <img
+          src="/eve.svg"
+          alt="eve"
+          className="eve-logo h-full w-full object-contain object-left"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="grid h-[70px] w-[170px] shrink-0 place-items-center rounded-lg bg-slate-950 text-white ring-1 ring-inset ring-slate-800"
+      aria-label={`${repository.name} repository mark`}
+    >
+      <span className="text-[34px] font-semibold uppercase leading-none tracking-normal">
+        {repositoryInitial(repository.name)}
+      </span>
+    </div>
+  );
+}
+
+export function repositoryInitial(name: string) {
+  const firstLetter = name.trim().match(/[A-Za-z0-9]/)?.[0];
+  return (firstLetter ?? "?").toUpperCase();
 }
 
 function useRepositoryDescription(repository: RepositorySummary) {
