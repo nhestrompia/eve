@@ -225,7 +225,11 @@ func TestInitCreatesSnapshotStructure(t *testing.T) {
 	for _, name := range []string{"AGENTS.md", "CLAUDE.md"} {
 		path := filepath.Join(repo, name)
 		before[name] = readTextFile(t, path)
-		if strings.Count(before[name], "<!-- eve:instructions:start") != 1 || !strings.Contains(before[name], "`complete_snapshot`") || !strings.Contains(before[name], "`skip_snapshot`") {
+		if strings.Count(before[name], "<!-- eve:instructions:start") != 1 ||
+			!strings.Contains(before[name], "`declare_plan`") ||
+			!strings.Contains(before[name], "`get_plan_request`") ||
+			!strings.Contains(before[name], "`complete_snapshot`") ||
+			!strings.Contains(before[name], "`skip_snapshot`") {
 			t.Fatalf("%s = %q, want one canonical EVE block", name, before[name])
 		}
 	}

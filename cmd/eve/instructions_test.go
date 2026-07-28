@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -44,6 +45,22 @@ func TestClassifyInstructionData(t *testing.T) {
 				t.Fatalf("state/version = %s/%d, want %s/%d", inspection.State, inspection.Version, tc.state, tc.version)
 			}
 		})
+	}
+}
+
+func TestCanonicalInstructionTemplateIncludesPlanWorkflow(t *testing.T) {
+	for _, want := range []string{
+		`version="3"`,
+		"Create an EVE Plan before making non-trivial",
+		"`declare_plan`",
+		"`get_plan_request`",
+		"locked Plan ID and revision",
+		"`complete_snapshot`",
+		"`skip_snapshot`",
+	} {
+		if !strings.Contains(canonicalInstructionTemplateV3, want) {
+			t.Fatalf("canonical instruction template missing %q", want)
+		}
 	}
 }
 
@@ -145,7 +162,9 @@ func TestInstructionInstallUpgradesExactKnownStaleBlock(t *testing.T) {
 		t.Fatalf("stale result = %#v", result)
 	}
 	updated := readTextFile(t, path)
-	if !strings.HasPrefix(updated, "# Existing\n\n") || !strings.HasSuffix(updated, "\n\nAfter block.\n") || !strings.Contains(updated, `version="2"`) {
+	if !strings.HasPrefix(updated, "# Existing\n\n") ||
+		!strings.HasSuffix(updated, "\n\nAfter block.\n") ||
+		!strings.Contains(updated, fmt.Sprintf(`version="%d"`, currentInstructionVersion)) {
 		t.Fatalf("updated stale content = %q", updated)
 	}
 }
