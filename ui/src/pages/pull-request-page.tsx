@@ -487,9 +487,17 @@ function ReviewSignals({
     },
     {
       label: "GitHub",
-      value: pullRequest.githubReady ? "Permits merge" : "Blocked",
+      value:
+        pullRequest.mergeability === "conflicting"
+          ? "Merge conflict"
+          : pullRequest.githubReady
+            ? "Permits merge"
+            : "Blocked",
       tone: pullRequest.githubReady ? "success" : "warning",
-      detail: `${pullRequest.checksPassed}/${pullRequest.checksTotal} checks passed`,
+      detail:
+        pullRequest.mergeability === "conflicting"
+          ? `Resolve conflicts with ${pullRequest.baseBranch}`
+          : `${pullRequest.checksPassed}/${pullRequest.checksTotal} checks passed`,
     },
   ];
 
@@ -948,7 +956,7 @@ function UnlinkedCodeState() {
   );
 }
 
-function pullRequestReadiness(pullRequest: PullRequestSummary): {
+export function pullRequestReadiness(pullRequest: PullRequestSummary): {
   ready: boolean;
   badge: string;
   title: string;
@@ -981,6 +989,15 @@ function pullRequestReadiness(pullRequest: PullRequestSummary): {
       badge: "Review stale",
       title: "Review is stale",
       detail: `The Snapshot no longer matches ${shortCommit(pullRequest.headSha)}. Create an updated Snapshot.`,
+      variant: "destructive",
+    };
+  }
+  if (pullRequest.mergeability === "conflicting") {
+    return {
+      ready: false,
+      badge: "Merge conflict",
+      title: "Resolve the merge conflict",
+      detail: `GitHub reports conflicts with ${pullRequest.baseBranch}. Update the branch before merging.`,
       variant: "destructive",
     };
   }

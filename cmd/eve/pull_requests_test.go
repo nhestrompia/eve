@@ -251,6 +251,44 @@ func TestPullRequestAPILinksSnapshotFromPRWorktreeAfterEVERecordCommit(t *testin
 	}
 }
 
+func TestSnapshotHistoryCommitRemainsCurrentAcrossEarlierFeatureWork(t *testing.T) {
+	root := initTempGitRepo(t)
+	t.Chdir(root)
+	mustRun(t, []string{"init"})
+	gitRun(t, root, "add", ".eve/config.json", "AGENTS.md", "CLAUDE.md")
+	gitRun(t, root, "commit", "-m", "initialize eve")
+	baseBranch := gitOutputForTest(t, root, "branch", "--show-current")
+
+	featureRoot := filepath.Join(t.TempDir(), "feature-worktree")
+	gitRun(t, root, "worktree", "add", "-b", "agent/multi-snapshot-pr", featureRoot)
+	featureRepo := repoFromRoot(featureRoot)
+	if err := os.WriteFile(filepath.Join(featureRoot, "earlier.txt"), []byte("earlier feature work\n"), 0o644); err != nil {
+		t.Fatalf("write earlier feature work: %v", err)
+	}
+	gitRun(t, featureRoot, "add", "earlier.txt")
+	gitRun(t, featureRoot, "commit", "-m", "implement earlier Snapshot")
+	snapshotBase := gitOutputForTest(t, featureRoot, "rev-parse", "HEAD")
+
+	if err := os.WriteFile(filepath.Join(featureRoot, "latest.txt"), []byte("latest feature work\n"), 0o644); err != nil {
+		t.Fatalf("write latest feature work: %v", err)
+	}
+	gitRun(t, featureRoot, "add", "latest.txt")
+	gitRun(t, featureRoot, "commit", "-m", "implement latest Snapshot")
+	implementationHead := gitOutputForTest(t, featureRoot, "rev-parse", "HEAD")
+
+	snapshot := sampleSnapshot("snap_multi_snapshot_pr", "Latest PR Snapshot", implementationHead)
+	snapshot.Implementation.Branch = "agent/multi-snapshot-pr"
+	snapshot.Implementation.BaseCommit = snapshotBase
+	writeSnapshot(t, featureRoot, snapshot)
+	gitRun(t, featureRoot, "add", ".eve")
+	gitRun(t, featureRoot, "commit", "-m", "record latest eve product history")
+	pullRequestHead := gitOutputForTest(t, featureRoot, "rev-parse", "HEAD")
+
+	if !snapshotMatchesPullRequestHead(featureRepo, snapshot, pullRequestHead, baseBranch) {
+		t.Fatal("Snapshot followed only by its eve history commit was marked stale")
+	}
+}
+
 func sampleGitHubPullRequest() githubPullRequest {
 	row := githubPullRequest{
 		Number:           142,

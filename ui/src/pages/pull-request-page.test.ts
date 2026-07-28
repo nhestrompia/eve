@@ -13,8 +13,10 @@ import {
 import { describe, expect, it, vi } from "vitest";
 import {
   parseAcceptanceCriteria,
+  pullRequestReadiness,
   PullRequestsBreadcrumbLink,
 } from "./pull-request-page";
+import type { PullRequestSummary } from "../types";
 
 describe("PullRequestsBreadcrumbLink", () => {
   it("navigates through the client router to the repository PR tab", async () => {
@@ -75,5 +77,26 @@ describe("parseAcceptanceCriteria", () => {
       "First",
       "Second",
     ]);
+  });
+});
+
+describe("pullRequestReadiness", () => {
+  it("names a GitHub merge conflict after Snapshot freshness is established", () => {
+    const readiness = pullRequestReadiness({
+      snapshotId: "snap_current",
+      snapshotHeadMatch: true,
+      planRevision: 1,
+      planValid: true,
+      planAligned: false,
+      eveChecksPassed: true,
+      mergeability: "conflicting",
+      baseBranch: "main",
+    } as PullRequestSummary);
+
+    expect(readiness).toMatchObject({
+      badge: "Merge conflict",
+      title: "Resolve the merge conflict",
+      variant: "destructive",
+    });
   });
 });

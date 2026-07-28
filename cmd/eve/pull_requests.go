@@ -426,6 +426,7 @@ func snapshotFollowedOnlyByHistoryAndBaseMerges(
 
 	previous := implementationHead
 	baseHead := ""
+	sawBaseMerge := false
 	for _, commit := range strings.Fields(output) {
 		parentOutput, err := gitOutput(repo.Root, "show", "-s", "--format=%P", commit)
 		if err != nil {
@@ -440,6 +441,7 @@ func snapshotFollowedOnlyByHistoryAndBaseMerges(
 				return false
 			}
 		} else {
+			sawBaseMerge = true
 			if baseHead == "" {
 				baseHead = resolvePullRequestBaseHead(repo, baseBranch)
 			}
@@ -454,8 +456,13 @@ func snapshotFollowedOnlyByHistoryAndBaseMerges(
 		}
 		previous = commit
 	}
-	return previous == pullRequestHead &&
-		snapshotProductPatchMatchesPullRequest(repo, snapshot, pullRequestHead, baseBranch)
+	if previous != pullRequestHead {
+		return false
+	}
+	if !sawBaseMerge {
+		return true
+	}
+	return snapshotProductPatchMatchesPullRequest(repo, snapshot, pullRequestHead, baseBranch)
 }
 
 func commitChangesOnlyEVEHistory(repo repository, from string, to string) bool {
