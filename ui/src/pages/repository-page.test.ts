@@ -1,20 +1,134 @@
 import { describe, expect, it } from 'vitest';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { RepositorySummary } from '../types';
-import { RepositoryHeaderMark, repositoryInitial, repositoryTabs } from './repository-page';
+import type { PullRequestSummary, RepositorySummary } from '../types';
+import {
+  pullRequestBannerSignals,
+  recentOpenPullRequest,
+  RepositoryHeaderMark,
+  repositoryInitial,
+  repositoryTabs,
+} from './repository-page';
+
+describe('pullRequestBannerSignals', () => {
+  it('shows one Snapshot blocker and leaves scope unevaluated without evidence', () => {
+    const signals = pullRequestBannerSignals({
+      snapshotId: undefined,
+      snapshotHeadMatch: false,
+      checksPassed: 4,
+      checksTotal: 4,
+      checksFailed: 0,
+      checksPending: 0,
+      scopeDrift: false,
+      githubReady: true,
+      readyToMerge: false,
+    } as PullRequestSummary);
+
+    expect(signals.filter((signal) => signal.label.includes('Snapshot'))).toHaveLength(1);
+    expect(signals).toContainEqual({
+      label: 'Scope not evaluated',
+      detail: 'Requires exact-head product evidence',
+      tone: 'neutral',
+    });
+    expect(signals.map((signal) => signal.label)).not.toContain('No scope drift');
+    expect(signals.at(-1)?.label).toBe('GitHub permits merge');
+  });
+
+  it('reports scope positively only for an exact-head Snapshot', () => {
+    const signals = pullRequestBannerSignals({
+      snapshotId: 'EV-032',
+      snapshotHeadMatch: true,
+      checksPassed: 4,
+      checksTotal: 4,
+      checksFailed: 0,
+      checksPending: 0,
+      scopeDrift: false,
+      planValid: true,
+      planAligned: true,
+      githubReady: true,
+      readyToMerge: true,
+    } as PullRequestSummary);
+
+    expect(signals[0]?.label).toBe('Snapshot linked');
+    expect(signals[2]).toMatchObject({
+      label: 'Within plan scope',
+      tone: 'success',
+    });
+    expect(signals[3]?.label).toBe('GitHub permits merge');
+  });
+
+  it('does not call failed or missing GitHub checks successful', () => {
+    const failed = pullRequestBannerSignals({
+      checksPassed: 3,
+      checksTotal: 4,
+      checksFailed: 1,
+      checksPending: 0,
+    } as PullRequestSummary);
+    const missing = pullRequestBannerSignals({
+      checksPassed: 0,
+      checksTotal: 0,
+      checksFailed: 0,
+      checksPending: 0,
+    } as PullRequestSummary);
+
+    expect(failed[1]).toEqual({
+      label: '1 check failed',
+      detail: '3/4 GitHub checks passed',
+      tone: 'warning',
+    });
+    expect(missing[1]).toEqual({
+      label: 'No GitHub checks',
+      detail: 'No check runs have been reported',
+      tone: 'neutral',
+    });
+  });
+});
 
 describe('repository tabs', () => {
   it('includes code inspection after snapshots', () => {
-    expect(repositoryTabs(46).map((tab) => tab.id)).toEqual([
+    expect(repositoryTabs(46, 2)).toEqual([
+      { id: 'overview', label: 'Overview' },
+      { id: 'snapshots', label: 'Snapshots', count: 46 },
+      { id: 'pull-requests', label: 'Pull requests', count: 2 },
+      { id: 'code', label: 'Code' },
+      { id: 'compare', label: 'Compare' },
+      { id: 'activity', label: 'Activity' },
+      { id: 'artifacts', label: 'Artifacts' }
+    ]);
+    expect(repositoryTabs(46, 2).map((tab) => tab.id)).toEqual([
       'overview',
       'snapshots',
+      'pull-requests',
       'code',
       'compare',
       'activity',
-      'artifacts',
-      'settings'
+      'artifacts'
     ]);
+  });
+});
+
+describe('recentOpenPullRequest', () => {
+  it('uses opened time and ignores older recently-updated pull requests', () => {
+    const now = Date.parse('2026-07-28T12:00:00Z');
+    const result = recentOpenPullRequest(
+      [
+        {
+          number: 1,
+          state: 'open',
+          createdAt: '2026-06-01T00:00:00Z',
+          updatedAt: '2026-07-28T11:59:00Z',
+        },
+        {
+          number: 2,
+          state: 'open',
+          createdAt: '2026-07-27T00:00:00Z',
+          updatedAt: '2026-07-27T01:00:00Z',
+        },
+      ] as PullRequestSummary[],
+      now,
+    );
+
+    expect(result?.number).toBe(2);
   });
 });
 

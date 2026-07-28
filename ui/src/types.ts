@@ -507,6 +507,53 @@ export type RepositorySummary = {
   sessionProviders: string[];
 };
 
+export type PullRequestSummary = {
+  provider: 'github';
+  repository: string;
+  number: number;
+  title: string;
+  body?: string;
+  url: string;
+  baseBranch: string;
+  headBranch: string;
+  headSha: string;
+  state: 'open';
+  draft: boolean;
+  mergeability: 'unknown' | 'mergeable' | 'conflicting' | 'blocked';
+  mergeState?: string;
+  reviewDecision?: 'approved' | 'changes_requested' | 'review_required' | '';
+  author?: string;
+  createdAt: string;
+  updatedAt: string;
+  mergedAt?: string;
+  additions: number;
+  deletions: number;
+  changedFiles: number;
+  commitCount: number;
+  checksTotal: number;
+  checksPassed: number;
+  checksFailed: number;
+  checksPending: number;
+  snapshotId?: string;
+  snapshotTitle?: string;
+  planRevision?: number;
+  planValid: boolean;
+  planAligned: boolean;
+  eveChecksPassed: boolean;
+  scopeDrift: boolean;
+  githubReady: boolean;
+  readyToMerge: boolean;
+  snapshotHeadMatch: boolean;
+};
+
+export type PullRequestCollection = {
+  connected: boolean;
+  repository: string;
+  openCount: number;
+  reason?: string;
+  pullRequests: PullRequestSummary[];
+};
+
 export type OpenEditorResponse = {
   repository: string;
   root: string;
