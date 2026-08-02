@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 103,
-  "commitCount": 121,
-  "decisionCount": 209,
-  "riskCount": 82,
+  "snapshotCount": 104,
+  "commitCount": 122,
+  "decisionCount": 212,
+  "riskCount": 84,
   "artifactCount": 48,
-  "latestAt": "2026-08-02T20:37:20Z",
-  "latestSnapshot": "snap_0c1745c5ada9cdf2",
-  "latestTitle": "Optimize individual repository page loading",
+  "latestAt": "2026-08-02T20:54:40Z",
+  "latestSnapshot": "snap_878be555cfaf9a26",
+  "latestTitle": "Split repository page into focused modules",
   "branch": "main",
-  "head": "bedb379f891d746cc8c21a5e3862ad7bbcc59ec5",
+  "head": "37317c97fb71056f7684a6026fc25fea700001a6",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "bedb379f891d746cc8c21a5e3862ad7bbcc59ec5"
+  "latestGitState": "37317c97fb71056f7684a6026fc25fea700001a6"
 }

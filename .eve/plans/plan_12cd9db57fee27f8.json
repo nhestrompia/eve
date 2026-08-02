@@ -1,0 +1,49 @@
+{
+  "id": "plan_12cd9db57fee27f8",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_split_repository_page_2026_08_02",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Split the oversized individual repository page into cohesive React modules while preserving behavior, then inventory other local UI files over 1000 lines.",
+      "acceptanceCriteria": "Repository page behavior, routes, loading states, tab interactions, API calls, and exported test helpers remain unchanged; the repository page file is reduced below 1000 lines through responsibility-based modules; focused and full UI verification pass; the UI line-count inventory is reported.",
+      "allowedPathGlobs": [
+        "ui/src/pages/repository-page.tsx",
+        "ui/src/pages/repository-page.test.ts",
+        "ui/src/pages/repository-page-loading.test.tsx",
+        "ui/src/pages/repository/**",
+        "cmd/eve/ui_dist/**"
+      ],
+      "milestones": [
+        {
+          "title": "Inventory and define extraction seams",
+          "goal": "Map page responsibilities, dependencies, public test exports, and all UI files over 1000 lines."
+        },
+        {
+          "title": "Extract cohesive repository modules",
+          "goal": "Move presentation and tab-specific behavior into focused modules with narrow typed interfaces."
+        },
+        {
+          "title": "Verify behavior and history",
+          "goal": "Run focused and full UI verification, confirm file-size targets, and record the refactor in EVE."
+        }
+      ],
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "1fbedd52d0efb4a491c52d442dff4679c04c0374",
+      "branch": "main",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-08-02T20:40:52Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-08-02T20:40:57Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_878be555cfaf9a26"
+}
