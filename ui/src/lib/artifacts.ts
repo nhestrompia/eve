@@ -20,7 +20,8 @@ export function artifactKind(artifact: SnapshotArtifact): ArtifactKind {
   if (
     type === "log" ||
     type.endsWith("_log") ||
-    /\.(log|out|trace)$/i.test(source)
+    artifact.mimeType?.startsWith("text/") ||
+    /\.(log|out|trace|txt)$/i.test(source)
   ) {
     return "log";
   }
