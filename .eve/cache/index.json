@@ -1,17 +1,17 @@
 {
   "id": "eve",
-  "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 101,
-  "commitCount": 118,
-  "decisionCount": 204,
-  "riskCount": 80,
+  "root": "/Users/nhestrompia/.codex/worktrees/8811/eve",
+  "snapshotCount": 102,
+  "commitCount": 119,
+  "decisionCount": 206,
+  "riskCount": 81,
   "artifactCount": 48,
-  "latestAt": "2026-07-28T15:46:49Z",
-  "latestSnapshot": "snap_17560d6bf3d046d0",
-  "latestTitle": "Release eve 0.7.0",
-  "branch": "main",
-  "head": "a74c52112a4537b25a6d4f07a291ef7cbca056dd",
+  "latestAt": "2026-08-02T19:22:29Z",
+  "latestSnapshot": "snap_5c8ad8cd49f29760",
+  "latestTitle": "Fix artifact card previews and log loading",
+  "branch": "codex/artifact-log-modal-fix",
+  "head": "558819c3469081a6159922796b219f480f70e26e",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "a74c52112a4537b25a6d4f07a291ef7cbca056dd"
+  "latestGitState": "558819c3469081a6159922796b219f480f70e26e"
 }

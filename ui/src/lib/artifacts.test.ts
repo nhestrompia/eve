@@ -94,5 +94,11 @@ describe("artifactKind", () => {
         path: "output/report.json",
       }),
     ).toBe("file");
+    expect(
+      artifactKind({
+        type: "note",
+        path: "output/diagnostics/sample.txt",
+      }),
+    ).toBe("log");
   });
 });

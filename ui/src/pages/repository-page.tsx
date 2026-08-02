@@ -2358,7 +2358,7 @@ function ArtifactsPanel({
   );
 }
 
-type ArtifactCardRow = {
+export type ArtifactCardRow = {
   id: string;
   type: string;
   description: string;
@@ -2368,7 +2368,7 @@ type ArtifactCardRow = {
   kind: ArtifactKind;
 };
 
-function ArtifactCard({
+export function ArtifactCard({
   artifact,
   onPreview,
 }: {
@@ -2380,15 +2380,33 @@ function ArtifactCard({
     artifact.kind === "image" &&
     Boolean(artifact.imageSrc) &&
     !imageUnavailable;
+  const openArtifact = () => onPreview(artifact);
+  const handleCardKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
+    if (event.target !== event.currentTarget) return;
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      openArtifact();
+    }
+  };
 
   return (
-    <article className="overflow-hidden rounded-lg bg-slate-50/70 shadow-[0_0_0_1px_rgba(15,23,42,0.1)]">
+    <article
+      role="button"
+      tabIndex={0}
+      aria-label={`Open ${artifact.description}`}
+      onClick={openArtifact}
+      onKeyDown={handleCardKeyDown}
+      className="cursor-pointer overflow-hidden rounded-lg bg-slate-50/70 shadow-[0_0_0_1px_rgba(15,23,42,0.1)] outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-blue-600"
+    >
       {artifact.kind === "image" ? (
         canPreviewImage ? (
           <button
             type="button"
             className="block aspect-video w-full overflow-hidden bg-white text-left active:scale-[0.96] transition-transform"
-            onClick={() => onPreview(artifact)}
+            onClick={(event) => {
+              event.stopPropagation();
+              openArtifact();
+            }}
             aria-label={`Open ${artifact.description}`}
           >
             <img
@@ -2426,7 +2444,10 @@ function ArtifactCard({
             type="button"
             className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg bg-white text-slate-600 shadow-[0_0_0_1px_rgba(15,23,42,0.1)] transition-transform hover:text-slate-950 active:scale-[0.96]"
             aria-label={`Preview ${artifact.type} artifact`}
-            onClick={() => onPreview(artifact)}
+            onClick={(event) => {
+              event.stopPropagation();
+              openArtifact();
+            }}
           >
             <ExternalLink className="size-4" />
           </button>
@@ -2437,6 +2458,7 @@ function ArtifactCard({
             rel="noreferrer"
             className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg bg-white text-slate-600 shadow-[0_0_0_1px_rgba(15,23,42,0.1)] transition-transform hover:text-slate-950 active:scale-[0.96]"
             aria-label="Open artifact"
+            onClick={(event) => event.stopPropagation()}
           >
             <ExternalLink className="size-4" />
           </a>
@@ -2460,7 +2482,7 @@ function ArtifactUnavailable({ kind }: { kind: "image" | "log" }) {
   );
 }
 
-function ArtifactLogContent({
+export function ArtifactLogContent({
   artifact,
   expanded = false,
 }: {
@@ -2474,6 +2496,13 @@ function ArtifactLogContent({
       const response = await fetch(artifact.href!, {
         headers: { Range: "bytes=0-131071" },
       });
+      if (response.status === 416) {
+        const fallback = await fetch(artifact.href!);
+        if (!fallback.ok) {
+          throw new Error(`Artifact returned ${fallback.status}`);
+        }
+        return fallback.text();
+      }
       if (!response.ok) throw new Error(`Artifact returned ${response.status}`);
       return response.text();
     },
