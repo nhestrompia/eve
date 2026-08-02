@@ -1,0 +1,46 @@
+{
+  "id": "plan_f1bbac5691457ba9",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_snapshot_pending_refactor_2026_08_03",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Record the committed one-component-per-file repository page refactor as an EVE snapshot so the pending snapshot warning clears.",
+      "acceptanceCriteria": "The committed repository page refactor is recorded with validation evidence and the pending snapshot state is resolved.",
+      "allowedPathGlobs": [
+        "ui/src/pages/repository-page.tsx",
+        "ui/src/pages/repository-page.test.ts",
+        "ui/src/pages/repository-page-loading.test.tsx",
+        "ui/src/pages/artifact-preview.test.tsx",
+        "ui/src/pages/repository/**",
+        "cmd/eve/ui_dist/**"
+      ],
+      "milestones": [
+        {
+          "title": "Record committed refactor",
+          "goal": "Create a product Snapshot for the already-verified implementation commit."
+        },
+        {
+          "title": "Clear pending state",
+          "goal": "Persist the EVE Snapshot and resolve the pending branch warning."
+        }
+      ],
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "bfbbd75dea25ce0a8749e3cf0b09c67325edc0b3",
+      "branch": "main",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-08-02T22:24:49Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-08-02T22:25:01Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_e920e8a5c6c74709"
+}
