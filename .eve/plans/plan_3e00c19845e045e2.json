@@ -1,0 +1,56 @@
+{
+  "id": "plan_3e00c19845e045e2",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_artifact-log-modal-fix-2026-08-02",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Fix the artifact log view and make every artifact card open its modal reliably.",
+      "acceptanceCriteria": "The artifact log view renders and responds correctly for the supported artifact states; clicking any artifact card opens the corresponding artifact modal; existing artifact interactions remain intact; relevant tests and checks pass.",
+      "allowedPathGlobs": [
+        "site/**",
+        "ui/**",
+        "scripts/**",
+        "*.go",
+        "*.md",
+        "*.json",
+        "*.ts",
+        "*.tsx",
+        "*.js",
+        "*.jsx",
+        "*.css"
+      ],
+      "milestones": [
+        {
+          "title": "Trace and reproduce",
+          "goal": "Identify the failing log-view and card-click paths and establish a red-capable regression check."
+        },
+        {
+          "title": "Implement fix",
+          "goal": "Correct the shared artifact interaction and log-view behavior with minimal scoped changes."
+        },
+        {
+          "title": "Verify and record",
+          "goal": "Run relevant verification, commit implementation, and record the product evolution in EVE."
+        }
+      ],
+      "configuredSuite": "relevant",
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "dffcb81c2f8270d985a85a6aafc6bc94d8474618",
+      "branch": "codex/artifact-log-modal-fix",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-08-02T18:23:23Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-08-02T19:14:01Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_5c8ad8cd49f29760"
+}
