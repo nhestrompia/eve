@@ -3,20 +3,20 @@ import {
   ArrowRight,
   BookOpen,
   ChevronDown,
-  ExternalLink,
   History,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "../../components/ui/button";
 import { StatusBadge } from "../../components/status-badge";
-import { compactDate, shortCommit } from "../../format";
+import { compactDate } from "../../format";
 import type {
   DetailResponse,
   EvolutionSummary,
-  GitCommit,
   RepositorySummary,
 } from "../../types";
+import { CommitRow } from "./commit-row";
+import { commitsForDetail, githubCommitUrl } from "./activity-utils";
 
 export function ActivityAccordionCard({
   repository,
@@ -138,73 +138,4 @@ export function ActivityAccordionCard({
       </div>
     </section>
   );
-}
-
-function CommitRow({
-  commit,
-  href,
-}: {
-  commit: GitCommit;
-  href?: string;
-}): React.JSX.Element {
-  const content = (
-    <>
-      <span className="font-mono text-xs text-muted-foreground">
-        {commit.shortHash || shortCommit(commit.hash)}
-      </span>
-      <span className="min-w-0 truncate text-sm font-medium">
-        {commit.subject || "Untitled commit"}
-      </span>
-      {href ? <ExternalLink className="ml-auto size-3.5 shrink-0 text-slate-500" /> : null}
-    </>
-  );
-
-  if (!href) {
-    return <div className="flex min-h-11 items-center gap-3 px-3">{content}</div>;
-  }
-
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noreferrer"
-      className="flex min-h-11 items-center gap-3 px-3 transition-colors hover:bg-slate-50"
-    >
-      {content}
-    </a>
-  );
-}
-
-function commitsForDetail(detail: DetailResponse): GitCommit[] {
-  const snapshotHash =
-    detail.snapshot.implementation.gitState || detail.summary.snapshot;
-  if (!snapshotHash) return [];
-
-  const matchedCommit = detail.commits.find(
-    (commit) =>
-      commit.hash === snapshotHash ||
-      commit.shortHash === snapshotHash ||
-      shortCommit(commit.hash) === shortCommit(snapshotHash),
-  );
-  if (matchedCommit) return [matchedCommit];
-
-  return [
-    {
-      hash: snapshotHash,
-      shortHash: shortCommit(snapshotHash),
-      subject: "Snapshot commit",
-      authorName: "",
-      authoredAt: "",
-      committedAt: "",
-    },
-  ];
-}
-
-function githubCommitUrl(remoteUrl: string | undefined, hash: string): string | undefined {
-  if (!remoteUrl || !hash) return undefined;
-  const trimmed = remoteUrl.trim().replace(/\.git$/, "");
-  const sshMatch = trimmed.match(/^git@github\.com:(.+)$/);
-  const baseUrl = sshMatch ? `https://github.com/${sshMatch[1]}` : trimmed;
-  if (!/^https:\/\/github\.com\//i.test(baseUrl)) return undefined;
-  return `${baseUrl}/commit/${hash}`;
 }

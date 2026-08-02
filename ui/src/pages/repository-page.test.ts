@@ -8,11 +8,9 @@ import {
   pullRequestBannerSignals,
   pullRequestDisclosureCopy,
   recentOpenPullRequest,
-  RepositoryHeaderMark,
-  repositoryInitial,
-  shouldLoadRepositoryDetails,
-  repositoryTabs,
-} from './repository-page';
+} from './repository/pull-requests-utils';
+import { RepositoryHeaderMark, repositoryInitial } from './repository/repository-header-mark';
+import { shouldLoadRepositoryDetails, repositoryTabs } from './repository/types';
 
 describe('eve pull request context', () => {
   it('keeps current Snapshot PRs visible and partitions the rest', () => {

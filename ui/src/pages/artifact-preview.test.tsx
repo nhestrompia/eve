@@ -5,11 +5,9 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  ArtifactCard,
-  ArtifactLogContent,
-  type ArtifactCardRow,
-} from "./repository-page";
+import { ArtifactCard } from "./repository/artifact-card";
+import { ArtifactLogContent } from "./repository/artifact-log-content";
+import type { ArtifactCardRow } from "./repository/artifact-types";
 
 function renderWithQueryClient(element: React.ReactElement) {
   const client = new QueryClient({
