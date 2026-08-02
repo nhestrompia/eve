@@ -1,0 +1,52 @@
+{
+  "id": "plan_470b6e811ec06ae3",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_repo_page_loading_optimization_2026_08_02",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Optimize loading performance for the individual repository page without changing its user-visible behavior.",
+      "acceptanceCriteria": "The individual repository page renders the same content and interactions, its critical loading path is measurably faster in the local reproduction, relevant tests/builds pass, and the change is recorded in EVE with verification results.",
+      "allowedPathGlobs": [
+        "site/app/**",
+        "site/lib/**",
+        "site/components/**",
+        "site/package.json",
+        "site/package-lock.json",
+        "site/tests/**",
+        "site/e2e/**"
+      ],
+      "milestones": [
+        {
+          "title": "Measure current repository page loading",
+          "goal": "Identify the slow request or render path and capture a repeatable baseline."
+        },
+        {
+          "title": "Implement targeted optimization",
+          "goal": "Reduce the measured bottleneck while preserving repository page behavior."
+        },
+        {
+          "title": "Verify and record the change",
+          "goal": "Run focused and project verification, then complete the EVE snapshot."
+        }
+      ],
+      "configuredSuite": "site",
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "5a99b58e2e5de1a57579a092f1442599cd4c05a7",
+      "branch": "main",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-08-02T20:27:16Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-08-02T20:27:28Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_0c1745c5ada9cdf2"
+}

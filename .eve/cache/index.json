@@ -1,17 +1,17 @@
 {
   "id": "eve",
-  "root": "/Users/nhestrompia/.codex/worktrees/8811/eve",
-  "snapshotCount": 102,
-  "commitCount": 119,
-  "decisionCount": 206,
-  "riskCount": 81,
+  "root": "/Users/nhestrompia/Documents/eve",
+  "snapshotCount": 103,
+  "commitCount": 121,
+  "decisionCount": 209,
+  "riskCount": 82,
   "artifactCount": 48,
-  "latestAt": "2026-08-02T19:22:29Z",
-  "latestSnapshot": "snap_5c8ad8cd49f29760",
-  "latestTitle": "Fix artifact card previews and log loading",
-  "branch": "codex/artifact-log-modal-fix",
-  "head": "558819c3469081a6159922796b219f480f70e26e",
+  "latestAt": "2026-08-02T20:37:20Z",
+  "latestSnapshot": "snap_0c1745c5ada9cdf2",
+  "latestTitle": "Optimize individual repository page loading",
+  "branch": "main",
+  "head": "bedb379f891d746cc8c21a5e3862ad7bbcc59ec5",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "558819c3469081a6159922796b219f480f70e26e"
+  "latestGitState": "bedb379f891d746cc8c21a5e3862ad7bbcc59ec5"
 }
