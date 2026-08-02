@@ -10,6 +10,7 @@ import {
   recentOpenPullRequest,
   RepositoryHeaderMark,
   repositoryInitial,
+  shouldLoadRepositoryDetails,
   repositoryTabs,
 } from './repository-page';
 
@@ -165,6 +166,19 @@ describe('repository tabs', () => {
       'activity',
       'artifacts'
     ]);
+  });
+});
+
+describe('repository detail loading', () => {
+  it('defers snapshot details until detail-heavy tabs are opened', () => {
+    expect(shouldLoadRepositoryDetails('overview', 102)).toBe(false);
+    expect(shouldLoadRepositoryDetails('snapshots', 102)).toBe(false);
+    expect(shouldLoadRepositoryDetails('activity', 102)).toBe(true);
+    expect(shouldLoadRepositoryDetails('artifacts', 102)).toBe(true);
+  });
+
+  it('does not load details when the repository has no snapshots', () => {
+    expect(shouldLoadRepositoryDetails('activity', 0)).toBe(false);
   });
 });
 

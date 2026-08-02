@@ -74,21 +74,18 @@ import type {
 
 export function RepositoryPage() {
   const { repo } = useParams({ from: "/repositories/$repo" });
-  const allEvolutions = useQuery({
-    queryKey: ["snapshots"],
-    queryFn: () => api.snapshots(),
-  });
+  const [activeTab, setActiveTab] = useState<RepositoryTab>(() =>
+    repositoryTabFromHash(),
+  );
   const evolutions = useQuery({
     queryKey: ["snapshots", repo],
     queryFn: () => api.snapshots(repo),
-  });
-  const repositories = useQuery({
-    queryKey: ["repositories"],
-    queryFn: api.repositories,
+    staleTime: 30_000,
   });
   const repository = useQuery({
     queryKey: ["repository", repo],
     queryFn: () => api.repository(repo),
+    staleTime: 30_000,
   });
   const pullRequests = useQuery({
     queryKey: ["pull-requests", repo],
@@ -107,31 +104,38 @@ export function RepositoryPage() {
           api.snapshotDetail(evolution.id, repo),
         ),
       ),
-    enabled: (evolutions.data?.length ?? 0) > 0,
+    enabled: shouldLoadRepositoryDetails(
+      activeTab,
+      evolutions.data?.length ?? 0,
+    ),
     staleTime: 30_000,
   });
 
+  useEffect(() => {
+    const syncTab = () => setActiveTab(repositoryTabFromHash());
+    window.addEventListener("hashchange", syncTab);
+    return () => window.removeEventListener("hashchange", syncTab);
+  }, []);
+
   return (
     <EvolutionShell
-      evolutions={allEvolutions.data ?? []}
+      evolutions={[]}
       selectedId={undefined}
       showHistoryRail={false}
       contentClassName="p-0 sm:p-0 lg:p-0"
     >
-      {evolutions.isLoading ||
-      repositories.isLoading ||
-      repository.isLoading ? (
+      {evolutions.isLoading || repository.isLoading ? (
         <LoadingState label={`Loading ${repo}`} />
       ) : null}
       {evolutions.error ? <ErrorState error={evolutions.error} /> : null}
-      {repositories.error ? <ErrorState error={repositories.error} /> : null}
       {repository.error ? <ErrorState error={repository.error} /> : null}
-      {evolutions.data && repositories.data && repository.data ? (
+      {evolutions.data && repository.data ? (
         <RepositoryOverviewPage
           repository={repository.data}
-          repositories={repositories.data}
           evolutions={evolutions.data}
           details={details.data ?? []}
+          activeTab={activeTab}
+          onActiveTabChange={setActiveTab}
           pullRequests={
             pullRequests.data ?? {
               connected: false,
@@ -152,33 +156,26 @@ export function RepositoryPage() {
 
 function RepositoryOverviewPage({
   repository,
-  repositories,
   evolutions,
   details,
+  activeTab,
+  onActiveTabChange,
   pullRequests,
   pullRequestsLoading,
 }: {
   repository: RepositorySummary;
-  repositories: RepositorySummary[];
   evolutions: EvolutionSummary[];
   details: DetailResponse[];
+  activeTab: RepositoryTab;
+  onActiveTabChange: (tab: RepositoryTab) => void;
   pullRequests: PullRequestCollection;
   pullRequestsLoading: boolean;
 }) {
   const latest = evolutions[0];
-  const stats = buildRepositoryStats(evolutions, details);
+  const stats = buildRepositoryStats(evolutions);
   const contributors = buildContributors(evolutions);
-  const [activeTab, setActiveTab] = useState<RepositoryTab>(() =>
-    repositoryTabFromHash(),
-  );
   const [description, setDescription] = useRepositoryDescription(repository);
   const tabs = repositoryTabs(evolutions.length, pullRequests.openCount);
-
-  useEffect(() => {
-    const syncTab = () => setActiveTab(repositoryTabFromHash());
-    window.addEventListener("hashchange", syncTab);
-    return () => window.removeEventListener("hashchange", syncTab);
-  }, []);
 
   return (
     <main className="min-h-[calc(100dvh-76px)] min-w-0 bg-background">
@@ -233,7 +230,7 @@ function RepositoryOverviewPage({
                   id={`repository-tab-trigger-${tab.id}`}
                   data-state={activeTab === tab.id ? "active" : "inactive"}
                   onClick={() => {
-                    setActiveTab(tab.id);
+                    onActiveTabChange(tab.id);
                     window.history.replaceState(
                       null,
                       "",
@@ -296,6 +293,16 @@ type RepositoryTab =
   | "compare"
   | "activity"
   | "artifacts";
+
+export function shouldLoadRepositoryDetails(
+  activeTab: RepositoryTab,
+  snapshotCount: number,
+) {
+  return (
+    snapshotCount > 0 &&
+    (activeTab === "activity" || activeTab === "artifacts")
+  );
+}
 
 export function repositoryTabs(
   snapshotCount: number,
@@ -2834,10 +2841,7 @@ type RepositoryStats = {
   risks: number;
 };
 
-function buildRepositoryStats(
-  evolutions: EvolutionSummary[],
-  details: DetailResponse[],
-): RepositoryStats {
+function buildRepositoryStats(evolutions: EvolutionSummary[]): RepositoryStats {
   return {
     snapshots: evolutions.length,
     features: evolutions.filter((evolution) => evolution.type === "feature")
@@ -2850,15 +2854,15 @@ function buildRepositoryStats(
       (total, evolution) => total + (evolution.commitCount ?? 0),
       0,
     ),
-    decisions: details.reduce(
-      (total, detail) => total + detail.evolution.decisions.length,
+    decisions: evolutions.reduce(
+      (total, evolution) => total + evolution.decisionCount,
       0,
     ),
     validated: evolutions.filter(
       (evolution) => evolution.verificationState === "passed",
     ).length,
-    risks: details.reduce(
-      (total, detail) => total + detail.evolution.risks.length,
+    risks: evolutions.reduce(
+      (total, evolution) => total + evolution.riskCount,
       0,
     ),
   };
