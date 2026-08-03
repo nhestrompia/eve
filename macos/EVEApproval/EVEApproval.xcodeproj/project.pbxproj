@@ -14,6 +14,7 @@
 		200000000000000000000006 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 100000000000000000000008 /* XCTest.framework */; };
 		200000000000000000000007 /* VoiceFeedbackTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000009 /* VoiceFeedbackTranscriber.swift */; };
 		200000000000000000000008 /* VoiceFeedbackTranscriberTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10000000000000000000000B /* VoiceFeedbackTranscriberTests.swift */; };
+		200000000000000000000009 /* PlanQueueStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10000000000000000000000C /* PlanQueueStoreTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -38,6 +39,7 @@
 		100000000000000000000009 /* VoiceFeedbackTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceFeedbackTranscriber.swift; sourceTree = "<group>"; };
 		10000000000000000000000A /* EVEApproval.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = EVEApproval.entitlements; sourceTree = "<group>"; };
 		10000000000000000000000B /* VoiceFeedbackTranscriberTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceFeedbackTranscriberTests.swift; sourceTree = "<group>"; };
+		10000000000000000000000C /* PlanQueueStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanQueueStoreTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -96,6 +98,7 @@
 			children = (
 				100000000000000000000005 /* PlanModelsTests.swift */,
 				10000000000000000000000B /* VoiceFeedbackTranscriberTests.swift */,
+				10000000000000000000000C /* PlanQueueStoreTests.swift */,
 			);
 			name = EVEApprovalTests;
 			path = Tests/EVEApprovalTests;
@@ -198,6 +201,7 @@
 			files = (
 				200000000000000000000005 /* PlanModelsTests.swift in Sources */,
 				200000000000000000000008 /* VoiceFeedbackTranscriberTests.swift in Sources */,
+				200000000000000000000009 /* PlanQueueStoreTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
