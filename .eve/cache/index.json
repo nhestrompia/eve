@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 105,
-  "commitCount": 123,
-  "decisionCount": 214,
-  "riskCount": 84,
+  "snapshotCount": 106,
+  "commitCount": 124,
+  "decisionCount": 216,
+  "riskCount": 85,
   "artifactCount": 48,
-  "latestAt": "2026-08-02T22:28:38Z",
-  "latestSnapshot": "snap_e920e8a5c6c74709",
-  "latestTitle": "Split repository page into one-component modules",
+  "latestAt": "2026-08-03T21:29:59Z",
+  "latestSnapshot": "snap_1109e5948b7de199",
+  "latestTitle": "Fix stale plan removal flow",
   "branch": "main",
-  "head": "bfbbd75dea25ce0a8749e3cf0b09c67325edc0b3",
-  "dirty": true,
+  "head": "26f250c8b79fb522cef6f69025811713f51a8276",
+  "dirty": false,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "bfbbd75dea25ce0a8749e3cf0b09c67325edc0b3"
+  "latestGitState": "26f250c8b79fb522cef6f69025811713f51a8276"
 }
