@@ -256,8 +256,8 @@ func newPendingPlanIDs(
     )
 }
 
-func didReviewQueueEmptyAfterPendingRequests(previousPendingCount: Int, requests: [PlanRequest]) -> Bool {
-    previousPendingCount > 0 && requests.isEmpty
+func didReviewQueueEmptyAfterDisplayedRequests(previousRequestCount: Int, requests: [PlanRequest]) -> Bool {
+    previousRequestCount > 0 && requests.isEmpty
 }
 
 func menuBarSystemImageName(pendingCount: Int) -> String {

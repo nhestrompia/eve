@@ -76,6 +76,17 @@ struct EVEClient {
     }
 }
 
+protocol PlanQueueClient {
+    func health() async -> Bool
+    func reviewQueue() async throws -> [PlanRequest]
+    func planRequest(id: String) async throws -> PlanRequest
+    func approve(_ request: PlanRequest, proposal: PlanProposal?) async throws -> PlanRequest
+    func reject(_ request: PlanRequest, feedback: String) async throws -> PlanRequest
+    func dismiss(_ request: PlanRequest) async throws -> PlanRequest
+}
+
+extension EVEClient: PlanQueueClient {}
+
 enum ClientError: LocalizedError {
     case invalidURL
     case invalidResponse
@@ -91,7 +102,7 @@ enum ClientError: LocalizedError {
 }
 
 enum DaemonLauncher {
-    static func startIfNeeded(client: EVEClient) async throws {
+    static func startIfNeeded(client: any PlanQueueClient) async throws {
         if await client.health() { return }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")

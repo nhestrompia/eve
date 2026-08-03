@@ -90,10 +90,18 @@ func (server runtimeServer) handlePlanRequestRoutes(w http.ResponseWriter, r *ht
 			writePlanMutationError(w, dismissErr)
 			return
 		}
+		server.publishPlanRequestChange(repo)
 		writeJSON(w, http.StatusOK, dismissed)
 	default:
 		writeAPIError(w, http.StatusNotFound, fmt.Errorf("plan request route not found"))
 	}
+}
+
+func (server runtimeServer) publishPlanRequestChange(repo repository) {
+	if server.events == nil {
+		return
+	}
+	server.events.publish(runtimeEvent{Kind: runtimeEventPlans, Repository: repo.ID})
 }
 
 func writePlanMutationError(w http.ResponseWriter, err error) {

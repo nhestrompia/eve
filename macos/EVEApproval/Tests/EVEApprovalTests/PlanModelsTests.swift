@@ -196,10 +196,10 @@ final class PlanModelsTests: XCTestCase {
         let pending = try decodeRequest(id: "planreq_pending01", state: "pending_approval")
         let stale = try decodeRequest(id: "planreq_stale001", state: "stale")
 
-        XCTAssertTrue(didReviewQueueEmptyAfterPendingRequests(previousPendingCount: 1, requests: []))
-        XCTAssertFalse(didReviewQueueEmptyAfterPendingRequests(previousPendingCount: 1, requests: [stale]))
-        XCTAssertFalse(didReviewQueueEmptyAfterPendingRequests(previousPendingCount: 2, requests: [pending]))
-        XCTAssertFalse(didReviewQueueEmptyAfterPendingRequests(previousPendingCount: 0, requests: []))
+        XCTAssertTrue(didReviewQueueEmptyAfterDisplayedRequests(previousRequestCount: 1, requests: []))
+        XCTAssertFalse(didReviewQueueEmptyAfterDisplayedRequests(previousRequestCount: 1, requests: [stale]))
+        XCTAssertFalse(didReviewQueueEmptyAfterDisplayedRequests(previousRequestCount: 2, requests: [pending]))
+        XCTAssertFalse(didReviewQueueEmptyAfterDisplayedRequests(previousRequestCount: 0, requests: []))
     }
 
     func testMenuBarApprovalWindowUsesCompactEmptySize() {

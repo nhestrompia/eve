@@ -470,6 +470,48 @@ func TestPlanDismissAPIOnlyRemovesStaleRequestsFromReviewQueue(t *testing.T) {
 	}
 }
 
+func TestPlanDismissAPIInvalidatesCachedReviewQueue(t *testing.T) {
+	repo := setupPlanTestRepo(t)
+	stale, err := repo.createOrResumePlanRequest(context.Background(), testPlanInput("planreq_dismisscache"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	stale.State = "stale"
+	stale.StaleReasons = []string{"working tree changed"}
+	if err := repo.savePlanRequest(stale); err != nil {
+		t.Fatal(err)
+	}
+
+	server := newRuntimeServer(repo, "")
+	handler := server.routes()
+	queue := func() string {
+		recorder := httptest.NewRecorder()
+		handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/api/plan-requests?status=review", nil))
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("review queue = %d: %s", recorder.Code, recorder.Body.String())
+		}
+		return recorder.Body.String()
+	}
+
+	if got := queue(); !strings.Contains(got, stale.PlanRequestID) {
+		t.Fatalf("initial review queue = %s, want stale request", got)
+	}
+
+	dismiss := httptest.NewRecorder()
+	handler.ServeHTTP(dismiss, httptest.NewRequest(
+		http.MethodPost,
+		"/api/plan-requests/"+stale.PlanRequestID+"/dismiss",
+		strings.NewReader(fmt.Sprintf(`{"expectedRevision":%d}`, stale.CurrentRevision)),
+	))
+	if dismiss.Code != http.StatusOK {
+		t.Fatalf("stale dismiss = %d: %s", dismiss.Code, dismiss.Body.String())
+	}
+
+	if got := queue(); strings.Contains(got, stale.PlanRequestID) {
+		t.Fatalf("review queue after dismiss = %s, stale request was returned from cache", got)
+	}
+}
+
 func TestPlanApprovalAPIDiscoversRequestsFromLinkedWorktrees(t *testing.T) {
 	repo := setupPlanTestRepo(t)
 	branch := gitOutputForTest(t, repo.Root, "branch", "--show-current")

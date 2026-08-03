@@ -6,15 +6,16 @@ final class PlanQueueStore: ObservableObject {
     @Published private(set) var state: QueueState = .loading
     @Published var selectedID: PlanRequest.ID?
     @Published private(set) var notice: QueueNotice?
+    @Published private(set) var dismissingIDs: Set<PlanRequest.ID> = []
 
     var onNewPendingRequests: (([PlanRequest]) -> Void)?
     var onPendingQueueDrained: (() -> Void)?
 
-    private let client: EVEClient
+    private let client: any PlanQueueClient
     private var refreshTask: Task<Void, Never>?
     private var seenPendingIDs: Set<PlanRequest.ID> = []
 
-    init(client: EVEClient = EVEClient()) {
+    init(client: any PlanQueueClient = EVEClient()) {
         self.client = client
     }
 
@@ -42,9 +43,16 @@ final class PlanQueueStore: ObservableObject {
     }
 
     func refresh() async {
+        await refresh(previousRequestCount: requests.count)
+    }
+
+    func isDismissing(_ request: PlanRequest) -> Bool {
+        dismissingIDs.contains(request.id)
+    }
+
+    private func refresh(previousRequestCount: Int) async {
         do {
             let refreshed = orderedPlanRequests(collapsedDuplicatePlanRequests(try await client.reviewQueue()))
-            let previousPendingCount = pendingCount
             let newIDs = newPendingPlanIDs(previous: seenPendingIDs, requests: refreshed)
             requests = refreshed
             seenPendingIDs = Set(
@@ -58,7 +66,7 @@ final class PlanQueueStore: ObservableObject {
                 let newRequests = refreshed.filter { newIDs.contains($0.id) }
                 onNewPendingRequests?(newRequests)
             }
-            if didReviewQueueEmptyAfterPendingRequests(previousPendingCount: previousPendingCount, requests: refreshed) {
+            if didReviewQueueEmptyAfterDisplayedRequests(previousRequestCount: previousRequestCount, requests: refreshed) {
                 onPendingQueueDrained?()
             }
         } catch {
@@ -95,14 +103,16 @@ final class PlanQueueStore: ObservableObject {
     }
 
     func dismiss(_ request: PlanRequest) async {
-        guard request.canDismissFromQueue else { return }
+        guard request.canDismissFromQueue, dismissingIDs.insert(request.id).inserted else { return }
+        let previousRequestCount = requests.count
+        defer { dismissingIDs.remove(request.id) }
         do {
             _ = try await client.dismiss(request)
             requests.removeAll { $0.id == request.id }
             selectedID = preferredPlanSelection(currentID: selectedID, requests: requests)
-            await refresh()
+            await refresh(previousRequestCount: previousRequestCount)
         } catch {
-            state = .offline(error.localizedDescription)
+            await refresh()
         }
     }
 

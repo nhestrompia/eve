@@ -482,11 +482,12 @@ struct PlanReviewView: View {
                     .accessibilityLabel(message)
                 Spacer(minLength: 0)
                 if request.canDismissFromQueue {
-                    Button("Remove stale plan") {
+                    Button(store.isDismissing(request) ? "Removing stale plan…" : "Remove stale plan") {
                         Task { await store.dismiss(request) }
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(.orange)
+                    .disabled(store.isDismissing(request))
                     .accessibilityLabel("Remove stale plan from queue")
                 }
             } else if rejecting {
