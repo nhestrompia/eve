@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 106,
-  "commitCount": 124,
-  "decisionCount": 216,
+  "snapshotCount": 107,
+  "commitCount": 125,
+  "decisionCount": 217,
   "riskCount": 85,
   "artifactCount": 48,
-  "latestAt": "2026-08-03T21:29:59Z",
-  "latestSnapshot": "snap_1109e5948b7de199",
-  "latestTitle": "Fix stale plan removal flow",
+  "latestAt": "2026-08-03T21:39:19Z",
+  "latestSnapshot": "snap_2882eda63041d49b",
+  "latestTitle": "Include stale plan regression in Xcode tests",
   "branch": "main",
-  "head": "26f250c8b79fb522cef6f69025811713f51a8276",
-  "dirty": false,
+  "head": "123c85cc2e7cbe6d388bfb0178695b14777beea5",
+  "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "26f250c8b79fb522cef6f69025811713f51a8276"
+  "latestGitState": "123c85cc2e7cbe6d388bfb0178695b14777beea5"
 }
