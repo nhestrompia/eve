@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "0.1.0",
+  "id": "skip_76f60fdf1fe6eaf7",
+  "repoId": "eve",
+  "branch": "main",
+  "reason": "Resolve the bookkeeping-only skip commit 40d1b7d so the repository is cleanly ready for the new approved-plan cache invalidation fix.",
+  "range": {
+    "from": "0427e5e5234abd28b1866b564b31363974b5c6ae",
+    "to": "40d1b7d16228c14e71aae6c016e44f9f6a6d3227",
+    "commits": [
+      "40d1b7d16228c14e71aae6c016e44f9f6a6d3227"
+    ]
+  },
+  "createdAt": "2026-08-04T14:43:00Z",
+  "agent": {}
+}
