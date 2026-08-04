@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "0.1.0",
+  "id": "skip_a98c8dd4b93eb753",
+  "repoId": "eve",
+  "branch": "main",
+  "reason": "Resolve the final bookkeeping-only EVE skip record before declaring the approved-plan queue fix.",
+  "range": {
+    "from": "40d1b7d16228c14e71aae6c016e44f9f6a6d3227",
+    "to": "35af2d7a2f0c0b3c52bc2526475607a0d671f553",
+    "commits": [
+      "35af2d7a2f0c0b3c52bc2526475607a0d671f553"
+    ]
+  },
+  "createdAt": "2026-08-04T14:44:23Z",
+  "agent": {}
+}
