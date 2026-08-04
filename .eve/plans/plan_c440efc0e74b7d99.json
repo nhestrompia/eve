@@ -1,0 +1,51 @@
+{
+  "id": "plan_c440efc0e74b7d99",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_macos_stale_plan_20260804",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Fix the macOS app plan lifecycle bug where an approved plan disappears and is recreated, including the programmatic stale-plan removal path; add a regression test and document the local macOS run/test workflow.",
+      "acceptanceCriteria": "An approved plan remains visible and is not recreated; stale plans are removed only through the intended lifecycle and the programmatic cleanup path is correct; a deterministic regression test covers the observed bug; relevant tests/build checks pass; the final response explains how to run the macOS app locally.",
+      "allowedPathGlobs": [
+        "macos/EVEApproval/**",
+        "cmd/eve/plan_api.go",
+        "cmd/eve/plans.go",
+        "cmd/eve/plans_test.go",
+        "cmd/eve/runtime_events.go",
+        "cmd/eve/runtime_events_test.go",
+        "README.md"
+      ],
+      "milestones": [
+        {
+          "title": "Reproduce and trace",
+          "goal": "Build a deterministic red-capable regression loop and trace approval, refresh, and stale-plan removal across the macOS app/backend."
+        },
+        {
+          "title": "Implement fix",
+          "goal": "Correct the lifecycle and programmatic removal behavior with focused regression coverage."
+        },
+        {
+          "title": "Verify and record",
+          "goal": "Run relevant tests/build checks, capture the product history record, and provide local macOS run instructions."
+        }
+      ],
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "35af2d7a2f0c0b3c52bc2526475607a0d671f553",
+      "branch": "main",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-08-04T14:44:41Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-08-04T14:44:49Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_9e8920eaaf686e8c"
+}

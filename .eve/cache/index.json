@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 107,
-  "commitCount": 125,
-  "decisionCount": 217,
-  "riskCount": 85,
+  "snapshotCount": 108,
+  "commitCount": 126,
+  "decisionCount": 219,
+  "riskCount": 86,
   "artifactCount": 48,
-  "latestAt": "2026-08-03T21:39:19Z",
-  "latestSnapshot": "snap_2882eda63041d49b",
-  "latestTitle": "Include stale plan regression in Xcode tests",
+  "latestAt": "2026-08-04T14:48:34Z",
+  "latestSnapshot": "snap_9e8920eaaf686e8c",
+  "latestTitle": "Keep approved plans out of the review queue",
   "branch": "main",
-  "head": "123c85cc2e7cbe6d388bfb0178695b14777beea5",
+  "head": "2002cdb6829e9a101f067b3b7cb22a9eda12c496",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "123c85cc2e7cbe6d388bfb0178695b14777beea5"
+  "latestGitState": "2002cdb6829e9a101f067b3b7cb22a9eda12c496"
 }
