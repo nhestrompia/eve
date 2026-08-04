@@ -380,6 +380,41 @@ func TestPlanApprovalAPIStatusCodesAndHumanRevision(t *testing.T) {
 	}
 }
 
+func TestPlanApprovalAPIInvalidatesCachedReviewQueue(t *testing.T) {
+	repo := setupPlanTestRepo(t)
+	request, err := repo.createOrResumePlanRequest(context.Background(), testPlanInput("planreq_approvecache"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := newRuntimeServer(repo, "").routes()
+	queue := func() string {
+		recorder := httptest.NewRecorder()
+		handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/api/plan-requests?status=review", nil))
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("review queue = %d: %s", recorder.Code, recorder.Body.String())
+		}
+		return recorder.Body.String()
+	}
+
+	if got := queue(); !strings.Contains(got, request.PlanRequestID) {
+		t.Fatalf("initial review queue = %s, want pending request", got)
+	}
+
+	approved := httptest.NewRecorder()
+	handler.ServeHTTP(approved, httptest.NewRequest(
+		http.MethodPost,
+		"/api/plan-requests/"+request.PlanRequestID+"/approve",
+		strings.NewReader(fmt.Sprintf(`{"expectedRevision":%d}`, request.CurrentRevision)),
+	))
+	if approved.Code != http.StatusOK {
+		t.Fatalf("approve = %d: %s", approved.Code, approved.Body.String())
+	}
+
+	if got := queue(); strings.Contains(got, request.PlanRequestID) {
+		t.Fatalf("review queue after approval = %s, approved request was returned from cache", got)
+	}
+}
+
 func TestPlanApprovalAPIEmptyQueueIsAnArray(t *testing.T) {
 	repo := setupPlanTestRepo(t)
 	handler := newRuntimeServer(repo, "").routes()

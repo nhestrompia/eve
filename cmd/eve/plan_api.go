@@ -61,6 +61,7 @@ func (server runtimeServer) handlePlanRequestRoutes(w http.ResponseWriter, r *ht
 			writePlanMutationError(w, approveErr)
 			return
 		}
+		server.publishPlanRequestChange(repo)
 		writeJSON(w, http.StatusOK, approved)
 	case len(parts) == 2 && parts[1] == "reject" && r.Method == http.MethodPost:
 		var input struct {
@@ -76,6 +77,7 @@ func (server runtimeServer) handlePlanRequestRoutes(w http.ResponseWriter, r *ht
 			writePlanMutationError(w, rejectErr)
 			return
 		}
+		server.publishPlanRequestChange(repo)
 		writeJSON(w, http.StatusOK, rejected)
 	case len(parts) == 2 && parts[1] == "dismiss" && r.Method == http.MethodPost:
 		var input struct {
