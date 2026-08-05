@@ -1,0 +1,59 @@
+{
+  "id": "plan_869823126007415d",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_codex_2026_08_05_macos_snapshot_tests_mcp",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Add focused tests for the latest macOS app snapshot changes, verify the macOS app behavior and repository checks, and ensure the EVE MCP is configured for Codex.",
+      "acceptanceCriteria": "Tests cover the latest macOS snapshot-related behavior and pass; the relevant macOS app verification passes or its environment limitation is documented; Codex MCP configuration contains the EVE server in the correct form; implementation and EVE history are committed separately as required by AGENTS.md.",
+      "allowedPathGlobs": [
+        "macos/**",
+        "MacOS/**",
+        "Sources/**",
+        "Tests/**",
+        "test/**",
+        "tests/**",
+        "Package.swift",
+        "Package.resolved",
+        "project.yml",
+        "*.xcodeproj/**",
+        "*.xcworkspace/**",
+        ".codex/**",
+        ".mcp.json",
+        "codex.config.toml",
+        ".eve/**"
+      ],
+      "milestones": [
+        {
+          "title": "Inspect recent snapshot changes",
+          "goal": "Identify the latest macOS app changes and existing verification/test conventions."
+        },
+        {
+          "title": "Add regression coverage",
+          "goal": "Implement focused tests for the snapshot behavior and any necessary minimal product fix."
+        },
+        {
+          "title": "Verify and configure Codex",
+          "goal": "Run relevant checks, ensure EVE MCP configuration is present, and record the completed change."
+        }
+      ],
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "80ab9a5bd91bc12d0214fedfbb019514269f8739",
+      "branch": "main",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-08-05T13:06:45Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-08-05T13:06:48Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_ece7a0bd4ecd2405"
+}

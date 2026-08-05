@@ -1,17 +1,17 @@
 {
   "id": "eve",
-  "root": "/Users/nhestrompia/Documents/eve",
-  "snapshotCount": 108,
-  "commitCount": 126,
-  "decisionCount": 219,
-  "riskCount": 86,
+  "root": "/Users/nhestrompia/Projects/eve",
+  "snapshotCount": 109,
+  "commitCount": 173,
+  "decisionCount": 220,
+  "riskCount": 87,
   "artifactCount": 48,
-  "latestAt": "2026-08-04T14:48:34Z",
-  "latestSnapshot": "snap_9e8920eaaf686e8c",
-  "latestTitle": "Keep approved plans out of the review queue",
+  "latestAt": "2026-08-05T13:16:08Z",
+  "latestSnapshot": "snap_ece7a0bd4ecd2405",
+  "latestTitle": "Harden macOS plan queue dismissal coverage",
   "branch": "main",
-  "head": "2002cdb6829e9a101f067b3b7cb22a9eda12c496",
+  "head": "c6394d21e0201d8a722cf5d5395a285189b2be13",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "2002cdb6829e9a101f067b3b7cb22a9eda12c496"
+  "latestGitState": "c6394d21e0201d8a722cf5d5395a285189b2be13"
 }
