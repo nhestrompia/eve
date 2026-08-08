@@ -13,6 +13,7 @@ const liveQueryPrefixes = [
   ["repository"],
   ["plan-requests"],
   ["pending-plan-requests"],
+  ["phone-status"],
   ["agents"],
 ] as const;
 

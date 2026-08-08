@@ -1,0 +1,16 @@
+{
+  "id": "/phone",
+  "name": "EVE Approvals",
+  "short_name": "EVE",
+  "description": "Review and decide AI implementation plans from your iPhone.",
+  "start_url": "/phone",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#f8fafc",
+  "background_color": "#f8fafc",
+  "icons": [
+    { "src": "/icons/eve-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/eve-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/eve-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

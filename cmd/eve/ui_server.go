@@ -35,6 +35,7 @@ type runtimeServer struct {
 	pullRequestLoader    pullRequestLoader
 	events               *runtimeEvents
 	agentLease           *agentLeaseOwner
+	phone                *phoneManager
 }
 
 type apiError struct {
@@ -240,7 +241,7 @@ type legacySession struct {
 }
 
 func newRuntimeServer(repo repository, addr string) runtimeServer {
-	return runtimeServer{
+	server := runtimeServer{
 		repo:                 repo,
 		addr:                 addr,
 		searchCache:          &snapshotSearchCache{},
@@ -248,6 +249,10 @@ func newRuntimeServer(repo repository, addr string) runtimeServer {
 		verificationRegistry: newVerificationRegistry(),
 		events:               newRuntimeEvents(150 * time.Millisecond),
 	}
+	server.phone = newPhoneManager(defaultPhoneConfigStore(), func(ctx context.Context) ([]*planRequest, error) {
+		return server.planRequests(ctx, "pending_approval")
+	})
+	return server
 }
 
 func (server runtimeServer) routes() http.Handler {
@@ -258,6 +263,10 @@ func (server runtimeServer) routes() http.Handler {
 	mux.HandleFunc("/api/health", server.handleHealth)
 	mux.HandleFunc("/api/plan-requests", server.handlePlanRequests)
 	mux.HandleFunc("/api/plan-requests/", server.handlePlanRequestRoutes)
+	mux.HandleFunc("/api/phone/status", server.handlePhoneStatus)
+	mux.HandleFunc("/api/phone/subscriptions", server.handlePhoneSubscriptions)
+	mux.HandleFunc("/api/phone/subscriptions/", server.handlePhoneSubscriptionRoutes)
+	mux.HandleFunc("/api/phone/test", server.handlePhoneTest)
 	mux.HandleFunc("/api/compare", server.handleCompare)
 	mux.HandleFunc("/api/search", server.handleSnapshotSearch)
 	mux.HandleFunc("/api/snapshots", server.handleGlobalSnapshots)
@@ -266,7 +275,7 @@ func (server runtimeServer) routes() http.Handler {
 	mux.HandleFunc("/api/repos/", server.handleRepoRoutes)
 	mux.HandleFunc("/mcp", server.handleMCPHTTP)
 	mux.Handle("/", spaHandler())
-	return logRequests(mux)
+	return server.phoneAccessMiddleware(logRequests(mux))
 }
 
 func (server runtimeServer) handleHealth(w http.ResponseWriter, r *http.Request) {

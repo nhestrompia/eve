@@ -17,6 +17,8 @@ import { RisksPage } from './pages/risks-page';
 import { SnapshotPage } from './pages/snapshot-page';
 import { SnapshotsPage } from './pages/snapshots-page';
 import { VerificationPage } from './pages/verification-page';
+import { PhonePage } from './pages/phone-page';
+import { PhonePlanPage } from './pages/phone-plan-page';
 
 const rootRoute = createRootRoute({ component: AppShell });
 
@@ -30,6 +32,18 @@ const plansRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/plans',
   component: PlansPage
+});
+
+const phoneRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/phone',
+  component: PhonePage
+});
+
+const phonePlanRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/phone/plans/$planRequestId',
+  component: PhonePlanPage
 });
 
 const snapshotsIndexRoute = createRoute({
@@ -125,6 +139,8 @@ const configRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   plansRoute,
+  phoneRoute,
+  phonePlanRoute,
   snapshotsIndexRoute,
   repositoriesIndexRoute,
   repositoryRoute,

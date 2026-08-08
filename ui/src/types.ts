@@ -172,6 +172,39 @@ export type PlanRequest = {
   staleReasons?: string[];
   supersededBy?: string;
   fulfilledSnapshotId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type PhoneDeviceStatus = {
+  id: string;
+  label: string;
+  createdAt: string;
+  lastSeenAt: string;
+  lastSuccessAt: string | null;
+  lastError: string | null;
+};
+
+export type PhoneStatus = {
+  enabled: boolean;
+  origin: string | null;
+  tailscaleLogin: string | null;
+  vapidPublicKey: string | null;
+  pendingPlanCount: number;
+  devices: PhoneDeviceStatus[];
+};
+
+export type RegisterPhoneSubscription = {
+  endpoint: string;
+  expirationTime: number | null;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+  device: {
+    label: string;
+    userAgent: string;
+  };
 };
 
 export type AgentActivity = {

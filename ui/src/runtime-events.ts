@@ -23,7 +23,7 @@ const queryKeysByEvent: Record<string, QueryKey[]> = {
   snapshots: [["snapshots"], ["repositories"], ["repository"], ["config"]],
   repositories: [["repositories"], ["repository"], ["config"], ["plan-requests"], ["pending-plan-requests"]],
   config: [["config"], ["repositories"], ["repository"], ["plan-requests"], ["pending-plan-requests"]],
-  plans: [["plan-requests"], ["pending-plan-requests"], ["agents"]],
+  plans: [["plan-requests"], ["pending-plan-requests"], ["phone-status"], ["agents"]],
   agents: [["agents"]],
   verification: [["repositories"], ["repository"], ["config"]],
 };

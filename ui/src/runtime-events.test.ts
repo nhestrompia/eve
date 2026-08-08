@@ -90,6 +90,7 @@ describe("runtime events", () => {
     expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([
       ["plan-requests"],
       ["pending-plan-requests"],
+      ["phone-status"],
       ["agents"],
     ]);
 

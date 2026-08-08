@@ -12,6 +12,19 @@ import { TopBar } from './top-bar';
 
 export function AppShell() {
   const state = useRouterState();
+  if (state.location.pathname === "/phone" || state.location.pathname.startsWith("/phone/")) {
+    return (
+      <div className="phone-app-shell min-h-dvh bg-background text-foreground">
+        <Outlet />
+        <Toaster position="top-center" richColors closeButton />
+      </div>
+    );
+  }
+  return <DashboardAppShell />;
+}
+
+function DashboardAppShell() {
+  const state = useRouterState();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const pendingPlans = useQuery({

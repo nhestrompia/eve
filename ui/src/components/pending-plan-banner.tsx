@@ -3,7 +3,14 @@ import { BellRing, CheckCircle2, ChevronRight, Edit3, GitBranch, Trash2, XCircle
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { api } from "../api";
-import type { PlanProposal, PlanRequest, PlanRevision } from "../types";
+import type { PlanProposal, PlanRequest } from "../types";
+import {
+  currentRevision,
+  planToProposal,
+  proposalValidationMessage,
+} from "./plan-review/plan-review-validation";
+
+export { currentRevision, planToProposal, proposalValidationMessage } from "./plan-review/plan-review-validation";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 
@@ -452,32 +459,8 @@ function ReadOnlyList({
   );
 }
 
-export function currentRevision(plan: PlanRequest): PlanRevision | undefined {
-  return plan.revisions.find((revision) => revision.revision === plan.currentRevision);
-}
-
 function isStalePlan(plan?: PlanRequest): boolean {
   return Boolean(plan && (plan.state === "stale" || (plan.staleReasons?.length ?? 0) > 0));
-}
-
-export function planToProposal(plan?: PlanRequest): PlanProposal {
-  const revision = plan ? currentRevision(plan) : undefined;
-  return {
-    goal: revision?.goal ?? "",
-    acceptanceCriteria: revision?.acceptanceCriteria ?? "",
-    allowedPathGlobs: revision?.allowedPathGlobs ?? [],
-    milestones: revision?.milestones ?? [],
-    requiredSuite: revision?.configuredSuite,
-  };
-}
-
-export function proposalValidationMessage(proposal: PlanProposal) {
-  if (!proposal.goal.trim()) return "Goal is required.";
-  if (!proposal.acceptanceCriteria.trim()) return "Acceptance criteria are required.";
-  if (proposal.allowedPathGlobs.length === 0 || proposal.allowedPathGlobs.some((glob) => !glob.trim())) {
-    return "At least one allowed path glob is required.";
-  }
-  return "";
 }
 
 function errorMessage(error: unknown) {

@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/nhestrompia/eve"
 )
@@ -96,6 +97,83 @@ func runDoctor(args []string, stdout io.Writer, stderr io.Writer) int {
 		case instructionMalformed:
 			fmt.Fprintf(stdout, "  ✗ %s contains malformed EVE instruction markers\n", target.Filename)
 			fmt.Fprintln(stdout, "    Resolve the markers manually, then run `eve instructions status`.")
+		}
+	}
+
+	fmt.Fprintln(stdout, "\nPhone approvals")
+	phoneConfig, phoneErr := defaultPhoneConfigStore().load()
+	if errors.Is(phoneErr, os.ErrNotExist) {
+		fmt.Fprintln(stdout, "  ○ Not configured (optional beta)")
+	} else if phoneErr != nil {
+		fatal = true
+		fmt.Fprintf(stdout, "  ✗ %v\n", phoneErr)
+	} else if !phoneConfig.Enabled {
+		fmt.Fprintf(stdout, "  ○ Disabled; %d device subscription(s) preserved\n", len(phoneConfig.Subscriptions))
+	} else {
+		fmt.Fprintf(stdout, "  ✓ Enabled at %s for %s\n", phoneConfig.origin(), phoneConfig.AllowedTailscaleLogin)
+		fmt.Fprintf(stdout, "  ✓ %d device subscription(s)\n", len(phoneConfig.Subscriptions))
+		if launchAgentPath, pathErr := phoneLaunchAgentPath(); pathErr != nil {
+			fatal = true
+			fmt.Fprintf(stdout, "  ✗ resolve LaunchAgent: %v\n", pathErr)
+		} else if _, statErr := os.Stat(launchAgentPath); statErr != nil {
+			fatal = true
+			fmt.Fprintln(stdout, "  ✗ Phone LaunchAgent is not installed; rerun `eve phone setup`")
+		} else {
+			fmt.Fprintln(stdout, "  ✓ Phone LaunchAgent is installed")
+			launchDomain := "gui/" + fmt.Sprint(os.Getuid()) + "/" + phoneLaunchAgentLabel
+			if _, loadedErr := (systemPhoneCommandRunner{}).Run("launchctl", []string{"print", launchDomain}, nil); loadedErr != nil {
+				fatal = true
+				fmt.Fprintln(stdout, "  ✗ Phone LaunchAgent is not loaded")
+			} else {
+				fmt.Fprintln(stdout, "  ✓ Phone LaunchAgent is loaded")
+			}
+		}
+		if phoneEndpointHealthy("http://" + phoneConfig.RuntimeAddr + "/api/health") {
+			fmt.Fprintln(stdout, "  ✓ Phone runtime is healthy")
+		} else {
+			fatal = true
+			fmt.Fprintln(stdout, "  ✗ Phone runtime is unavailable")
+		}
+		if tailscale, env, locateErr := locateTailscaleCLI(); locateErr != nil {
+			fatal = true
+			fmt.Fprintf(stdout, "  ✗ %v\n", locateErr)
+		} else {
+			runner := systemPhoneCommandRunner{}
+			if version, versionErr := runner.Run(tailscale, []string{"version"}, env); versionErr == nil {
+				fmt.Fprintf(stdout, "  ✓ Tailscale %s\n", strings.TrimSpace(string(version)))
+			}
+			if status, statusErr := runner.Run(tailscale, []string{"status", "--json"}, env); statusErr != nil {
+				fatal = true
+				fmt.Fprintln(stdout, "  ✗ Tailscale is not connected")
+			} else if identity, identityErr := parseTailscaleIdentity(status); identityErr != nil || !strings.EqualFold(identity.LoginName, phoneConfig.AllowedTailscaleLogin) {
+				fatal = true
+				fmt.Fprintln(stdout, "  ✗ Tailscale identity does not match the phone configuration")
+			} else {
+				fmt.Fprintf(stdout, "  ✓ Tailscale identity %s at %s\n", identity.LoginName, identity.DNSName)
+			}
+			if status, statusErr := runner.Run(tailscale, []string{"serve", "status", "--json"}, env); statusErr != nil || !phoneServeStatusMatches(status, phoneConfig.ServePort, "http://127.0.0.1:4317") {
+				fatal = true
+				fmt.Fprintln(stdout, "  ✗ Tailscale Serve mapping is not healthy; rerun `eve phone setup`")
+			} else {
+				fmt.Fprintln(stdout, "  ✓ Tailscale Serve mapping is healthy")
+			}
+			if err := verifyPhoneRemote(phoneConfig.origin()+"/api/phone/status", phoneConfig.AllowedTailscaleLogin, 3*time.Second); err != nil {
+				fmt.Fprintf(stdout, "  ⚠ Private identity check unavailable: %v\n", err)
+			} else {
+				fmt.Fprintln(stdout, "  ✓ Private identity headers verified")
+			}
+		}
+		pendingDeliveries := 0
+		for _, delivery := range phoneConfig.Deliveries {
+			if delivery.State != "delivered" && delivery.State != "skipped_existing" {
+				pendingDeliveries++
+			}
+		}
+		fmt.Fprintf(stdout, "  %d pending notification delivery record(s)\n", pendingDeliveries)
+		for _, subscription := range phoneConfig.Subscriptions {
+			if subscription.LastError != "" {
+				fmt.Fprintf(stdout, "  ⚠ %s: %s\n", subscription.Label, subscription.LastError)
+			}
 		}
 	}
 

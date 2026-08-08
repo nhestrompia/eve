@@ -59,6 +59,8 @@ func runWithIO(args []string, stdin io.Reader, stdout io.Writer, stderr io.Write
 		return runInstructions(args[1:], stdout, stderr)
 	case "doctor":
 		return runDoctor(args[1:], stdout, stderr)
+	case "phone":
+		return runPhone(args[1:], stdin, stdout, stderr)
 	case "add":
 		return runAdd(args[1:], stdin, stdout, stderr)
 	case "commit":
@@ -111,6 +113,7 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  init [--no-agent-instructions | --instructions-only]")
 	fmt.Fprintln(w, "  instructions <install|status|diff>")
 	fmt.Fprintln(w, "  doctor")
+	fmt.Fprintln(w, "  phone <setup|status|disable|reset>")
 	fmt.Fprintln(w, "  add --title <title> --summary <summary> [--type feature] [--validation <command>] [--plan-id <id> --plan-revision <n>]")
 	fmt.Fprintln(w, "  commit [--allow-dirty]")
 	fmt.Fprintln(w, "  run-suite [--cwd /path/to/repo] [--suite <name>] [--commit <sha>]")
@@ -621,6 +624,10 @@ func runKill(args []string, stdout io.Writer, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "eve kill only targets localhost")
 		return 2
 	}
+	if config, err := defaultPhoneConfigStore().load(); err == nil && config.Enabled && runtimePort(config.RuntimeAddr) == runtimePort(*addr) {
+		fmt.Fprintln(stderr, "EVE phone access keeps this runtime alive. Run `eve phone disable` before `eve kill`.")
+		return 1
+	}
 	pids, err := runtimePIDs(*addr)
 	if err != nil {
 		fmt.Fprintf(stderr, "%v\n", err)
@@ -662,6 +669,7 @@ func serveRuntime(repo repository, options runtimeLaunchOptions, stdout io.Write
 	rememberRepository(repo)
 
 	server := newRuntimeServer(repo, strings.TrimSpace(options.Addr))
+	server.phone.logger = stderr
 	eventContext, stopEvents := context.WithCancel(context.Background())
 	defer stopEvents()
 	eventRepositories := server.repositories()
@@ -672,6 +680,7 @@ func serveRuntime(repo repository, options runtimeLaunchOptions, stdout io.Write
 		go server.events.runRecoveryRefresh(eventContext, 5*time.Minute)
 	}
 	go server.events.watchAgentExpirations(eventContext, eventRepositories)
+	go server.phone.run(eventContext, server.events)
 	listener, err := net.Listen("tcp", server.addr)
 	if err != nil {
 		fmt.Fprintf(stderr, "serve runtime: %v\n", err)

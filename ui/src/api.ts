@@ -10,6 +10,9 @@ import type {
   PlanRecord,
   PlanProposal,
   PlanRequest,
+	PhoneDeviceStatus,
+	PhoneStatus,
+	RegisterPhoneSubscription,
   PendingSnapshotResponse,
   PullRequestCollection,
   PullRequestSummary,
@@ -70,6 +73,16 @@ type SearchAPI = {
   }>;
 };
 
+export class APIRequestError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'APIRequestError';
+    this.status = status;
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     ...init,
@@ -79,7 +92,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const data = await response.json().catch(() => undefined);
   if (!response.ok) {
     const message = data && typeof data.error === 'string' ? data.error : `Request failed: ${response.status}`;
-    throw new Error(message);
+    throw new APIRequestError(message, response.status);
   }
   return data as T;
 }
@@ -295,6 +308,7 @@ export const api = {
   agents: () => request<AgentActivity[]>('/api/agents'),
   planRequests: (status = 'pending_approval') =>
     request<PlanRequest[]>(`/api/plan-requests?status=${encodeURIComponent(status)}`),
+  planRequest: (id: string) => request<PlanRequest>(`/api/plan-requests/${encodeURIComponent(id)}`),
   approvePlanRequest: (plan: PlanRequest, proposal?: PlanProposal) =>
     request<PlanRequest>(`/api/plan-requests/${encodeURIComponent(plan.planRequestId)}/approve`, {
       method: 'POST',
@@ -320,6 +334,21 @@ export const api = {
       body: JSON.stringify({
         expectedRevision: plan.currentRevision
       })
+    }),
+  phoneStatus: () => request<PhoneStatus>('/api/phone/status'),
+  registerPhoneSubscription: (subscription: RegisterPhoneSubscription) =>
+    request<PhoneDeviceStatus>('/api/phone/subscriptions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(subscription)
+    }),
+  removePhoneSubscription: (id: string) =>
+    request<void>(`/api/phone/subscriptions/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  testPhoneSubscription: (id: string) =>
+    request<{ delivered: boolean }>('/api/phone/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subscriptionId: id })
     }),
   pendingSnapshot: (repo: string) => request<PendingSnapshotResponse>(`/api/repos/${encodeURIComponent(repo)}/pending`),
   pullRequests: (repo: string) =>
