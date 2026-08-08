@@ -1,0 +1,58 @@
+{
+  "id": "plan_40bfe711a2666313",
+  "schemaVersion": "0.1.0",
+  "planRequestId": "planreq_iphone_plan_approval_pwa_20260808",
+  "repository": "eve",
+  "status": "fulfilled",
+  "revisions": [
+    {
+      "revision": 1,
+      "source": "agent",
+      "goal": "Implement the opt-in macOS-hosted EVE Approvals PWA for iPhone, using Tailscale Serve for private authenticated access and direct standards-based Web Push for plan notifications.",
+      "acceptanceCriteria": "`eve phone setup/status/disable/reset` manage Tailscale Serve and a macOS LaunchAgent safely; remote requests enforce exact host, same Tailscale identity, HTTPS and same-origin mutations; phone APIs manage Apple Web Push subscriptions and test notifications without leaking secrets; runtime delivers deduplicated pending-plan notifications with retries; `/phone` and `/phone/plans/:id` provide install, queue, edit, approve and reject workflows; PWA manifest/service worker/icons are embedded; existing desktop plan UI remains functional; automated Go and UI verification passes; physical iPhone-only validation is documented if unavailable.",
+      "allowedPathGlobs": [
+        "PRODUCT.md",
+        "docs/**",
+        "cmd/eve/**",
+        "ui/**",
+        "go.mod",
+        "go.sum",
+        "package.json",
+        "package-lock.json",
+        ".eve/**"
+      ],
+      "milestones": [
+        {
+          "title": "Host foundation",
+          "goal": "Implement phone configuration, Tailscale discovery/Serve setup, LaunchAgent management, CLI lifecycle, and request security."
+        },
+        {
+          "title": "Push delivery",
+          "goal": "Implement phone APIs, VAPID subscriptions, runtime reconciliation, delivery deduplication, retry handling, and diagnostics."
+        },
+        {
+          "title": "Phone PWA",
+          "goal": "Implement focused onboarding, queue, plan review/edit/approve/reject, manifest, icons, service worker, and shared plan-review logic."
+        },
+        {
+          "title": "Validation and history",
+          "goal": "Run automated and visual verification, commit implementation, complete the EVE snapshot, and commit the generated product record."
+        }
+      ],
+      "configuredSuite": "default",
+      "resolvedChecks": {},
+      "resolvedCheckIds": [],
+      "policyHash": "sha256:315b08bdd4b0ba74612a623da1fd35363ac94c3900d3299103185f21c6031ed3",
+      "checkDefinitionsHash": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "suiteDigest": "sha256:a6a6af4c62d042304aa304c2374ea115ea22db20e5c4baf5eb31af0291945628",
+      "baseCommit": "b21d1b622354f80a2195d02012e0cba9f01d5ab7",
+      "branch": "main",
+      "treeFingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "createdAt": "2026-08-08T18:47:44Z"
+    }
+  ],
+  "lockedRevision": 1,
+  "lockedAt": "2026-08-08T18:47:52Z",
+  "approvedBy": "local_ui",
+  "fulfilledBySnapshot": "snap_82625a7b5c8db6f7"
+}

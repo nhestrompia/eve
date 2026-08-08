@@ -1,17 +1,17 @@
 {
   "id": "eve",
   "root": "/Users/nhestrompia/Projects/eve",
-  "snapshotCount": 109,
-  "commitCount": 173,
-  "decisionCount": 220,
-  "riskCount": 87,
-  "artifactCount": 48,
-  "latestAt": "2026-08-05T13:16:08Z",
-  "latestSnapshot": "snap_ece7a0bd4ecd2405",
-  "latestTitle": "Harden macOS plan queue dismissal coverage",
+  "snapshotCount": 110,
+  "commitCount": 174,
+  "decisionCount": 224,
+  "riskCount": 89,
+  "artifactCount": 52,
+  "latestAt": "2026-08-08T19:45:13Z",
+  "latestSnapshot": "snap_82625a7b5c8db6f7",
+  "latestTitle": "Private iPhone plan approvals",
   "branch": "main",
-  "head": "c6394d21e0201d8a722cf5d5395a285189b2be13",
+  "head": "421952c0c6fc690299f657f13461734a42022ca3",
   "dirty": true,
   "remoteUrl": "https://github.com/nhestrompia/eve",
-  "latestGitState": "c6394d21e0201d8a722cf5d5395a285189b2be13"
+  "latestGitState": "421952c0c6fc690299f657f13461734a42022ca3"
 }
